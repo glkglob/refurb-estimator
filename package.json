@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "jest"
   },
   "dependencies": {
     "next": "16.2.0",
@@ -13,9 +14,16 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "@tailwindcss/postcss": "4.2.2",
+    "@types/jest": "30.0.0",
     "@types/node": "25.5.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "jest": "30.3.0",
+    "postcss": "8.5.8",
+    "tailwindcss": "4.2.2",
+    "ts-jest": "29.4.6",
     "typescript": "5.9.3"
   }
 }

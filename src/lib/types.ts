@@ -10,7 +10,7 @@ export type FinishLevel = "budget" | "standard" | "premium";
 
 export type Condition = "poor" | "fair" | "good";
 
-export type ProjectType = "refurb" | "extension" | "loft";
+export type ProjectType = "refurb";
 
 export type RoomType =
   | "kitchen"
@@ -18,50 +18,89 @@ export type RoomType =
   | "bedroom"
   | "living"
   | "hallway"
-  | "exterior";
+  | "utility";
 
-export type EstimateCategory =
+export type CostCategory =
   | "kitchen"
-  | "bathrooms"
+  | "bathroom"
   | "electrics"
+  | "plumbing"
   | "heating"
-  | "plastering"
   | "windows"
+  | "doors"
+  | "plastering"
   | "decoration"
+  | "flooring"
   | "contingency"
   | "fees";
-
-export type PropertyType =
-  | "flat"
-  | "terraced"
-  | "semiDetached"
-  | "detached"
-  | "bungalow";
 
 export type EstimateInput = {
   region: Region;
   projectType: ProjectType;
-  propertyType: PropertyType;
+  propertyType: string;
   totalAreaM2: number;
   condition: Condition;
   finishLevel: FinishLevel;
-  kitchens?: number;
-  bathrooms?: number;
+  rooms?: RoomInput[];
 };
 
-export type CategoryRange = {
+export type RoomInput = {
+  id: string;
+  roomType: RoomType;
+  areaM2: number;
+  intensity: "light" | "full";
+  finishLevel: FinishLevel;
+};
+
+export type CategoryBreakdown = {
+  category: CostCategory;
   low: number;
   typical: number;
   high: number;
 };
 
-export type EstimateCategoryBreakdown = {
-  category: EstimateCategory;
-  range: CategoryRange;
-};
+export type RoomCategoryAllocation = Partial<Record<CostCategory, number>>;
 
 export type EstimateResult = {
-  overall: CategoryRange;
-  costPerM2: CategoryRange;
-  breakdown: EstimateCategoryBreakdown[];
+  totalLow: number;
+  totalTypical: number;
+  totalHigh: number;
+  costPerM2: {
+    low: number;
+    typical: number;
+    high: number;
+  };
+  categories: CategoryBreakdown[];
+};
+
+export type Scenario = {
+  id: string;
+  name: string;
+  input: EstimateInput;
+  result: EstimateResult;
+  createdAt: string;
+  updatedAt: string;
+  purchasePrice?: number;
+  gdv?: number;
+};
+
+export type CostLibrary = {
+  baseRefurbPerM2: {
+    low: number;
+    typical: number;
+    high: number;
+  };
+  regionalMultipliers: Record<Region, number>;
+  conditionMultipliers: Record<Condition, number>;
+  finishMultipliers: Record<FinishLevel, number>;
+  categoryPercents: Record<CostCategory, number>;
+  roomBaseRanges: Record<
+    RoomType,
+    {
+      low: number;
+      typical: number;
+      high: number;
+    }
+  >;
+  roomCategoryAllocations: Record<RoomType, RoomCategoryAllocation>;
 };

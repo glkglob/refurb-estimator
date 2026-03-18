@@ -23,8 +23,11 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { loadBudgetActuals, saveBudgetActuals } from "@/lib/budget";
-import { loadScenarios } from "@/lib/storage";
+import {
+  loadBudgetActuals,
+  loadScenarios,
+  saveBudgetActuals
+} from "@/lib/dataService";
 import type { CostCategory, Scenario } from "@/lib/types";
 
 const COST_CATEGORIES: CostCategory[] = [
@@ -133,18 +136,62 @@ export default function BudgetPage() {
     maximumFractionDigits: 0
   });
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>("");
   const [actuals, setActuals] = useState<Partial<Record<CostCategory, number>>>({});
 
   useEffect(() => {
-    const loadedScenarios = loadScenarios().sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    setScenarios(loadedScenarios);
+    let isMounted = true;
 
-    if (loadedScenarios.length > 0) {
-      setSelectedScenarioId(loadedScenarios[0].id);
-    }
+    (async () => {
+      setIsLoading(true);
+      setLoadError(null);
+
+      try {
+        const loadedScenarios = await loadScenarios();
+        if (!isMounted) {
+          return;
+        }
+
+        const sorted = loadedScenarios.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setScenarios(sorted);
+        if (sorted.length > 0) {
+          setSelectedScenarioId((prev) => prev || sorted[0].id);
+        }
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        const fallbackData =
+          error && typeof error === "object" && "fallbackData" in error
+            ? ((error as { fallbackData?: Scenario[] }).fallbackData ?? [])
+            : [];
+        const sorted = fallbackData.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setScenarios(sorted);
+        if (sorted.length > 0) {
+          setSelectedScenarioId((prev) => prev || sorted[0].id);
+        }
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load scenarios from cloud. Showing local data."
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const selectedScenario = useMemo(
@@ -172,8 +219,38 @@ export default function BudgetPage() {
       return;
     }
 
-    const saved = loadBudgetActuals(selectedScenarioId);
-    setActuals(saved?.actuals ?? {});
+    let isMounted = true;
+
+    (async () => {
+      try {
+        const saved = await loadBudgetActuals(selectedScenarioId);
+        if (!isMounted) {
+          return;
+        }
+
+        setActuals(saved?.actuals ?? {});
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        const fallbackData =
+          error && typeof error === "object" && "fallbackData" in error
+            ? ((error as { fallbackData?: { actuals?: Partial<Record<CostCategory, number>> } | null }).fallbackData ??
+              null)
+            : null;
+        setActuals(fallbackData?.actuals ?? {});
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load budget actuals from cloud. Showing local data."
+        );
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
   }, [selectedScenarioId]);
 
   useEffect(() => {
@@ -182,11 +259,21 @@ export default function BudgetPage() {
     }
 
     const timeoutId = window.setTimeout(() => {
-      saveBudgetActuals({
-        scenarioId: selectedScenarioId,
-        actuals,
-        updatedAt: new Date().toISOString()
-      });
+      (async () => {
+        try {
+          await saveBudgetActuals({
+            scenarioId: selectedScenarioId,
+            actuals,
+            updatedAt: new Date().toISOString()
+          });
+        } catch (error) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Unable to save budget actuals to cloud. Saved locally instead."
+          );
+        }
+      })();
     }, 500);
 
     return () => {
@@ -215,10 +302,20 @@ export default function BudgetPage() {
     }));
   }
 
+  if (isLoading) {
+    return (
+      <section className="space-y-6">
+        <h1 className="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
+        <p className="text-sm text-muted-foreground">Loading scenarios...</p>
+      </section>
+    );
+  }
+
   if (scenarios.length === 0) {
     return (
       <section className="space-y-6">
         <h1 className="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
+        {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
             No scenarios saved yet. Save a scenario first to start tracking your budget. Create
@@ -271,6 +368,7 @@ export default function BudgetPage() {
   return (
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
+      {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
 
       <Card>
         <CardContent className="p-4">

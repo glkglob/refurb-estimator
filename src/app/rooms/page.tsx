@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { defaultCostLibrary } from "@/lib/costLibrary";
+import { saveScenario } from "@/lib/dataService";
 import { estimateRooms } from "@/lib/estimator";
-import { saveScenario } from "@/lib/storage";
 import type {
   Condition,
   EstimateInput,
@@ -146,11 +146,11 @@ export default function RoomsPage() {
     };
   }, [rooms, region, condition]);
 
-  function handleSaveScenario(
+  async function handleSaveScenario(
     name: string,
     purchasePrice?: number,
     gdv?: number
-  ): void {
+  ): Promise<void> {
     if (!calculation.result) {
       return;
     }
@@ -167,12 +167,22 @@ export default function RoomsPage() {
       gdv
     };
 
-    saveScenario(scenario);
-    setIsSaveModalOpen(false);
-    toast({
-      title: "Scenario saved",
-      description: "You can compare it on the Scenario Comparison page."
-    });
+    try {
+      await saveScenario(scenario);
+      setIsSaveModalOpen(false);
+      toast({
+        title: "Scenario saved",
+        description: "You can compare it on the Scenario Comparison page."
+      });
+    } catch (error) {
+      setIsSaveModalOpen(false);
+      toast({
+        title: "Scenario saved locally",
+        description:
+          error instanceof Error ? error.message : "Cloud sync failed. Scenario was saved locally.",
+        variant: "destructive"
+      });
+    }
   }
 
   return (

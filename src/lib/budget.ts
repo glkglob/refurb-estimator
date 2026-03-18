@@ -1,4 +1,5 @@
 import type { BudgetActuals } from "./types";
+export type { BudgetActuals } from "./types";
 
 const BUDGET_KEY_PREFIX = "refurb-budget-";
 

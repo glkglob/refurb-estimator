@@ -57,6 +57,10 @@ export function loadScenarios(): Scenario[] {
   return readScenariosFromStorage();
 }
 
+export function loadLocal(): Scenario[] {
+  return readScenariosFromStorage();
+}
+
 export function deleteScenario(id: string): void {
   if (!canUseStorage()) {
     return;

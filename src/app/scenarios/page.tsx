@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { deleteScenario, loadScenarios } from "@/lib/storage";
+import { deleteScenario, loadScenarios } from "@/lib/dataService";
 import type { Scenario } from "@/lib/types";
 
 function formatRoi(value: number): string {
@@ -38,10 +38,49 @@ export default function ScenariosPage() {
     maximumFractionDigits: 0
   });
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [scenarioToDelete, setScenarioToDelete] = useState<Scenario | null>(null);
 
   useEffect(() => {
-    setScenarios(loadScenarios());
+    let isMounted = true;
+
+    (async () => {
+      setIsLoading(true);
+      setLoadError(null);
+
+      try {
+        const loaded = await loadScenarios();
+        if (!isMounted) {
+          return;
+        }
+
+        setScenarios(loaded);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        const fallbackData =
+          error && typeof error === "object" && "fallbackData" in error
+            ? ((error as { fallbackData?: Scenario[] }).fallbackData ?? [])
+            : [];
+        setScenarios(fallbackData);
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load scenarios from cloud. Showing local data."
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const sortedScenarios = useMemo(
@@ -85,21 +124,33 @@ export default function ScenariosPage() {
     [sortedScenarios]
   );
 
-  function handleDeleteConfirm(): void {
+  async function handleDeleteConfirm(): Promise<void> {
     if (!scenarioToDelete) {
       return;
     }
 
-    deleteScenario(scenarioToDelete.id);
-    setScenarios((prev) => prev.filter((item) => item.id !== scenarioToDelete.id));
+    try {
+      await deleteScenario(scenarioToDelete.id);
+      setScenarios((prev) => prev.filter((item) => item.id !== scenarioToDelete.id));
+    } catch (error) {
+      setScenarios((prev) => prev.filter((item) => item.id !== scenarioToDelete.id));
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : "Unable to delete scenario from cloud. Deleted local copy."
+      );
+    }
+
     setScenarioToDelete(null);
   }
 
   return (
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Scenario Comparison</h1>
+      {isLoading ? <p className="text-sm text-muted-foreground">Loading scenarios...</p> : null}
+      {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
 
-      {sortedScenarios.length === 0 ? (
+      {!isLoading && sortedScenarios.length === 0 ? (
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
             No scenarios saved yet. Create one from the{" "}
@@ -113,7 +164,7 @@ export default function ScenariosPage() {
             page.
           </CardContent>
         </Card>
-      ) : (
+      ) : !isLoading ? (
         <>
           <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
             <Table className="min-w-[960px]">
@@ -241,7 +292,7 @@ export default function ScenariosPage() {
             </Card>
           ) : null}
         </>
-      )}
+      ) : null}
 
       <Dialog
         open={Boolean(scenarioToDelete)}

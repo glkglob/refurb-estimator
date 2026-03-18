@@ -2,44 +2,38 @@
 
 AI-powered UK property refurbishment cost estimator.
 
-## Features (planned)
+## Prerequisites
+- Node.js 18+ (LTS recommended)
+- npm 9+
 
-- Room-by-room refurbishment cost breakdowns
-- Regional pricing adjusted by UK postcode
-- Predefined templates (HMO conversion, flip to sell, rental refurb)
-- Scenario comparison and budget tracking
-- Built-in UK material & labour cost library
+## Setup
+npm install
+WATCHPACK_POLLING=true npm run dev -- --webpack
+Open http://localhost:3000
+
+## Testing
+npm test
+
+## Pages
+- **/** — Quick Estimate: enter property details, get instant low/typical/high cost breakdown
+- **/rooms** — Detailed Rooms: add individual rooms for granular cost estimates
+- **/scenarios** — Scenarios: save and compare multiple estimates with profit/ROI analysis
+- **/budget** — Budget Tracker: track actual spend against planned costs per category
+
+## Customising Cost Data
+Edit `src/lib/costLibrary.ts` to adjust:
+- `baseRefurbPerM2` — overall refurb cost per m² (low/typical/high)
+- `regionalMultipliers` — price adjustment by UK region
+- `conditionMultipliers` — adjustment for property condition
+- `finishMultipliers` — adjustment for finish quality level
+- `categoryPercents` — how total cost splits across categories (must sum to 1.0)
+- `roomBaseRanges` — base cost ranges per room type
 
 ## Tech Stack
+- Next.js 14+ (App Router, webpack mode)
+- TypeScript (strict)
+- Tailwind CSS
+- Jest + ts-jest
 
-- **Framework:** Next.js (App Router, webpack mode)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS
-
-## Getting Started
-
-```bash
-npm install
-npm run dev -- --webpack
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-## Project Structure
-
-```
-src/
-├── app/
-│   ├── page.tsx          # Home / landing
-│   ├── rooms/page.tsx    # Room-by-room estimator
-│   ├── scenarios/page.tsx # Scenario comparison
-│   └── budget/page.tsx   # Budget summary
-├── components/           # Reusable UI components
-└── lib/
-    ├── costLibrary.ts    # UK cost data
-    └── estimator.ts      # Calculation engine
-```
-
-## License
-
-Private — all rights reserved.
+## Build
+npm run build

@@ -1,24 +1,45 @@
-# UK Property Refurb Estimator
+# Refurb Estimator
 
-Minimal Next.js + React + TypeScript starter with route pages for:
+AI-powered UK property refurbishment cost estimator.
 
-- Quick Estimate (`/`)
-- Detailed Rooms estimator (`/rooms`)
-- Scenario comparison (`/scenarios`)
-- Budget tracker (`/budget`)
+## Features (planned)
 
-## Run locally
+- Room-by-room refurbishment cost breakdowns
+- Regional pricing adjusted by UK postcode
+- Predefined templates (HMO conversion, flip to sell, rental refurb)
+- Scenario comparison and budget tracking
+- Built-in UK material & labour cost library
 
-1. Install dependencies:
+## Tech Stack
+
+- **Framework:** Next.js (App Router, webpack mode)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+
+## Getting Started
 
 ```bash
 npm install
+npm run dev -- --webpack
 ```
 
-2. Start development server:
+Open [http://localhost:3000](http://localhost:3000).
 
-```bash
-npm run dev
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── page.tsx          # Home / landing
+│   ├── rooms/page.tsx    # Room-by-room estimator
+│   ├── scenarios/page.tsx # Scenario comparison
+│   └── budget/page.tsx   # Budget summary
+├── components/           # Reusable UI components
+└── lib/
+    ├── costLibrary.ts    # UK cost data
+    └── estimator.ts      # Calculation engine
 ```
 
-3. Open [http://localhost:3000](http://localhost:3000).
+## License
+
+Private — all rights reserved.

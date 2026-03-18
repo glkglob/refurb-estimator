@@ -1,9 +1,22 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import EstimateResults from "@/components/EstimateResults";
-import InfoTooltip from "@/components/InfoTooltip";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
+import TermTooltip from "@/components/TermTooltip";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import { defaultCostLibrary } from "@/lib/costLibrary";
 import { estimateRooms } from "@/lib/estimator";
 import { saveScenario } from "@/lib/storage";
@@ -15,6 +28,7 @@ import type {
   RoomType,
   Scenario
 } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const regions: Region[] = [
   "London",
@@ -37,9 +51,6 @@ const roomTypes: RoomType[] = [
 const finishLevels: RoomInput["finishLevel"][] = ["budget", "standard", "premium"];
 const intensityOptions: RoomInput["intensity"][] = ["light", "full"];
 
-const inputBaseClass =
-  "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200";
-
 export default function RoomsPage() {
   const [region, setRegion] = useState<Region>("Midlands");
   const [condition, setCondition] = useState<Condition>("fair");
@@ -61,20 +72,8 @@ export default function RoomsPage() {
   ]);
   const [nextRoomId, setNextRoomId] = useState(3);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [shouldScrollToResults, setShouldScrollToResults] = useState(false);
-
-  useEffect(() => {
-    if (!saveMessage) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setSaveMessage(null);
-    }, 3000);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [saveMessage]);
+  const { toast } = useToast();
 
   function updateRoom(id: string, patch: Partial<Omit<RoomInput, "id">>) {
     setRooms((prev) =>
@@ -170,66 +169,73 @@ export default function RoomsPage() {
 
     saveScenario(scenario);
     setIsSaveModalOpen(false);
-    setSaveMessage("Scenario saved");
+    toast({
+      title: "Scenario saved",
+      description: "You can compare it on the Scenario Comparison page."
+    });
   }
 
   return (
     <section className="space-y-6">
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Detailed Rooms</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Detailed Rooms</h1>
 
-      <div className="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 sm:p-6">
-        <div className="space-y-1">
-          <label htmlFor="rooms-region" className="text-sm font-medium text-slate-700">
-            Region
-          </label>
-          <select
-            id="rooms-region"
-            value={region}
-            onChange={(event) => {
-              setRegion(event.target.value as Region);
-              setShouldScrollToResults(true);
-            }}
-            className={inputBaseClass}
-          >
-            {regions.map((regionValue) => (
-              <option key={regionValue} value={regionValue}>
-                {regionValue}
-              </option>
-            ))}
-          </select>
-        </div>
+      <Card>
+        <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor="rooms-region">Region</Label>
+            <Select
+              value={region}
+              onValueChange={(value) => {
+                setRegion(value as Region);
+                setShouldScrollToResults(true);
+              }}
+            >
+              <SelectTrigger id="rooms-region" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {regions.map((regionValue) => (
+                  <SelectItem key={regionValue} value={regionValue}>
+                    {regionValue}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="space-y-1">
-          <label htmlFor="rooms-condition" className="text-sm font-medium text-slate-700">
-            Condition
-          </label>
-          <select
-            id="rooms-condition"
-            value={condition}
-            onChange={(event) => {
-              setCondition(event.target.value as Condition);
-              setShouldScrollToResults(true);
-            }}
-            className={inputBaseClass}
-          >
-            {conditions.map((conditionValue) => (
-              <option key={conditionValue} value={conditionValue}>
-                {conditionValue}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+          <div className="space-y-1">
+            <Label htmlFor="rooms-condition">Condition</Label>
+            <Select
+              value={condition}
+              onValueChange={(value) => {
+                setCondition(value as Condition);
+                setShouldScrollToResults(true);
+              }}
+            >
+              <SelectTrigger id="rooms-condition" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {conditions.map((conditionValue) => (
+                  <SelectItem key={conditionValue} value={conditionValue}>
+                    {conditionValue}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="space-y-4">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted-foreground">
           Workscope guide:{" "}
-          <InfoTooltip
+          <TermTooltip
             term="First fix"
             explanation="Initial installation of wiring, pipes, and heating before plastering."
           />{" "}
           and{" "}
-          <InfoTooltip
+          <TermTooltip
             term="Second fix"
             explanation="Final fitting of sockets, taps, radiators, and light fixtures after plastering."
           />
@@ -240,123 +246,119 @@ export default function RoomsPage() {
           const hasAreaError = !Number.isFinite(room.areaM2) || room.areaM2 <= 0;
 
           return (
-            <article key={room.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-slate-900">Room {index + 1}</h2>
-                <button
-                  type="button"
-                  onClick={() => removeRoom(room.id)}
-                  disabled={rooms.length === 1}
-                  className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
-                >
-                  Remove
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Room type</label>
-                  <select
-                    value={room.roomType}
-                    onChange={(event) =>
-                      updateRoom(room.id, { roomType: event.target.value as RoomType })
-                    }
-                    className={inputBaseClass}
+            <Card key={room.id}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="text-lg">Room {index + 1}</CardTitle>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeRoom(room.id)}
+                    disabled={rooms.length === 1}
                   >
-                    {roomTypes.map((roomType) => (
-                      <option key={roomType} value={roomType}>
-                        {roomType}
-                      </option>
-                    ))}
-                  </select>
+                    Remove
+                  </Button>
                 </div>
+              </CardHeader>
 
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Area (m²)</label>
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    placeholder="e.g. 12"
-                    value={room.areaM2}
-                    onChange={(event) => updateRoom(room.id, { areaM2: Number(event.target.value) })}
-                    className={`${inputBaseClass} ${
-                      hasAreaError
-                        ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                        : ""
-                    }`}
-                  />
-                  {hasAreaError ? (
-                    <p className="text-sm text-red-600">Area must be greater than zero</p>
-                  ) : null}
-                </div>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label>Room type</Label>
+                    <Select
+                      value={room.roomType}
+                      onValueChange={(value) => updateRoom(room.id, { roomType: value as RoomType })}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roomTypes.map((roomType) => (
+                          <SelectItem key={roomType} value={roomType}>
+                            {roomType}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Intensity</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {intensityOptions.map((intensity) => {
-                      const isActive = room.intensity === intensity;
-                      return (
-                        <button
-                          key={intensity}
-                          type="button"
-                          onClick={() => updateRoom(room.id, { intensity })}
-                          className={`rounded-md border px-3 py-2 text-sm font-medium transition ${
-                            isActive
-                              ? "border-slate-900 bg-slate-900 text-white"
-                              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                          }`}
-                        >
-                          {intensity}
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-1">
+                    <Label>Area (m²)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      step={1}
+                      placeholder="e.g. 12"
+                      value={room.areaM2}
+                      onChange={(event) => updateRoom(room.id, { areaM2: Number(event.target.value) })}
+                      aria-invalid={hasAreaError}
+                      className={cn("w-full", hasAreaError && "border-red-500 focus-visible:ring-red-200")}
+                    />
+                    {hasAreaError ? (
+                      <p className="text-sm text-red-600">Area must be greater than zero</p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label>Intensity</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {intensityOptions.map((intensity) => {
+                        const isActive = room.intensity === intensity;
+                        return (
+                          <Button
+                            key={intensity}
+                            type="button"
+                            variant={isActive ? "default" : "outline"}
+                            onClick={() => updateRoom(room.id, { intensity })}
+                          >
+                            {intensity}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label>Finish level</Label>
+                    <Select
+                      value={room.finishLevel}
+                      onValueChange={(value) =>
+                        updateRoom(room.id, {
+                          finishLevel: value as RoomInput["finishLevel"]
+                        })
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {finishLevels.map((finishLevel) => (
+                          <SelectItem key={finishLevel} value={finishLevel}>
+                            {finishLevel}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Finish level</label>
-                  <select
-                    value={room.finishLevel}
-                    onChange={(event) =>
-                      updateRoom(room.id, {
-                        finishLevel: event.target.value as RoomInput["finishLevel"]
-                      })
-                    }
-                    className={inputBaseClass}
-                  >
-                    {finishLevels.map((finishLevel) => (
-                      <option key={finishLevel} value={finishLevel}>
-                        {finishLevel}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </article>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
 
-      <button
-        type="button"
-        onClick={addRoom}
-        className="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700"
-      >
+      <Button type="button" variant="outline" onClick={addRoom}>
+        <Plus className="size-4" />
         Add room
-      </button>
+      </Button>
 
       {calculation.error ? <p className="text-sm font-medium text-red-600">{calculation.error}</p> : null}
-      {saveMessage ? <p className="text-sm font-medium text-green-600">{saveMessage}</p> : null}
       {calculation.result ? (
         <div id="results" className="space-y-4">
-          <button
-            type="button"
-            onClick={() => setIsSaveModalOpen(true)}
-            className="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
-          >
+          <Button type="button" onClick={() => setIsSaveModalOpen(true)}>
             Save as Scenario
-          </button>
+          </Button>
           <EstimateResults result={calculation.result} />
         </div>
       ) : null}

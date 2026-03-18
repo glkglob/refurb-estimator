@@ -1,5 +1,15 @@
 import CurrencyDisplay from "@/components/CurrencyDisplay";
-import InfoTooltip from "@/components/InfoTooltip";
+import { DonutChart } from "@tremor/react";
+import TermTooltip from "@/components/TermTooltip";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import type { EstimateResult } from "@/lib/types";
 
 type EstimateResultsProps = {
@@ -7,16 +17,28 @@ type EstimateResultsProps = {
 };
 
 export default function EstimateResults({ result }: EstimateResultsProps) {
+  const gbpFormatter = new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 0
+  });
+
   const summaryCards = [
     { label: "Low", total: result.totalLow, perM2: result.costPerM2.low },
     { label: "Typical", total: result.totalTypical, perM2: result.costPerM2.typical },
     { label: "High", total: result.totalHigh, perM2: result.costPerM2.high }
   ];
+  const donutData = result.categories
+    .filter((category) => category.typical > 0)
+    .map((category) => ({
+      name: category.category.charAt(0).toUpperCase() + category.category.slice(1),
+      value: category.typical
+    }));
 
   function renderCategoryLabel(category: string) {
     if (category === "contingency") {
       return (
-        <InfoTooltip
+        <TermTooltip
           term="Contingency"
           explanation="A buffer (typically 5–10%) for unexpected costs during the refurbishment."
         />
@@ -25,7 +47,7 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
 
     if (category === "fees") {
       return (
-        <InfoTooltip
+        <TermTooltip
           term="Fees"
           explanation="Professional fees including architect, surveyor, structural engineer, and building control."
         />
@@ -39,63 +61,100 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
     <section className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row">
         {summaryCards.map((card) => (
-          <article key={card.label} className="flex-1 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-slate-600">{card.label}</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              <CurrencyDisplay amount={card.total} />
-            </p>
-            <p className="mt-2 text-sm text-slate-600">
-              <span className="font-medium text-slate-700">Cost per m²:</span>{" "}
-              <CurrencyDisplay amount={card.perM2} /> /m²
-            </p>
-          </article>
+          <Card key={card.label} className="flex-1">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{card.label}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-2xl font-semibold">
+                <CurrencyDisplay amount={card.total} />
+              </p>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Cost per m²:</span>{" "}
+                <CurrencyDisplay amount={card.perM2} /> /m²
+              </p>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-100 text-left text-slate-700">
-            <tr>
-              <th className="px-4 py-3 font-semibold">
-                <span className="inline-flex items-center gap-2">
-                  Category
-                  <span className="inline-flex items-center gap-2 text-xs font-normal text-slate-600">
-                    <InfoTooltip
-                      term="Contingency"
-                      explanation="A buffer (typically 5–10%) for unexpected costs during the refurbishment."
-                    />
-                    <InfoTooltip
-                      term="Fees"
-                      explanation="Professional fees including architect, surveyor, structural engineer, and building control."
-                    />
+      <Card>
+        <CardHeader>
+          <CardTitle>Cost Breakdown by Category</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DonutChart
+            data={donutData}
+            category="value"
+            index="name"
+            colors={[
+              "teal",
+              "cyan",
+              "blue",
+              "indigo",
+              "slate",
+              "emerald",
+              "amber",
+              "violet",
+              "rose",
+              "zinc",
+              "lime",
+              "orange"
+            ]}
+            valueFormatter={(value) => gbpFormatter.format(value)}
+            label={gbpFormatter.format(result.totalTypical)}
+            showLabel
+            className="h-56 md:h-72"
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-0">
+          <Table className="min-w-[760px]">
+            <TableHeader className="bg-muted/60">
+              <TableRow>
+                <TableHead className="px-4">
+                  <span className="inline-flex items-center gap-2">
+                    Category
+                    <span className="inline-flex items-center gap-2 text-xs font-normal text-muted-foreground">
+                      <TermTooltip
+                        term="Contingency"
+                        explanation="A buffer (typically 5–10%) for unexpected costs during the refurbishment."
+                      />
+                      <TermTooltip
+                        term="Fees"
+                        explanation="Professional fees including architect, surveyor, structural engineer, and building control."
+                      />
+                    </span>
                   </span>
-                </span>
-              </th>
-              <th className="px-4 py-3 font-semibold">Low</th>
-              <th className="px-4 py-3 font-semibold">Typical</th>
-              <th className="px-4 py-3 font-semibold">High</th>
-            </tr>
-          </thead>
-          <tbody>
+                </TableHead>
+                <TableHead className="px-4">Low</TableHead>
+                <TableHead className="px-4">Typical</TableHead>
+                <TableHead className="px-4">High</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
             {result.categories.map((category, index) => (
-              <tr key={category.category} className={index % 2 === 0 ? "bg-white" : "bg-slate-50"}>
-                <td className="px-4 py-3 font-medium text-slate-800">
+                <TableRow key={category.category} className={index % 2 === 0 ? "bg-card" : "bg-muted/20"}>
+                  <TableCell className="px-4 font-medium">
                   {renderCategoryLabel(category.category)}
-                </td>
-                <td className="px-4 py-3 text-slate-700">
+                  </TableCell>
+                  <TableCell className="px-4">
                   <CurrencyDisplay amount={category.low} />
-                </td>
-                <td className="px-4 py-3 text-slate-700">
+                  </TableCell>
+                  <TableCell className="px-4">
                   <CurrencyDisplay amount={category.typical} />
-                </td>
-                <td className="px-4 py-3 text-slate-700">
+                  </TableCell>
+                  <TableCell className="px-4">
                   <CurrencyDisplay amount={category.high} />
-                </td>
-              </tr>
+                  </TableCell>
+                </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </section>
   );
 }

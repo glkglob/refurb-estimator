@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import EstimateForm from "@/components/EstimateForm";
 import EstimateResults from "@/components/EstimateResults";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { defaultCostLibrary } from "@/lib/costLibrary";
 import { estimateProject } from "@/lib/estimator";
 import { saveScenario } from "@/lib/storage";
@@ -14,19 +16,7 @@ export default function HomePage() {
   const [result, setResult] = useState<EstimateResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!saveMessage) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setSaveMessage(null);
-    }, 3000);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [saveMessage]);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!result) {
@@ -76,33 +66,31 @@ export default function HomePage() {
 
     saveScenario(scenario);
     setIsSaveModalOpen(false);
-    setSaveMessage("Scenario saved");
+    toast({
+      title: "Scenario saved",
+      description: "You can compare it on the Scenario Comparison page."
+    });
   }
 
   return (
     <section className="space-y-6">
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Quick Estimate</h1>
-      <p className="text-sm text-slate-700">
+      <h1 className="text-3xl font-semibold tracking-tight">Quick Estimate</h1>
+      <p className="text-sm text-muted-foreground">
         Enter your property details below and click Calculate to get an instant estimate.
       </p>
       <EstimateForm onSubmit={handleSubmit} />
       {submitError ? <p className="text-sm font-medium text-red-600">{submitError}</p> : null}
-      {saveMessage ? <p className="text-sm font-medium text-green-600">{saveMessage}</p> : null}
       {result ? (
         <div id="results" className="space-y-4">
           {lastInput ? (
-            <p className="text-sm text-slate-700">
+            <p className="text-sm text-muted-foreground">
               Estimate for: {lastInput.totalAreaM2}m² {lastInput.propertyType} in {lastInput.region},{" "}
               {lastInput.condition} condition, {lastInput.finishLevel} finish
             </p>
           ) : null}
-          <button
-            type="button"
-            onClick={() => setIsSaveModalOpen(true)}
-            className="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
-          >
+          <Button type="button" onClick={() => setIsSaveModalOpen(true)}>
             Save as Scenario
-          </button>
+          </Button>
           <EstimateResults result={result} />
         </div>
       ) : null}

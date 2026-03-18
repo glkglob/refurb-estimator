@@ -1,9 +1,29 @@
 "use client";
 
+import { BarChart } from "@tremor/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
-import InfoTooltip from "@/components/InfoTooltip";
+import TermTooltip from "@/components/TermTooltip";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import { deleteScenario, loadScenarios } from "@/lib/storage";
 import type { Scenario } from "@/lib/types";
 
@@ -12,7 +32,13 @@ function formatRoi(value: number): string {
 }
 
 export default function ScenariosPage() {
+  const gbpFormatter = new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 0
+  });
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [scenarioToDelete, setScenarioToDelete] = useState<Scenario | null>(null);
 
   useEffect(() => {
     setScenarios(loadScenarios());
@@ -25,117 +51,223 @@ export default function ScenariosPage() {
       ),
     [scenarios]
   );
+  const scenarioCostChartData = useMemo(
+    () =>
+      sortedScenarios.map((scenario) => ({
+        name: scenario.name,
+        Low: scenario.result.totalLow,
+        Typical: scenario.result.totalTypical,
+        High: scenario.result.totalHigh
+      })),
+    [sortedScenarios]
+  );
+  const investmentChartData = useMemo(
+    () =>
+      sortedScenarios
+        .filter(
+          (scenario) =>
+            typeof scenario.purchasePrice === "number" && typeof scenario.gdv === "number"
+        )
+        .map((scenario) => {
+          const purchase = scenario.purchasePrice as number;
+          const gdv = scenario.gdv as number;
+          const refurbCost = scenario.result.totalTypical;
+          const profit = gdv - purchase - refurbCost;
 
-  function handleDelete(scenario: Scenario): void {
-    if (!window.confirm(`Delete scenario ${scenario.name}?`)) {
+          return {
+            name: scenario.name,
+            Purchase: purchase,
+            "Refurb Cost": refurbCost,
+            GDV: gdv,
+            Profit: profit
+          };
+        }),
+    [sortedScenarios]
+  );
+
+  function handleDeleteConfirm(): void {
+    if (!scenarioToDelete) {
       return;
     }
 
-    deleteScenario(scenario.id);
-    setScenarios((prev) => prev.filter((item) => item.id !== scenario.id));
+    deleteScenario(scenarioToDelete.id);
+    setScenarios((prev) => prev.filter((item) => item.id !== scenarioToDelete.id));
+    setScenarioToDelete(null);
   }
 
   return (
     <section className="space-y-6">
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Scenario Comparison</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Scenario Comparison</h1>
 
       {sortedScenarios.length === 0 ? (
-        <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">
-          No scenarios saved yet. Create one from the{" "}
-          <Link href="/" className="font-medium text-slate-900 underline">
-            Quick Estimate
-          </Link>{" "}
-          or{" "}
-          <Link href="/rooms" className="font-medium text-slate-900 underline">
-            Detailed Rooms
-          </Link>{" "}
-          page.
-        </p>
+        <Card>
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            No scenarios saved yet. Create one from the{" "}
+            <Link href="/" className="font-medium text-foreground underline">
+              Quick Estimate
+            </Link>{" "}
+            or{" "}
+            <Link href="/rooms" className="font-medium text-foreground underline">
+              Detailed Rooms
+            </Link>{" "}
+            page.
+          </CardContent>
+        </Card>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-          <table className="min-w-[960px] w-full text-sm">
-            <thead className="bg-slate-100 text-left text-slate-700">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Name</th>
-                <th className="px-4 py-3 font-semibold">Total (Typical)</th>
-                <th className="px-4 py-3 font-semibold">£/m²</th>
-                <th className="px-4 py-3 font-semibold">Purchase Price</th>
-                <th className="px-4 py-3 font-semibold">
-                  <InfoTooltip
-                    term="GDV"
-                    explanation="Gross Development Value — the estimated market value of the property after refurbishment."
-                  />
-                </th>
-                <th className="px-4 py-3 font-semibold">Profit</th>
-                <th className="px-4 py-3 font-semibold">
-                  <span className="inline-flex items-center gap-1">
-                    <InfoTooltip
+        <>
+          <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
+            <Table className="min-w-[960px]">
+              <TableHeader className="bg-muted/60">
+                <TableRow>
+                  <TableHead className="px-4">Name</TableHead>
+                  <TableHead className="px-4">Total (Typical)</TableHead>
+                  <TableHead className="px-4">£/m²</TableHead>
+                  <TableHead className="px-4">Purchase Price</TableHead>
+                  <TableHead className="px-4">
+                    <TermTooltip
+                      term="GDV"
+                      explanation="Gross Development Value — the estimated market value of the property after refurbishment."
+                    />
+                  </TableHead>
+                  <TableHead className="px-4">Profit</TableHead>
+                  <TableHead className="px-4">
+                    <TermTooltip
                       term="ROI"
                       explanation="Return on Investment — profit as a percentage of total purchase and refurbishment costs."
                     />
-                    %
-                  </span>
-                </th>
-                <th className="px-4 py-3 font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedScenarios.map((scenario, index) => {
-                const totalTypical = scenario.result.totalTypical;
-                const costPerM2Typical = scenario.result.costPerM2.typical;
-                const purchasePrice = scenario.purchasePrice;
-                const gdv = scenario.gdv;
-                const hasFinancials =
-                  typeof purchasePrice === "number" && typeof gdv === "number";
-                const profit = hasFinancials ? gdv - purchasePrice - totalTypical : null;
-                const roi =
-                  hasFinancials && profit !== null
-                    ? (profit / (purchasePrice + totalTypical)) * 100
-                    : null;
+                  </TableHead>
+                  <TableHead className="px-4">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedScenarios.map((scenario, index) => {
+                  const totalTypical = scenario.result.totalTypical;
+                  const costPerM2Typical = scenario.result.costPerM2.typical;
+                  const purchasePrice = scenario.purchasePrice;
+                  const gdv = scenario.gdv;
+                  const hasFinancials =
+                    typeof purchasePrice === "number" && typeof gdv === "number";
+                  const profit = hasFinancials ? gdv - purchasePrice - totalTypical : null;
+                  const roi =
+                    hasFinancials && profit !== null
+                      ? (profit / (purchasePrice + totalTypical)) * 100
+                      : null;
+                  const roiPositive = typeof roi === "number" ? roi >= 0 : false;
 
-                return (
-                  <tr key={scenario.id} className={index % 2 === 0 ? "bg-white" : "bg-slate-50"}>
-                    <td className="px-4 py-3 font-medium text-slate-900">{scenario.name}</td>
-                    <td className="px-4 py-3 text-slate-700">
-                      <CurrencyDisplay amount={totalTypical} />
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      <CurrencyDisplay amount={costPerM2Typical} />
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {typeof purchasePrice === "number" ? (
-                        <CurrencyDisplay amount={purchasePrice} />
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {typeof gdv === "number" ? (
-                        <CurrencyDisplay amount={gdv} />
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {profit !== null ? <CurrencyDisplay amount={profit} /> : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{roi !== null ? formatRoi(roi) : "—"}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(scenario)}
-                        className="rounded-md bg-red-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-red-700"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  return (
+                    <TableRow key={scenario.id} className={index % 2 !== 0 ? "bg-muted/20" : ""}>
+                      <TableCell className="px-4 font-medium">{scenario.name}</TableCell>
+                      <TableCell className="px-4">
+                        <CurrencyDisplay amount={totalTypical} />
+                      </TableCell>
+                      <TableCell className="px-4">
+                        <CurrencyDisplay amount={costPerM2Typical} />
+                      </TableCell>
+                      <TableCell className="px-4">
+                        {typeof purchasePrice === "number" ? (
+                          <CurrencyDisplay amount={purchasePrice} />
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell className="px-4">
+                        {typeof gdv === "number" ? <CurrencyDisplay amount={gdv} /> : "—"}
+                      </TableCell>
+                      <TableCell className="px-4">
+                        {profit !== null ? <CurrencyDisplay amount={profit} /> : "—"}
+                      </TableCell>
+                      <TableCell className="px-4">
+                        {roi !== null ? (
+                          <Badge
+                            variant={roiPositive ? "default" : "destructive"}
+                            className="font-medium"
+                          >
+                            {formatRoi(roi)}
+                          </Badge>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell className="px-4">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setScenarioToDelete(scenario)}
+                        >
+                          Delete
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          {scenarioCostChartData.length >= 2 ? (
+            <Card className="bg-card">
+              <CardHeader>
+                <CardTitle>Scenario Cost Comparison</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BarChart
+                  data={scenarioCostChartData}
+                  index="name"
+                  categories={["Low", "Typical", "High"]}
+                  colors={["emerald", "teal", "rose"]}
+                  valueFormatter={(value) => gbpFormatter.format(value)}
+                  className="h-72"
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {investmentChartData.length > 0 ? (
+            <Card className="bg-card">
+              <CardHeader>
+                <CardTitle>Investment Analysis</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BarChart
+                  data={investmentChartData}
+                  index="name"
+                  categories={["Purchase", "Refurb Cost", "GDV", "Profit"]}
+                  colors={["slate", "teal", "emerald", "cyan"]}
+                  valueFormatter={(value) => gbpFormatter.format(value)}
+                  className="h-72"
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+        </>
       )}
+
+      <Dialog
+        open={Boolean(scenarioToDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setScenarioToDelete(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Scenario</DialogTitle>
+            <DialogDescription>
+              {scenarioToDelete ? `Delete scenario ${scenarioToDelete.name}?` : "Delete scenario?"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="border-0 bg-transparent p-0">
+            <Button type="button" variant="outline" onClick={() => setScenarioToDelete(null)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleDeleteConfirm}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

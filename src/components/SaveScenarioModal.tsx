@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import InfoTooltip from "@/components/InfoTooltip";
+import TermTooltip from "@/components/TermTooltip";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type SaveScenarioModalProps = {
   isOpen: boolean;
@@ -25,22 +36,8 @@ export default function SaveScenarioModal({
       setPurchasePrice("");
       setGdv("");
       setNameError(null);
-      return;
     }
-
-    function handleKeyDown(event: KeyboardEvent): void {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) {
-    return null;
-  }
+  }, [isOpen]);
 
   function parseOptionalNumber(value: string): number | undefined {
     const trimmed = value.trim();
@@ -69,24 +66,26 @@ export default function SaveScenarioModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
           onClose();
         }
       }}
-      role="presentation"
     >
-      <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl sm:p-6">
-        <h2 className="text-xl font-semibold text-slate-900">Save Scenario</h2>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Save Scenario</DialogTitle>
+          <DialogDescription>
+            Save this estimate so you can compare scenarios and track budget variance.
+          </DialogDescription>
+        </DialogHeader>
 
-        <form onSubmit={handleSave} className="mt-4 space-y-4">
+        <form onSubmit={handleSave} className="space-y-4">
           <div className="space-y-1">
-            <label htmlFor="scenario-name" className="text-sm font-medium text-slate-700">
-              Scenario name
-            </label>
-            <input
+            <Label htmlFor="scenario-name">Scenario name</Label>
+            <Input
               id="scenario-name"
               type="text"
               value={name}
@@ -96,63 +95,55 @@ export default function SaveScenarioModal({
                   setNameError(null);
                 }
               }}
-              className={`w-full rounded-md border px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:ring-2 ${
-                nameError
-                  ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                  : "border-slate-300 focus:border-slate-500 focus:ring-slate-200"
-              }`}
+              aria-invalid={Boolean(nameError)}
+              className={nameError ? "border-red-500 focus-visible:ring-red-200" : ""}
             />
             {nameError ? <p className="text-sm text-red-600">{nameError}</p> : null}
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="scenario-purchase-price" className="text-sm font-medium text-slate-700">
-              Purchase price
-            </label>
-            <input
+            <Label htmlFor="scenario-purchase-price">Purchase price</Label>
+            <Input
               id="scenario-purchase-price"
               type="number"
               placeholder="e.g. 150000"
               value={purchasePrice}
               onChange={(event) => setPurchasePrice(event.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="scenario-gdv" className="text-sm font-medium text-slate-700">
-              <InfoTooltip
+            <Label htmlFor="scenario-gdv">
+              <TermTooltip
                 term="GDV"
                 explanation="Gross Development Value — the estimated market value of the property after refurbishment."
               />
-            </label>
-            <input
+            </Label>
+            <Input
               id="scenario-gdv"
               type="number"
               placeholder="e.g. 250000"
               value={gdv}
               onChange={(event) => setGdv(event.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
             />
           </div>
 
-          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-            <button
+          <DialogFooter className="border-0 bg-transparent p-0">
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
             >
               Save
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

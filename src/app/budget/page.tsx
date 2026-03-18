@@ -1,9 +1,28 @@
 "use client";
 
+import { BarChart } from "@tremor/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
-import InfoTooltip from "@/components/InfoTooltip";
+import TermTooltip from "@/components/TermTooltip";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import { loadBudgetActuals, saveBudgetActuals } from "@/lib/budget";
 import { loadScenarios } from "@/lib/storage";
 import type { CostCategory, Scenario } from "@/lib/types";
@@ -41,25 +60,33 @@ function getStatus(actual: number | undefined, planned: number): BudgetStatus {
   return "alert";
 }
 
-function getStatusDisplay(status: BudgetStatus) {
+function getStatusBadge(status: BudgetStatus) {
   if (status === "ok") {
-    return <span className="text-green-600">✓</span>;
+    return <Badge className="bg-green-600 text-white">✓ On budget</Badge>;
   }
 
   if (status === "warning") {
-    return <span className="text-amber-500">⚠</span>;
+    return (
+      <Badge className="bg-amber-500 text-white hover:bg-amber-500/90">
+        ⚠ Near limit
+      </Badge>
+    );
   }
 
   if (status === "alert") {
-    return <span className="text-red-600">✗</span>;
+    return <Badge variant="destructive">✗ Over budget</Badge>;
   }
 
-  return <span className="text-slate-400">—</span>;
+  return (
+    <Badge variant="outline" className="text-muted-foreground">
+      —
+    </Badge>
+  );
 }
 
 function getVarianceClass(actual: number | undefined, variance: number | undefined): string {
   if (typeof actual !== "number" || typeof variance !== "number") {
-    return "text-slate-500";
+    return "text-muted-foreground";
   }
 
   if (variance > 0) {
@@ -70,7 +97,7 @@ function getVarianceClass(actual: number | undefined, variance: number | undefin
     return "text-green-600";
   }
 
-  return "text-slate-700";
+  return "text-foreground";
 }
 
 function formatCategoryLabel(category: CostCategory): string {
@@ -80,7 +107,7 @@ function formatCategoryLabel(category: CostCategory): string {
 function renderCategoryLabel(category: CostCategory) {
   if (category === "contingency") {
     return (
-      <InfoTooltip
+      <TermTooltip
         term="Contingency"
         explanation="A buffer (typically 5–10%) for unexpected costs during the refurbishment."
       />
@@ -89,7 +116,7 @@ function renderCategoryLabel(category: CostCategory) {
 
   if (category === "fees") {
     return (
-      <InfoTooltip
+      <TermTooltip
         term="Fees"
         explanation="Professional fees including architect, surveyor, structural engineer, and building control."
       />
@@ -100,6 +127,11 @@ function renderCategoryLabel(category: CostCategory) {
 }
 
 export default function BudgetPage() {
+  const gbpFormatter = new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 0
+  });
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>("");
   const [actuals, setActuals] = useState<Partial<Record<CostCategory, number>>>({});
@@ -186,18 +218,21 @@ export default function BudgetPage() {
   if (scenarios.length === 0) {
     return (
       <section className="space-y-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Budget Tracker</h1>
-        <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">
-          No scenarios saved yet. Save a scenario first to start tracking your budget. Create one from{" "}
-          <Link href="/" className="font-medium text-slate-900 underline">
-            Quick Estimate
-          </Link>{" "}
-          or{" "}
-          <Link href="/rooms" className="font-medium text-slate-900 underline">
-            Detailed Rooms
-          </Link>{" "}
-          .
-        </p>
+        <h1 className="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
+        <Card>
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            No scenarios saved yet. Save a scenario first to start tracking your budget. Create
+            one from{" "}
+            <Link href="/" className="font-medium text-foreground underline">
+              Quick Estimate
+            </Link>{" "}
+            or{" "}
+            <Link href="/rooms" className="font-medium text-foreground underline">
+              Detailed Rooms
+            </Link>
+            .
+          </CardContent>
+        </Card>
       </section>
     );
   }
@@ -225,95 +260,122 @@ export default function BudgetPage() {
   const totalVariance =
     typeof totalActual === "number" ? totalActual - totalPlanned : undefined;
   const totalStatus = getStatus(totalActual, totalPlanned);
+  const plannedVsActualChartData = rows
+    .filter((row) => row.planned > 0)
+    .map((row) => ({
+      name: formatCategoryLabel(row.category),
+      Planned: row.planned,
+      Actual: typeof row.actual === "number" ? row.actual : 0
+    }));
 
   return (
     <section className="space-y-6">
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Budget Tracker</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <label htmlFor="scenario-select" className="mb-2 block text-sm font-medium text-slate-700">
-          Scenario
-        </label>
-        <select
-          id="scenario-select"
-          value={selectedScenarioId}
-          onChange={(event) => setSelectedScenarioId(event.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
-        >
-          {scenarios.map((scenario) => (
-            <option key={scenario.id} value={scenario.id}>
-              {scenario.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Card>
+        <CardContent className="p-4">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Scenario</p>
+            <Select value={selectedScenarioId} onValueChange={setSelectedScenarioId}>
+              <SelectTrigger id="scenario-select" className="w-full">
+                <SelectValue placeholder="Select scenario" />
+              </SelectTrigger>
+              <SelectContent>
+                {scenarios.map((scenario) => (
+                  <SelectItem key={scenario.id} value={scenario.id}>
+                    {scenario.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {selectedScenario ? (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-          <table className="min-w-[980px] w-full text-sm">
-            <thead className="bg-slate-100 text-left text-slate-700">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Category</th>
-                <th className="px-4 py-3 font-semibold">Planned (Typical)</th>
-                <th className="px-4 py-3 font-semibold">Actual</th>
-                <th className="px-4 py-3 font-semibold">Variance</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, index) => (
-                <tr key={row.category} className={index % 2 === 0 ? "bg-white" : "bg-slate-50"}>
-                  <td className="px-4 py-3 font-medium text-slate-900">
-                    {renderCategoryLabel(row.category)}
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">
-                    <CurrencyDisplay amount={row.planned} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      placeholder="£0"
-                      value={typeof row.actual === "number" ? row.actual : ""}
-                      onChange={(event) => handleActualChange(row.category, event.target.value)}
-                      className="w-full max-w-40 rounded-md border border-slate-300 px-3 py-2 text-right text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                    />
-                  </td>
-                  <td className={`px-4 py-3 ${getVarianceClass(row.actual, row.variance)}`}>
-                    {typeof row.variance === "number" ? (
-                      <CurrencyDisplay amount={row.variance} />
+        <>
+          <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
+            <Table className="min-w-[980px]">
+              <TableHeader className="bg-muted/60">
+                <TableRow>
+                  <TableHead className="px-4">Category</TableHead>
+                  <TableHead className="px-4">Planned (Typical)</TableHead>
+                  <TableHead className="px-4">Actual</TableHead>
+                  <TableHead className="px-4">Variance</TableHead>
+                  <TableHead className="px-4">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row, index) => (
+                  <TableRow key={row.category} className={index % 2 !== 0 ? "bg-muted/20" : ""}>
+                    <TableCell className="px-4 font-medium">{renderCategoryLabel(row.category)}</TableCell>
+                    <TableCell className="px-4">
+                      <CurrencyDisplay amount={row.planned} />
+                    </TableCell>
+                    <TableCell className="px-4">
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        placeholder="£0"
+                        value={typeof row.actual === "number" ? row.actual : ""}
+                        onChange={(event) => handleActualChange(row.category, event.target.value)}
+                        className="h-8 w-full max-w-40 text-right"
+                      />
+                    </TableCell>
+                    <TableCell className={`px-4 ${getVarianceClass(row.actual, row.variance)}`}>
+                      {typeof row.variance === "number" ? (
+                        <CurrencyDisplay amount={row.variance} />
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4">{getStatusBadge(row.status)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="bg-muted/50 font-semibold">
+                  <TableCell className="px-4">Total</TableCell>
+                  <TableCell className="px-4">
+                    <CurrencyDisplay amount={totalPlanned} />
+                  </TableCell>
+                  <TableCell className="px-4">
+                    {typeof totalActual === "number" ? (
+                      <CurrencyDisplay amount={totalActual} />
                     ) : (
                       "—"
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-lg">{getStatusDisplay(row.status)}</td>
-                </tr>
-              ))}
-              <tr className="border-t border-slate-300 bg-slate-100 font-semibold">
-                <td className="px-4 py-3 text-slate-900">Total</td>
-                <td className="px-4 py-3 text-slate-900">
-                  <CurrencyDisplay amount={totalPlanned} />
-                </td>
-                <td className="px-4 py-3 text-slate-900">
-                  {typeof totalActual === "number" ? (
-                    <CurrencyDisplay amount={totalActual} />
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className={`px-4 py-3 ${getVarianceClass(totalActual, totalVariance)}`}>
-                  {typeof totalVariance === "number" ? (
-                    <CurrencyDisplay amount={totalVariance} />
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-4 py-3 text-lg">{getStatusDisplay(totalStatus)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                  </TableCell>
+                  <TableCell className={`px-4 ${getVarianceClass(totalActual, totalVariance)}`}>
+                    {typeof totalVariance === "number" ? (
+                      <CurrencyDisplay amount={totalVariance} />
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4">{getStatusBadge(totalStatus)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+
+          {hasAnyActual ? (
+            <Card className="bg-card">
+              <CardHeader>
+                <CardTitle>Planned vs Actual by Category</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BarChart
+                  data={plannedVsActualChartData}
+                  index="name"
+                  categories={["Planned", "Actual"]}
+                  colors={["teal", "slate"]}
+                  valueFormatter={(value) => gbpFormatter.format(value)}
+                  className="h-72"
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+        </>
       ) : null}
     </section>
   );

@@ -84,6 +84,12 @@ export type Scenario = {
   gdv?: number;
 };
 
+export type BudgetActuals = {
+  scenarioId: string;
+  actuals: Partial<Record<CostCategory, number>>;
+  updatedAt: string;
+};
+
 export type CostLibrary = {
   baseRefurbPerM2: {
     low: number;

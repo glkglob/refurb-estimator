@@ -1,10 +1,4 @@
-import type { CostCategory } from "./types";
-
-export interface BudgetActuals {
-  scenarioId: string;
-  actuals: Partial<Record<CostCategory, number>>;
-  updatedAt: string;
-}
+import type { BudgetActuals } from "./types";
 
 const BUDGET_KEY_PREFIX = "refurb-budget-";
 

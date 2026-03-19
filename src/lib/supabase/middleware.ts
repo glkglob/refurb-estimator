@@ -1,8 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-const PROTECTED_ROUTES: string[] = [];
-const PUBLIC_ROUTES = ["/", "/rooms", "/auth/login", "/auth/signup"];
+const PROTECTED_ROUTES: string[] = ["/scenarios", "/budget"];
+const PUBLIC_ROUTES = ["/", "/rooms", "/photo", "/auth/login", "/auth/signup"];
 
 function matchesRoute(pathname: string, route: string): boolean {
   return pathname === route || pathname.startsWith(`${route}/`);

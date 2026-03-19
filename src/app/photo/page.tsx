@@ -1,8 +1,10 @@
 "use client";
 
 import { AlertCircle, Camera, RefreshCw, Sparkles, Upload } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import EstimateResults from "@/components/EstimateResults";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -12,21 +14,10 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import type { EstimateInput, EstimateResult, Region } from "@/lib/types";
 
-const regions: Region[] = [
-  "London",
-  "SouthEast",
-  "Midlands",
-  "North",
-  "Scotland",
-  "Wales"
-];
-
-const supportedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const maxImageBytes = 20 * 1024 * 1024;
-
-type PhotoEstimateApiResponse = {
+type PhotoEstimateResponse = {
   aiAnalysis: {
     propertyType: string;
     totalAreaM2: number;
@@ -40,64 +31,76 @@ type PhotoEstimateApiResponse = {
   estimateResult: EstimateResult;
 };
 
-function getBase64ByteSize(dataUrl: string): number {
+const supportedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const maxBytes = 20 * 1024 * 1024;
+const regions: Region[] = [
+  "London",
+  "SouthEast",
+  "Midlands",
+  "North",
+  "Scotland",
+  "Wales"
+];
+
+function estimateDataUrlBytes(dataUrl: string): number {
   const commaIndex = dataUrl.indexOf(",");
-  const base64 = commaIndex >= 0 ? dataUrl.slice(commaIndex + 1) : dataUrl;
-  const sanitized = base64.replace(/\s/g, "");
-  const paddingLength = sanitized.endsWith("==")
+  const base64Payload = commaIndex >= 0 ? dataUrl.slice(commaIndex + 1) : dataUrl;
+  const compactPayload = base64Payload.replace(/\s/g, "");
+  const padding = compactPayload.endsWith("==")
     ? 2
-    : sanitized.endsWith("=")
+    : compactPayload.endsWith("=")
       ? 1
       : 0;
-  return Math.floor((sanitized.length * 3) / 4) - paddingLength;
+  return Math.floor((compactPayload.length * 3) / 4) - padding;
 }
 
-function getErrorMessage(payload: unknown, fallback: string): string {
+function parseApiError(payload: unknown): string {
   if (payload && typeof payload === "object") {
-    const record = payload as Record<string, unknown>;
-    if (typeof record.message === "string" && record.message.trim()) {
-      return record.message;
+    const data = payload as Record<string, unknown>;
+    if (typeof data.message === "string" && data.message.trim()) {
+      return data.message;
     }
-    if (typeof record.error === "string" && record.error.trim()) {
-      return record.error;
+    if (typeof data.error === "string" && data.error.trim()) {
+      return data.error;
     }
   }
-
-  return fallback;
+  return "Unable to analyse the photo. Please try again.";
 }
 
-function isPhotoEstimateApiResponse(payload: unknown): payload is PhotoEstimateApiResponse {
+function isPhotoEstimateResponse(payload: unknown): payload is PhotoEstimateResponse {
   if (!payload || typeof payload !== "object") {
     return false;
   }
-
-  const record = payload as Record<string, unknown>;
-  return Boolean(record.aiAnalysis && record.estimateInput && record.estimateResult);
+  const data = payload as Record<string, unknown>;
+  return Boolean(data.aiAnalysis && data.estimateInput && data.estimateResult);
 }
 
-async function resizeImageToDataUrl(file: File): Promise<string> {
+async function resizeToDataUrl(file: File): Promise<string> {
   const objectUrl = URL.createObjectURL(file);
 
   try {
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Unable to load image"));
+      img.onerror = () => reject(new Error("Unable to read image"));
       img.src = objectUrl;
     });
 
     const maxDimension = 2048;
-    const widthRatio = maxDimension / image.naturalWidth;
-    const heightRatio = maxDimension / image.naturalHeight;
-    const scale = Math.min(1, widthRatio, heightRatio);
+    const scale = Math.min(
+      1,
+      maxDimension / image.naturalWidth,
+      maxDimension / image.naturalHeight
+    );
+
     const targetWidth = Math.max(1, Math.round(image.naturalWidth * scale));
     const targetHeight = Math.max(1, Math.round(image.naturalHeight * scale));
 
     const canvas = document.createElement("canvas");
     canvas.width = targetWidth;
     canvas.height = targetHeight;
-    const context = canvas.getContext("2d");
 
+    const context = canvas.getContext("2d");
     if (!context) {
       throw new Error("Unable to process image");
     }
@@ -109,7 +112,22 @@ async function resizeImageToDataUrl(file: File): Promise<string> {
   }
 }
 
-export default function PhotoEstimatePage() {
+function labelForRegion(region: Region): string {
+  return region === "SouthEast" ? "South East" : region;
+}
+
+function confidenceBadgeClass(confidence: string): string {
+  switch (confidence) {
+    case "high":
+      return "border-emerald-300 bg-emerald-50 text-emerald-700";
+    case "medium":
+      return "border-amber-300 bg-amber-50 text-amber-700";
+    default:
+      return "border-red-300 bg-red-50 text-red-700";
+  }
+}
+
+export default function PhotoPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [regionOverride, setRegionOverride] = useState<Region | "auto">("auto");
@@ -141,34 +159,33 @@ export default function PhotoEstimatePage() {
     };
   }, [previewUrl]);
 
-  function clearPreview(url: string | null) {
+  const refineHref = useMemo(() => {
+    if (!result) {
+      return "/";
+    }
+
+    const params = new URLSearchParams({
+      region: result.estimateInput.region,
+      totalAreaM2: String(result.estimateInput.totalAreaM2),
+      condition: result.estimateInput.condition,
+      finishLevel: result.estimateInput.finishLevel,
+      propertyType: result.estimateInput.propertyType
+    });
+    return `/?${params.toString()}`;
+  }, [result]);
+
+  function revokePreview(url: string | null) {
     if (url) {
       URL.revokeObjectURL(url);
     }
   }
 
-  function handleFileSelection(file: File | null) {
-    if (!file) {
-      return;
-    }
-
-    if (!supportedMimeTypes.has(file.type)) {
-      setError("Please upload a JPEG, PNG, or WebP image.");
-      return;
-    }
-
-    clearPreview(previewUrl);
-    const nextPreviewUrl = URL.createObjectURL(file);
-    setSelectedFile(file);
-    setPreviewUrl(nextPreviewUrl);
-    setError(null);
-    setResult(null);
-  }
-
   function resetAll() {
-    clearPreview(previewUrl);
+    revokePreview(previewUrl);
     setSelectedFile(null);
     setPreviewUrl(null);
+    setRegionOverride("auto");
+    setIsAnalysing(false);
     setError(null);
     setResult(null);
     if (uploadInputRef.current) {
@@ -179,9 +196,33 @@ export default function PhotoEstimatePage() {
     }
   }
 
+  function handleFile(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    if (!supportedTypes.has(file.type)) {
+      setError("Please upload a JPEG, PNG, or WebP image.");
+      return;
+    }
+
+    if (file.size > maxBytes) {
+      setError("Image is too large. Maximum size is 20MB.");
+      return;
+    }
+
+    revokePreview(previewUrl);
+    const nextPreviewUrl = URL.createObjectURL(file);
+
+    setSelectedFile(file);
+    setPreviewUrl(nextPreviewUrl);
+    setError(null);
+    setResult(null);
+  }
+
   async function handleAnalyse() {
     if (!selectedFile) {
-      setError("Please upload a property photo before analysing.");
+      setError("Please select a property photo first.");
       return;
     }
 
@@ -189,36 +230,31 @@ export default function PhotoEstimatePage() {
     setError(null);
 
     try {
-      const resizedImage = await resizeImageToDataUrl(selectedFile);
-      if (getBase64ByteSize(resizedImage) > maxImageBytes) {
-        setResult(null);
-        setError("Image is too large after processing. Please choose a smaller image.");
-        return;
-      }
-
-      const payload: { image: string; region?: Region } = { image: resizedImage };
-      if (regionOverride !== "auto") {
-        payload.region = regionOverride;
+      const base64DataUrl = await resizeToDataUrl(selectedFile);
+      if (estimateDataUrlBytes(base64DataUrl) > maxBytes) {
+        throw new Error("Image is too large after processing. Please use a smaller photo.");
       }
 
       const response = await fetch("/api/ai/photo-estimate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image: base64DataUrl,
+          region: regionOverride !== "auto" ? regionOverride : undefined
+        })
       });
 
-      const data = (await response.json().catch(() => null)) as unknown;
+      const payload = (await response.json().catch(() => null)) as unknown;
+
       if (!response.ok) {
-        throw new Error(getErrorMessage(data, "Failed to analyse image"));
+        throw new Error(parseApiError(payload));
       }
 
-      if (!isPhotoEstimateApiResponse(data)) {
-        throw new Error("Unexpected response from AI estimate API");
+      if (!isPhotoEstimateResponse(payload)) {
+        throw new Error("Unexpected response from the AI service.");
       }
 
-      setResult(data);
+      setResult(payload);
       requestAnimationFrame(() => {
         document.getElementById("photo-results")?.scrollIntoView({ behavior: "smooth" });
       });
@@ -227,7 +263,7 @@ export default function PhotoEstimatePage() {
       setError(
         analysisError instanceof Error
           ? analysisError.message
-          : "Unable to analyse image right now. Please try again."
+          : "Unable to analyse the photo. Please try again."
       );
     } finally {
       setIsAnalysing(false);
@@ -237,24 +273,47 @@ export default function PhotoEstimatePage() {
   return (
     <section className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">AI Estimate</h1>
+        <h1 className="text-2xl font-semibold">AI Photo Estimate</h1>
         <p className="text-sm text-muted-foreground">
-          Upload a property photo and get an AI-assisted refurbishment estimate in seconds.
+          Upload a property photo and get an instant refurbishment cost estimate powered by AI.
         </p>
       </div>
 
-      <Card className="shadow-sm">
+      <Card className="mx-auto w-full max-w-2xl shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Sparkles className="size-5 text-primary" />
-            Photo Analysis
-          </CardTitle>
+          <CardTitle className="text-lg">Upload Property Photo</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-5">
+        <CardContent className="space-y-4">
+          <input
+            ref={uploadInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            capture="environment"
+            className="hidden"
+            onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
+          />
+
           <div
-            className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
-              isDragging ? "border-primary bg-primary/5" : "border-border bg-muted/20"
-            }`}
+            role="button"
+            tabIndex={0}
+            className={cn(
+              "rounded-lg border-2 border-dashed border-muted-foreground/25 p-6 text-center transition-colors hover:border-primary/50",
+              isDragging && "border-primary bg-primary/5"
+            )}
+            onClick={() => uploadInputRef.current?.click()}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                uploadInputRef.current?.click();
+              }
+            }}
             onDragOver={(event) => {
               event.preventDefault();
               setIsDragging(true);
@@ -266,112 +325,107 @@ export default function PhotoEstimatePage() {
             onDrop={(event) => {
               event.preventDefault();
               setIsDragging(false);
-              const droppedFile = event.dataTransfer.files?.[0] ?? null;
-              handleFileSelection(droppedFile);
+              handleFile(event.dataTransfer.files?.[0] ?? null);
             }}
           >
-            <input
-              ref={uploadInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={(event) => handleFileSelection(event.target.files?.[0] ?? null)}
-            />
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              capture="environment"
-              className="hidden"
-              onChange={(event) => handleFileSelection(event.target.files?.[0] ?? null)}
-            />
-
             <Upload className="mx-auto mb-3 size-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              Drag and drop a photo, or choose upload options below.
+            <p className="text-sm font-medium text-foreground">
+              Drag & drop a property photo or click to browse
             </p>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <p className="mt-1 text-xs text-muted-foreground">JPEG, PNG, or WebP · Max 20MB</p>
+
+            <div className="mt-4 sm:hidden">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => uploadInputRef.current?.click()}
-              >
-                <Upload className="size-4" />
-                Upload image
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => cameraInputRef.current?.click()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  cameraInputRef.current?.click();
+                }}
               >
                 <Camera className="size-4" />
-                Use camera
-              </Button>
-              {selectedFile ? (
-                <Button type="button" variant="ghost" onClick={resetAll}>
-                  <RefreshCw className="size-4" />
-                  Clear
-                </Button>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">Region override (optional)</p>
-              <Select
-                value={regionOverride}
-                onValueChange={(value) => setRegionOverride(value as Region | "auto")}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Auto-detect region" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Auto-detect</SelectItem>
-                  {regions.map((region) => (
-                    <SelectItem key={region} value={region}>
-                      {region}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end">
-              <Button
-                type="button"
-                variant="default"
-                className="w-full sm:w-auto"
-                disabled={!selectedFile || isAnalysing}
-                onClick={() => void handleAnalyse()}
-              >
-                {isAnalysing ? <RefreshCw className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-                {isAnalysing ? "Analysing photo..." : "Analyse photo"}
+                Use Camera
               </Button>
             </div>
           </div>
 
-          {previewUrl ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">Selected image preview</p>
-              <div className="overflow-hidden rounded-lg border bg-card">
+          {selectedFile && previewUrl ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-muted/20 p-3">
                 <img
                   src={previewUrl}
-                  alt="Selected property preview"
-                  className="max-h-[420px] w-full object-cover"
+                  alt="Selected property photo preview"
+                  className="mx-auto max-h-[300px] w-full rounded object-contain"
                 />
               </div>
-              {selectedFile ? (
-                <p className="text-xs text-muted-foreground">
-                  {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
-                </p>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Region preference</p>
+                  <Select
+                    value={regionOverride}
+                    onValueChange={(value) => setRegionOverride(value as Region | "auto")}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Auto-detect (let AI guess)</SelectItem>
+                      {regions.map((region) => (
+                        <SelectItem key={region} value={region}>
+                          {labelForRegion(region)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-end gap-2">
+                  <Button
+                    type="button"
+                    variant="default"
+                    disabled={isAnalysing || !selectedFile}
+                    onClick={() => void handleAnalyse()}
+                    className="w-full sm:w-auto"
+                  >
+                    {isAnalysing ? (
+                      <RefreshCw className="size-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="size-4" />
+                    )}
+                    {isAnalysing ? "Analysing property..." : "Analyse Photo"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={resetAll}>
+                    Change Photo
+                  </Button>
+                </div>
+              </div>
+
+              {isAnalysing ? (
+                <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+                  <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+                  <p className="text-xs text-muted-foreground">This usually takes 5-15 seconds</p>
+                </div>
               ) : null}
             </div>
           ) : null}
 
           {error ? (
-            <div className="flex items-start gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
-              <AlertCircle className="mt-0.5 size-4 shrink-0" />
-              <p>{error}</p>
+            <div className="space-y-3 rounded-md border border-red-300 bg-red-50 p-3 text-red-700">
+              <div className="flex items-start gap-2 text-sm">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                <p>{error}</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-red-300 text-red-700 hover:bg-red-100"
+                onClick={() => setError(null)}
+              >
+                Try Again
+              </Button>
             </div>
           ) : null}
         </CardContent>
@@ -379,38 +433,55 @@ export default function PhotoEstimatePage() {
 
       {result ? (
         <div id="photo-results" className="space-y-4">
-          <Card className="shadow-sm">
+          <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg">AI Analysis</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p>
-                <span className="font-medium text-foreground">Property type:</span>{" "}
-                {result.aiAnalysis.propertyType}
+            <CardContent className="space-y-3 text-sm">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <p>
+                  <span className="font-medium text-foreground">Property Type:</span>{" "}
+                  {result.aiAnalysis.propertyType}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Estimated Area:</span>{" "}
+                  {Math.round(result.aiAnalysis.totalAreaM2)} m²
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Condition:</span>{" "}
+                  {result.aiAnalysis.condition}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Finish Level:</span>{" "}
+                  {result.aiAnalysis.finishLevel}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Region:</span> {result.aiAnalysis.region}
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="font-medium text-foreground">Confidence:</span>
+                  <Badge className={confidenceBadgeClass(result.aiAnalysis.confidence)}>
+                    {result.aiAnalysis.confidence}
+                  </Badge>
+                </p>
+              </div>
+
+              <p className="italic text-muted-foreground">{result.aiAnalysis.notes}</p>
+              <p className="text-xs text-muted-foreground">
+                These estimates are AI-generated. Adjust inputs on the Quick Estimate page for more
+                accuracy.
               </p>
-              <p>
-                <span className="font-medium text-foreground">Estimated area:</span>{" "}
-                {Math.round(result.aiAnalysis.totalAreaM2)} m²
-              </p>
-              <p>
-                <span className="font-medium text-foreground">Condition:</span>{" "}
-                {result.aiAnalysis.condition}
-              </p>
-              <p>
-                <span className="font-medium text-foreground">Finish level:</span>{" "}
-                {result.aiAnalysis.finishLevel}
-              </p>
-              <p>
-                <span className="font-medium text-foreground">Region:</span> {result.aiAnalysis.region}
-              </p>
-              <p>
-                <span className="font-medium text-foreground">Confidence:</span>{" "}
-                {result.aiAnalysis.confidence}
-              </p>
-              <p className="text-muted-foreground">{result.aiAnalysis.notes}</p>
+              <Button type="button" variant="outline" asChild>
+                <Link href={refineHref}>Refine Estimate</Link>
+              </Button>
             </CardContent>
           </Card>
+
           <EstimateResults result={result.estimateResult} />
+
+          <Button type="button" variant="outline" onClick={resetAll}>
+            Try Another Photo
+          </Button>
         </div>
       ) : null}
     </section>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { defaultCostLibrary } from "@/lib/costLibrary";
 import { estimateProject } from "@/lib/estimator";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
   Condition,
   EstimateInput,
@@ -10,9 +11,12 @@ import type {
 } from "@/lib/types";
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 10;
 const DEFAULT_REGION: Region = "Midlands";
 const DEFAULT_CONDITION: Condition = "fair";
 const DEFAULT_FINISH_LEVEL: FinishLevel = "standard";
+const SUPPORTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 const SYSTEM_PROMPT = `You are a UK property refurbishment expert. Analyse the provided property photo and return a JSON object with these exact fields:
 {
@@ -48,6 +52,11 @@ type PhotoEstimateRequestBody = {
   region?: unknown;
 };
 
+type RateLimitEntry = {
+  count: number;
+  resetTime: number;
+};
+
 type AiAnalysisResponse = {
   propertyType?: unknown;
   totalAreaM2?: unknown;
@@ -59,6 +68,8 @@ type AiAnalysisResponse = {
   error?: unknown;
   message?: unknown;
 };
+
+const rateLimitStore = new Map<string, RateLimitEntry>();
 
 function isRegion(value: unknown): value is Region {
   return typeof value === "string" && REGION_VALUES.includes(value as Region);
@@ -94,6 +105,66 @@ function getBase64ByteSize(dataUrl: string): number {
   return Math.floor((sanitized.length * 3) / 4) - paddingLength;
 }
 
+function getClientIp(request: Request): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    const firstIp = forwardedFor.split(",")[0]?.trim();
+    if (firstIp) {
+      return firstIp;
+    }
+  }
+
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp) {
+    return realIp;
+  }
+
+  return "unknown";
+}
+
+function cleanupExpiredRateLimits(now: number) {
+  for (const [ip, entry] of rateLimitStore.entries()) {
+    if (entry.resetTime <= now) {
+      rateLimitStore.delete(ip);
+    }
+  }
+}
+
+function checkRateLimit(ip: string, now: number): {
+  isAllowed: boolean;
+  retryAfterSeconds?: number;
+} {
+  cleanupExpiredRateLimits(now);
+
+  const current = rateLimitStore.get(ip);
+  if (!current) {
+    rateLimitStore.set(ip, {
+      count: 1,
+      resetTime: now + RATE_LIMIT_WINDOW_MS
+    });
+    return { isAllowed: true };
+  }
+
+  if (current.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return {
+      isAllowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((current.resetTime - now) / 1000))
+    };
+  }
+
+  current.count += 1;
+  rateLimitStore.set(ip, current);
+  return { isAllowed: true };
+}
+
+function isValidDataUrlImage(image: string): boolean {
+  const match = image.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,/i);
+  if (!match) {
+    return false;
+  }
+  return SUPPORTED_IMAGE_MIME_TYPES.has(match[1].toLowerCase());
+}
+
 function clampArea(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(parsed)) {
@@ -112,16 +183,51 @@ function asNonEmptyString(value: unknown, fallback: string): string {
 
 export async function POST(request: Request) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
+    const now = Date.now();
+    const clientIp = getClientIp(request);
+    const rateLimit = checkRateLimit(clientIp, now);
+
+    if (!rateLimit.isAllowed) {
+      const retryAfterSeconds = rateLimit.retryAfterSeconds ?? 60;
       return NextResponse.json(
-        { error: "Server is missing OPENAI_API_KEY configuration" },
-        { status: 500 }
+        {
+          error: "Too many requests. Please try again later.",
+          retryAfter: retryAfterSeconds
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(retryAfterSeconds)
+          }
+        }
       );
     }
 
-    const openai = new OpenAI();
+    const isSupabaseConfigured = Boolean(
+      process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    );
+    if (isSupabaseConfigured) {
+      const supabase = await createServerSupabaseClient();
+      const {
+        data: { user },
+        error: authError
+      } = await supabase.auth.getUser();
 
-    const body = (await request.json()) as PhotoEstimateRequestBody;
+      if (authError || !user) {
+        return NextResponse.json(
+          { error: "Sign in to use AI photo estimates." },
+          { status: 401 }
+        );
+      }
+    }
+
+    let body: PhotoEstimateRequestBody;
+    try {
+      body = (await request.json()) as PhotoEstimateRequestBody;
+    } catch {
+      return NextResponse.json({ error: "Image is required" }, { status: 400 });
+    }
+
     const image = typeof body.image === "string" ? body.image.trim() : "";
 
     if (!image) {
@@ -135,6 +241,22 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    if (!isValidDataUrlImage(image)) {
+      return NextResponse.json(
+        { error: "Invalid image format. Please upload a JPEG, PNG, or WebP image." },
+        { status: 400 }
+      );
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: "Server is missing OPENAI_API_KEY configuration" },
+        { status: 500 }
+      );
+    }
+
+    const openai = new OpenAI();
 
     const overrideRegion = isRegion(body.region) ? body.region : undefined;
 

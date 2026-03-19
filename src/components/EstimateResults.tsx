@@ -63,7 +63,7 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
         {summaryCards.map((card) => (
           <Card
             key={card.label}
-            className={`flex-1 shadow-sm ${card.label === "Typical" ? "border border-primary" : ""}`}
+            className={`flex-1 ${card.label === "Typical" ? "border-primary shadow-sm" : "shadow-sm"}`}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{card.label}</CardTitle>
@@ -113,25 +113,24 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
       </Card>
 
       <Card className="shadow-sm">
-        <CardContent className="p-0">
+        <CardContent className="space-y-2 p-0">
+          <p className="px-4 pt-4 text-xs text-muted-foreground">
+            Includes{" "}
+            <TermTooltip
+              term="Contingency"
+              explanation="A buffer (typically 5–10%) for unexpected costs during the refurbishment."
+            />{" "}
+            and{" "}
+            <TermTooltip
+              term="Fees"
+              explanation="Professional fees including architect, surveyor, structural engineer, and building control."
+            />
+            .
+          </p>
           <Table className="min-w-[760px]">
             <TableHeader className="bg-muted/60">
               <TableRow>
-                <TableHead className="px-4">
-                  <span className="inline-flex items-center gap-2">
-                    Category
-                    <span className="inline-flex items-center gap-2 text-xs font-normal text-muted-foreground">
-                      <TermTooltip
-                        term="Contingency"
-                        explanation="A buffer (typically 5–10%) for unexpected costs during the refurbishment."
-                      />
-                      <TermTooltip
-                        term="Fees"
-                        explanation="Professional fees including architect, surveyor, structural engineer, and building control."
-                      />
-                    </span>
-                  </span>
-                </TableHead>
+                <TableHead className="px-4">Category</TableHead>
                 <TableHead className="px-4">Low</TableHead>
                 <TableHead className="px-4">Typical</TableHead>
                 <TableHead className="px-4">High</TableHead>

@@ -130,22 +130,33 @@ export default function Header() {
   return (
     <header className="border-b border-border bg-background">
       <nav aria-label="Main navigation" className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
-        <div className="hidden items-center gap-2 md:flex">
-          {navItems.map((item, index) => (
-            <div key={item.href} className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                className={pathname === item.href ? "font-semibold text-primary hover:text-primary" : ""}
-                asChild
-              >
-                <Link href={item.href}>{item.label}</Link>
-              </Button>
-              {index < navItems.length - 1 ? <Separator orientation="vertical" className="h-5" /> : null}
-            </div>
-          ))}
+        <div className="flex items-center gap-3">
+          <Link href="/" className="inline-flex items-center gap-2">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
+              RE
+            </span>
+            <span className="hidden text-sm font-semibold text-foreground sm:inline">
+              Refurb Estimator
+            </span>
+          </Link>
+          <Separator orientation="vertical" className="hidden h-5 md:block" />
+          <div className="hidden items-center gap-2 md:flex">
+            {navItems.map((item, index) => (
+              <div key={item.href} className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  className={pathname === item.href ? "font-semibold text-primary hover:text-primary" : ""}
+                  asChild
+                >
+                  <Link href={item.href}>{item.label}</Link>
+                </Button>
+                {index < navItems.length - 1 ? <Separator orientation="vertical" className="h-5" /> : null}
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="ml-auto hidden md:block">
+        <div className="ml-auto hidden items-center md:flex">
           <AuthActions />
         </div>
 

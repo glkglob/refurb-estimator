@@ -12,6 +12,7 @@ import { estimateProject } from "@/lib/estimator";
 import type { EstimateInput, EstimateResult, Scenario } from "@/lib/types";
 
 export default function HomePage() {
+  const [formKey, setFormKey] = useState(0);
   const [lastInput, setLastInput] = useState<EstimateInput | null>(null);
   const [result, setResult] = useState<EstimateResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -82,25 +83,40 @@ export default function HomePage() {
     }
   }
 
+  function handleNewEstimate() {
+    setLastInput(null);
+    setResult(null);
+    setSubmitError(null);
+    setFormKey((prev) => prev + 1);
+    document.getElementById("estimate-form")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   return (
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Quick Estimate</h1>
       <p className="text-sm text-muted-foreground">
         Enter your property details below and click Calculate to get an instant estimate.
       </p>
-      <EstimateForm onSubmit={handleSubmit} />
+      <div id="estimate-form">
+        <EstimateForm key={formKey} onSubmit={handleSubmit} />
+      </div>
       {submitError ? <p className="text-sm font-medium text-red-600">{submitError}</p> : null}
       {result ? (
-        <div id="results" className="space-y-4">
+        <div id="results" className="mt-8 space-y-6">
           {lastInput ? (
             <p className="text-sm text-muted-foreground">
               Estimate for: {lastInput.totalAreaM2}m² {lastInput.propertyType} in {lastInput.region},{" "}
               {lastInput.condition} condition, {lastInput.finishLevel} finish
             </p>
           ) : null}
-          <Button type="button" variant="default" onClick={() => setIsSaveModalOpen(true)}>
-            Save as Scenario
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="default" onClick={() => setIsSaveModalOpen(true)}>
+              Save as Scenario
+            </Button>
+            <Button type="button" variant="outline" onClick={handleNewEstimate}>
+              New estimate
+            </Button>
+          </div>
           <EstimateResults result={result} />
         </div>
       ) : null}

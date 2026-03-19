@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -121,128 +122,128 @@ export default function EstimateForm({ onSubmit }: EstimateFormProps) {
     cn("w-full", hasError && "border-red-500 ring-red-200 aria-invalid:border-red-500");
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      noValidate
-      className="space-y-4 rounded-lg border bg-card p-4 shadow-sm sm:p-6"
-    >
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label htmlFor="region">Region</Label>
-          <Select
-            value={values.region || undefined}
-            onValueChange={(value) => updateField("region", value as FormValues["region"])}
-          >
-            <SelectTrigger
-              id="region"
-              aria-invalid={Boolean(errors.region)}
-              className={getSelectClass(Boolean(errors.region))}
-            >
-              <SelectValue placeholder="Select region" />
-            </SelectTrigger>
-            <SelectContent>
-            {regions.map((region) => (
-                <SelectItem key={region} value={region}>
-                {region}
-                </SelectItem>
-            ))}
-            </SelectContent>
-          </Select>
-          {errors.region ? <p className="text-sm text-red-600">{errors.region}</p> : null}
-        </div>
+    <Card className="shadow-sm">
+      <CardContent className="pt-6">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="region">Region</Label>
+              <Select
+                value={values.region || undefined}
+                onValueChange={(value) => updateField("region", value as FormValues["region"])}
+              >
+                <SelectTrigger
+                  id="region"
+                  aria-invalid={Boolean(errors.region)}
+                  className={getSelectClass(Boolean(errors.region))}
+                >
+                  <SelectValue placeholder="Select region" />
+                </SelectTrigger>
+                <SelectContent>
+                  {regions.map((region) => (
+                    <SelectItem key={region} value={region}>
+                      {region}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.region ? <p className="text-sm text-red-600">{errors.region}</p> : null}
+            </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="propertyType">Property type</Label>
-          <Select
-            value={values.propertyType}
-            onValueChange={(value) => updateField("propertyType", value)}
-          >
-            <SelectTrigger
-              id="propertyType"
-              aria-invalid={Boolean(errors.propertyType)}
-              className={getSelectClass(Boolean(errors.propertyType))}
-            >
-              <SelectValue placeholder="Select property type" />
-            </SelectTrigger>
-            <SelectContent>
-            {propertyTypes.map((propertyType) => (
-                <SelectItem key={propertyType} value={propertyType}>
-                {propertyType}
-                </SelectItem>
-            ))}
-            </SelectContent>
-          </Select>
-          {errors.propertyType ? <p className="text-sm text-red-600">{errors.propertyType}</p> : null}
-        </div>
+            <div className="space-y-1">
+              <Label htmlFor="propertyType">Property type</Label>
+              <Select
+                value={values.propertyType}
+                onValueChange={(value) => updateField("propertyType", value)}
+              >
+                <SelectTrigger
+                  id="propertyType"
+                  aria-invalid={Boolean(errors.propertyType)}
+                  className={getSelectClass(Boolean(errors.propertyType))}
+                >
+                  <SelectValue placeholder="Select property type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {propertyTypes.map((propertyType) => (
+                    <SelectItem key={propertyType} value={propertyType}>
+                      {propertyType}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.propertyType ? <p className="text-sm text-red-600">{errors.propertyType}</p> : null}
+            </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="totalAreaM2">Total area m²</Label>
-          <Input
-            id="totalAreaM2"
-            type="number"
-            min={1}
-            step={1}
-            placeholder="e.g. 75"
-            value={values.totalAreaM2}
-            onChange={(event) => updateField("totalAreaM2", event.target.value)}
-            aria-invalid={Boolean(errors.totalAreaM2)}
-            className={getInputClass(Boolean(errors.totalAreaM2))}
-          />
-          {errors.totalAreaM2 ? <p className="text-sm text-red-600">{errors.totalAreaM2}</p> : null}
-        </div>
+            <div className="space-y-1">
+              <Label htmlFor="totalAreaM2">Total area m²</Label>
+              <Input
+                id="totalAreaM2"
+                type="number"
+                min={1}
+                step={1}
+                placeholder="e.g. 75"
+                value={values.totalAreaM2}
+                onChange={(event) => updateField("totalAreaM2", event.target.value)}
+                aria-invalid={Boolean(errors.totalAreaM2)}
+                className={getInputClass(Boolean(errors.totalAreaM2))}
+              />
+              {errors.totalAreaM2 ? <p className="text-sm text-red-600">{errors.totalAreaM2}</p> : null}
+            </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="condition">Condition</Label>
-          <Select
-            value={values.condition || undefined}
-            onValueChange={(value) => updateField("condition", value as FormValues["condition"])}
-          >
-            <SelectTrigger
-              id="condition"
-              aria-invalid={Boolean(errors.condition)}
-              className={getSelectClass(Boolean(errors.condition))}
-            >
-              <SelectValue placeholder="Select condition" />
-            </SelectTrigger>
-            <SelectContent>
-            {conditions.map((condition) => (
-                <SelectItem key={condition} value={condition}>
-                {condition}
-                </SelectItem>
-            ))}
-            </SelectContent>
-          </Select>
-          {errors.condition ? <p className="text-sm text-red-600">{errors.condition}</p> : null}
-        </div>
+            <div className="space-y-1">
+              <Label htmlFor="condition">Condition</Label>
+              <Select
+                value={values.condition || undefined}
+                onValueChange={(value) => updateField("condition", value as FormValues["condition"])}
+              >
+                <SelectTrigger
+                  id="condition"
+                  aria-invalid={Boolean(errors.condition)}
+                  className={getSelectClass(Boolean(errors.condition))}
+                >
+                  <SelectValue placeholder="Select condition" />
+                </SelectTrigger>
+                <SelectContent>
+                  {conditions.map((condition) => (
+                    <SelectItem key={condition} value={condition}>
+                      {condition}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.condition ? <p className="text-sm text-red-600">{errors.condition}</p> : null}
+            </div>
 
-        <div className="space-y-1 sm:col-span-2">
-          <Label htmlFor="finishLevel">Finish level</Label>
-          <Select
-            value={values.finishLevel || undefined}
-            onValueChange={(value) => updateField("finishLevel", value as FormValues["finishLevel"])}
-          >
-            <SelectTrigger
-              id="finishLevel"
-              aria-invalid={Boolean(errors.finishLevel)}
-              className={getSelectClass(Boolean(errors.finishLevel))}
-            >
-              <SelectValue placeholder="Select finish level" />
-            </SelectTrigger>
-            <SelectContent>
-            {finishLevels.map((finish) => (
-                <SelectItem key={finish} value={finish}>
-                {finish}
-                </SelectItem>
-            ))}
-            </SelectContent>
-          </Select>
-          {errors.finishLevel ? <p className="text-sm text-red-600">{errors.finishLevel}</p> : null}
-        </div>
-      </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label htmlFor="finishLevel">Finish level</Label>
+              <Select
+                value={values.finishLevel || undefined}
+                onValueChange={(value) => updateField("finishLevel", value as FormValues["finishLevel"])}
+              >
+                <SelectTrigger
+                  id="finishLevel"
+                  aria-invalid={Boolean(errors.finishLevel)}
+                  className={getSelectClass(Boolean(errors.finishLevel))}
+                >
+                  <SelectValue placeholder="Select finish level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {finishLevels.map((finish) => (
+                    <SelectItem key={finish} value={finish}>
+                      {finish}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.finishLevel ? <p className="text-sm text-red-600">{errors.finishLevel}</p> : null}
+            </div>
+          </div>
 
-      <Button type="submit" variant="default">
-        Calculate estimate
-      </Button>
-    </form>
+          <Button type="submit" variant="default" className="w-full sm:w-auto">
+            Calculate estimate
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

@@ -3,6 +3,7 @@
 import { BarChart } from "@tremor/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import AuthBanner from "@/components/AuthBanner";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
 import TermTooltip from "@/components/TermTooltip";
 import { Badge } from "@/components/ui/badge";
@@ -147,6 +148,7 @@ export default function ScenariosPage() {
   return (
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Scenario Comparison</h1>
+      <AuthBanner />
       {isLoading ? <p className="text-sm text-muted-foreground">Loading scenarios...</p> : null}
       {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
 

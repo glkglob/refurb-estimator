@@ -1,6 +1,7 @@
 import CurrencyDisplay from "@/components/CurrencyDisplay";
 import { DonutChart } from "@tremor/react";
 import TermTooltip from "@/components/TermTooltip";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -16,6 +17,21 @@ type EstimateResultsProps = {
   result: EstimateResult;
 };
 
+const CHART_COLORS = [
+  "#0d9488",
+  "#06b6d4",
+  "#3b82f6",
+  "#6366f1",
+  "#64748b",
+  "#10b981",
+  "#f59e0b",
+  "#8b5cf6",
+  "#f43f5e",
+  "#78716c",
+  "#84cc16",
+  "#f97316"
+];
+
 export default function EstimateResults({ result }: EstimateResultsProps) {
   const gbpFormatter = new Intl.NumberFormat("en-GB", {
     style: "currency",
@@ -24,9 +40,25 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
   });
 
   const summaryCards = [
-    { label: "Low", total: result.totalLow, perM2: result.costPerM2.low },
-    { label: "Typical", total: result.totalTypical, perM2: result.costPerM2.typical },
-    { label: "High", total: result.totalHigh, perM2: result.costPerM2.high }
+    {
+      label: "Low",
+      total: result.totalLow,
+      perM2: result.costPerM2.low,
+      className: "flex-1 border-l-4 border-l-emerald-400 shadow-sm"
+    },
+    {
+      label: "Typical",
+      total: result.totalTypical,
+      perM2: result.costPerM2.typical,
+      className: "flex-1 border-l-4 border-l-primary bg-primary/5 shadow-md",
+      recommended: true
+    },
+    {
+      label: "High",
+      total: result.totalHigh,
+      perM2: result.costPerM2.high,
+      className: "flex-1 border-l-4 border-l-amber-400 shadow-sm"
+    }
   ];
   const donutData = result.categories
     .filter((category) => category.typical > 0)
@@ -61,12 +93,16 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
     <section className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row">
         {summaryCards.map((card) => (
-          <Card
-            key={card.label}
-            className={`flex-1 ${card.label === "Typical" ? "border-primary shadow-sm" : "shadow-sm"}`}
-          >
+          <Card key={card.label} className={card.className}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{card.label}</CardTitle>
+              <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
+                {card.label}
+                {card.recommended ? (
+                  <Badge variant="secondary" className="ml-2 text-[10px]">
+                    Recommended
+                  </Badge>
+                ) : null}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <p className="text-2xl font-semibold">
@@ -90,25 +126,24 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
             data={donutData}
             category="value"
             index="name"
-            colors={[
-              "teal",
-              "cyan",
-              "blue",
-              "indigo",
-              "slate",
-              "emerald",
-              "amber",
-              "violet",
-              "rose",
-              "zinc",
-              "lime",
-              "orange"
-            ]}
+            colors={CHART_COLORS}
             valueFormatter={(value) => gbpFormatter.format(value)}
             label={gbpFormatter.format(result.totalTypical)}
             showLabel
+            showTooltip
             className="h-56 md:h-72"
           />
+          <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            {donutData.map((item, i) => (
+              <div key={item.name} className="flex items-center gap-1.5">
+                <span
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
+                />
+                <span>{item.name}</span>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
@@ -132,13 +167,16 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
               <TableRow>
                 <TableHead className="px-4">Category</TableHead>
                 <TableHead className="px-4">Low</TableHead>
-                <TableHead className="px-4">Typical</TableHead>
+                <TableHead className="px-4 font-semibold text-foreground">Typical</TableHead>
                 <TableHead className="px-4">High</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
             {result.categories.map((category, index) => (
-                <TableRow key={category.category} className={index % 2 === 0 ? "bg-card" : "bg-muted/20"}>
+                <TableRow
+                  key={category.category}
+                  className={index % 2 === 0 ? "bg-card hover:bg-muted/40" : "bg-muted/20 hover:bg-muted/40"}
+                >
                   <TableCell className="px-4 font-medium">
                   {renderCategoryLabel(category.category)}
                   </TableCell>
@@ -146,7 +184,9 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
                   <CurrencyDisplay amount={category.low} />
                   </TableCell>
                   <TableCell className="px-4">
-                  <CurrencyDisplay amount={category.typical} />
+                    <span className="font-medium">
+                      <CurrencyDisplay amount={category.typical} />
+                    </span>
                   </TableCell>
                   <TableCell className="px-4">
                   <CurrencyDisplay amount={category.high} />

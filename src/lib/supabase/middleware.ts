@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-const PROTECTED_ROUTES = ["/scenarios", "/budget"];
+const PROTECTED_ROUTES: string[] = [];
 const PUBLIC_ROUTES = ["/", "/rooms", "/auth/login", "/auth/signup"];
 
 function matchesRoute(pathname: string, route: string): boolean {

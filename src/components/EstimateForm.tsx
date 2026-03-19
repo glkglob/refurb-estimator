@@ -206,7 +206,7 @@ export default function EstimateForm({ onSubmit }: EstimateFormProps) {
                 <SelectContent>
                   {conditions.map((condition) => (
                     <SelectItem key={condition} value={condition}>
-                      {condition}
+                      {condition.charAt(0).toUpperCase() + condition.slice(1)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -230,7 +230,7 @@ export default function EstimateForm({ onSubmit }: EstimateFormProps) {
                 <SelectContent>
                   {finishLevels.map((finish) => (
                     <SelectItem key={finish} value={finish}>
-                      {finish}
+                      {finish.charAt(0).toUpperCase() + finish.slice(1)}
                     </SelectItem>
                   ))}
                 </SelectContent>

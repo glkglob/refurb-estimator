@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import AuthBanner from "@/components/AuthBanner";
 import EstimateResults from "@/components/EstimateResults";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import TermTooltip from "@/components/TermTooltip";
@@ -188,6 +189,7 @@ export default function RoomsPage() {
   return (
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Detailed Rooms</h1>
+      <AuthBanner />
 
       <Card className="shadow-sm">
         <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2">
@@ -228,7 +230,7 @@ export default function RoomsPage() {
               <SelectContent>
                 {conditions.map((conditionValue) => (
                   <SelectItem key={conditionValue} value={conditionValue}>
-                    {conditionValue}
+                    {conditionValue.charAt(0).toUpperCase() + conditionValue.slice(1)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -286,7 +288,7 @@ export default function RoomsPage() {
                       <SelectContent>
                         {roomTypes.map((roomType) => (
                           <SelectItem key={roomType} value={roomType}>
-                            {roomType}
+                            {roomType.charAt(0).toUpperCase() + roomType.slice(1)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -345,7 +347,7 @@ export default function RoomsPage() {
                       <SelectContent>
                         {finishLevels.map((finishLevel) => (
                           <SelectItem key={finishLevel} value={finishLevel}>
-                            {finishLevel}
+                            {finishLevel.charAt(0).toUpperCase() + finishLevel.slice(1)}
                           </SelectItem>
                         ))}
                       </SelectContent>

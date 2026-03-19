@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import AuthBanner from "@/components/AuthBanner";
 import EstimateForm from "@/components/EstimateForm";
 import EstimateResults from "@/components/EstimateResults";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
@@ -97,6 +98,7 @@ export default function HomePage() {
       <p className="text-sm text-muted-foreground">
         Enter your property details below and click Calculate to get an instant estimate.
       </p>
+      <AuthBanner />
       <div id="estimate-form">
         <EstimateForm key={formKey} onSubmit={handleSubmit} />
       </div>

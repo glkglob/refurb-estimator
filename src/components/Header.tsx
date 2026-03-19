@@ -28,6 +28,7 @@ import {
 
 const navItems = [
   { href: "/", label: "Quick Estimate" },
+  { href: "/photo", label: "AI Estimate" },
   { href: "/rooms", label: "Detailed Rooms" },
   { href: "/scenarios", label: "Scenario Comparison" },
   { href: "/budget", label: "Budget Tracker" }

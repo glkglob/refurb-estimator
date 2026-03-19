@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import AuthBanner from "@/components/AuthBanner";
 import EstimateForm from "@/components/EstimateForm";
 import EstimateResults from "@/components/EstimateResults";
@@ -18,6 +19,7 @@ export default function HomePage() {
   const [result, setResult] = useState<EstimateResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,23 +52,25 @@ export default function HomePage() {
     purchasePrice?: number,
     gdv?: number
   ): Promise<void> {
-    if (!lastInput || !result) {
-      return;
-    }
-
-    const timestamp = new Date().toISOString();
-    const scenario: Scenario = {
-      id: crypto.randomUUID(),
-      name,
-      input: lastInput,
-      result,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      purchasePrice,
-      gdv
-    };
+    setIsSaving(true);
 
     try {
+      if (!lastInput || !result) {
+        return;
+      }
+
+      const timestamp = new Date().toISOString();
+      const scenario: Scenario = {
+        id: crypto.randomUUID(),
+        name,
+        input: lastInput,
+        result,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        purchasePrice,
+        gdv
+      };
+
       await saveScenario(scenario);
       setIsSaveModalOpen(false);
       toast({
@@ -81,6 +85,8 @@ export default function HomePage() {
           error instanceof Error ? error.message : "Cloud sync failed. Scenario was saved locally.",
         variant: "destructive"
       });
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -100,7 +106,17 @@ export default function HomePage() {
       </p>
       <AuthBanner />
       <div id="estimate-form">
-        <EstimateForm key={formKey} onSubmit={handleSubmit} />
+        <EstimateForm
+          key={formKey}
+          onSubmit={handleSubmit}
+          onValidationError={() =>
+            toast({
+              title: "Missing fields",
+              description: "Please fill in all required fields before calculating.",
+              variant: "destructive"
+            })
+          }
+        />
       </div>
       {submitError ? <p className="text-sm font-medium text-red-600">{submitError}</p> : null}
       {result ? (
@@ -112,7 +128,13 @@ export default function HomePage() {
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="default" onClick={() => setIsSaveModalOpen(true)}>
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => setIsSaveModalOpen(true)}
+              disabled={isSaving}
+            >
+              {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
               Save as Scenario
             </Button>
             <Button type="button" variant="outline" onClick={handleNewEstimate}>
@@ -126,6 +148,7 @@ export default function HomePage() {
         isOpen={isSaveModalOpen}
         onClose={() => setIsSaveModalOpen(false)}
         onSave={handleSaveScenario}
+        isSaving={isSaving}
       />
     </section>
   );

@@ -149,21 +149,36 @@ export default function ScenariosPage() {
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Scenario Comparison</h1>
       <AuthBanner />
-      {isLoading ? <p className="text-sm text-muted-foreground">Loading scenarios...</p> : null}
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="shadow-sm">
+              <CardContent className="space-y-3 p-4">
+                <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : null}
       {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
 
       {!isLoading && sortedScenarios.length === 0 ? (
-        <Card className="shadow-sm">
-          <CardContent className="p-4 text-sm text-muted-foreground">
-            No scenarios saved yet. Create one from the{" "}
-            <Link href="/" className="font-medium text-foreground underline">
-              Quick Estimate
-            </Link>{" "}
-            or{" "}
-            <Link href="/rooms" className="font-medium text-foreground underline">
-              Detailed Rooms
-            </Link>{" "}
-            page.
+        <Card className="py-12 text-center shadow-sm">
+          <CardContent className="space-y-3">
+            <p className="text-lg font-medium text-foreground">No scenarios saved yet</p>
+            <p className="text-sm text-muted-foreground">
+              Run an estimate and click &ldquo;Save as Scenario&rdquo; to start comparing options.
+            </p>
+            <div className="flex justify-center gap-2 pt-2">
+              <Button variant="default" asChild>
+                <Link href="/">Quick Estimate</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/rooms">Detailed Rooms</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : !isLoading ? (

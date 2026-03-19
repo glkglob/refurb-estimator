@@ -17,6 +17,7 @@ import type { EstimateInput } from "@/lib/types";
 
 type EstimateFormProps = {
   onSubmit: (input: EstimateInput) => void;
+  onValidationError?: () => void;
 };
 
 type FormValues = {
@@ -50,7 +51,7 @@ const propertyTypes = [
   "Commercial"
 ] as const;
 
-export default function EstimateForm({ onSubmit }: EstimateFormProps) {
+export default function EstimateForm({ onSubmit, onValidationError }: EstimateFormProps) {
   const [values, setValues] = useState<FormValues>({
     region: "",
     propertyType: "",
@@ -102,6 +103,7 @@ export default function EstimateForm({ onSubmit }: EstimateFormProps) {
     setErrors(validationErrors);
 
     if (Object.keys(validationErrors).length > 0) {
+      onValidationError?.();
       return;
     }
 

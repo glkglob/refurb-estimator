@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import TermTooltip from "@/components/TermTooltip";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,12 +19,14 @@ type SaveScenarioModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSave: (name: string, purchasePrice?: number, gdv?: number) => void;
+  isSaving?: boolean;
 };
 
 export default function SaveScenarioModal({
   isOpen,
   onClose,
-  onSave
+  onSave,
+  isSaving = false
 }: SaveScenarioModalProps) {
   const [name, setName] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
@@ -133,13 +136,16 @@ export default function SaveScenarioModal({
               type="button"
               variant="outline"
               onClick={onClose}
+              disabled={isSaving}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               variant="default"
+              disabled={isSaving}
             >
+              {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
               Save
             </Button>
           </DialogFooter>

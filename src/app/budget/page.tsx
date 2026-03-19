@@ -7,6 +7,7 @@ import AuthBanner from "@/components/AuthBanner";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
 import TermTooltip from "@/components/TermTooltip";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -308,7 +309,17 @@ export default function BudgetPage() {
       <section className="space-y-6">
         <h1 className="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
         <AuthBanner />
-        <p className="text-sm text-muted-foreground">Loading scenarios...</p>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="shadow-sm">
+              <CardContent className="space-y-3 p-4">
+                <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </section>
     );
   }
@@ -319,18 +330,21 @@ export default function BudgetPage() {
         <h1 className="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
         <AuthBanner />
         {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
-        <Card className="shadow-sm">
-          <CardContent className="p-4 text-sm text-muted-foreground">
-            No scenarios saved yet. Save a scenario first to start tracking your budget. Create
-            one from{" "}
-            <Link href="/" className="font-medium text-foreground underline">
-              Quick Estimate
-            </Link>{" "}
-            or{" "}
-            <Link href="/rooms" className="font-medium text-foreground underline">
-              Detailed Rooms
-            </Link>
-            .
+        <Card className="py-12 text-center shadow-sm">
+          <CardContent className="space-y-3">
+            <p className="text-lg font-medium text-foreground">No scenarios to track</p>
+            <p className="text-sm text-muted-foreground">
+              Save a scenario first, then come back here to track actual spend against your
+              estimate.
+            </p>
+            <div className="flex justify-center gap-2 pt-2">
+              <Button variant="default" asChild>
+                <Link href="/">Quick Estimate</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/rooms">Detailed Rooms</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </section>

@@ -3,7 +3,7 @@ import { estimateProject, estimateRooms } from "./estimator";
 import type { EstimateInput, RoomInput } from "./types";
 
 describe("estimateProject", () => {
-  test("Budget North flat: 50m² gives typical ≈ £60,750", () => {
+  test("Budget North flat: 50m² gives typical ≈ £56,070", () => {
     const input: EstimateInput = {
       region: "North",
       projectType: "refurb",
@@ -15,7 +15,7 @@ describe("estimateProject", () => {
 
     const result = estimateProject(input, defaultCostLibrary);
 
-    expect(result.totalTypical).toBeCloseTo(60750, 2);
+    expect(result.totalTypical).toBeCloseTo(56070, 2);
   });
 
   test("Premium London terrace totals are significantly higher than budget North case", () => {
@@ -40,7 +40,7 @@ describe("estimateProject", () => {
     const budgetResult = estimateProject(budgetNorth, defaultCostLibrary);
     const premiumResult = estimateProject(premiumLondon, defaultCostLibrary);
 
-    expect(premiumResult.totalTypical).toBeCloseTo(438750, 2);
+    expect(premiumResult.totalTypical).toBeCloseTo(489645, 2);
     expect(premiumResult.totalTypical).toBeGreaterThan(budgetResult.totalTypical * 5);
     expect(premiumResult.totalLow).toBeGreaterThan(budgetResult.totalLow * 5);
     expect(premiumResult.totalHigh).toBeGreaterThan(budgetResult.totalHigh * 5);
@@ -160,9 +160,9 @@ describe("estimateRooms", () => {
   test("Kitchen + bathroom full intensity returns plausible positive totals", () => {
     const result = estimateRooms(fullRooms, londonFair, defaultCostLibrary);
 
-    expect(result.totalLow).toBeCloseTo(9687.5, 6);
-    expect(result.totalTypical).toBeCloseTo(19375, 6);
-    expect(result.totalHigh).toBeCloseTo(38750, 6);
+    expect(result.totalLow).toBeCloseTo(12150, 6);
+    expect(result.totalTypical).toBeCloseTo(22612.5, 6);
+    expect(result.totalHigh).toBeCloseTo(45225, 6);
     expect(result.totalLow).toBeGreaterThan(0);
     expect(result.totalTypical).toBeGreaterThan(result.totalLow);
     expect(result.totalHigh).toBeGreaterThan(result.totalTypical);
@@ -243,7 +243,7 @@ describe("estimateRooms", () => {
     expect(combined.totalHigh).toBeCloseTo(summed.high, 10);
   });
 
-  test("Kitchen 10m² in Midlands/fair/full/standard gives typical ≈ £6,000", () => {
+  test("Kitchen 10m² in Midlands/fair/full/standard gives typical ≈ £6,500", () => {
     const rooms: RoomInput[] = [
       {
         id: "room-kitchen",
@@ -256,7 +256,7 @@ describe("estimateRooms", () => {
 
     const result = estimateRooms(rooms, midlandsFair, defaultCostLibrary);
 
-    expect(result.totalTypical).toBeCloseTo(6000, 6);
+    expect(result.totalTypical).toBeCloseTo(6500, 6);
   });
 
   test("Kitchen room allocates spend across multiple categories", () => {

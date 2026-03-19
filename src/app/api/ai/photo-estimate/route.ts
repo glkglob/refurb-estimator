@@ -18,21 +18,43 @@ const DEFAULT_CONDITION: Condition = "fair";
 const DEFAULT_FINISH_LEVEL: FinishLevel = "standard";
 const SUPPORTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-const SYSTEM_PROMPT = `You are a UK property refurbishment expert. Analyse the provided property photo and return a JSON object with these exact fields:
+const SYSTEM_PROMPT = `You are a UK property refurbishment expert and chartered surveyor. Analyse the provided property photo and return a JSON object with these exact fields:
+
 {
   "propertyType": "string — one of: terraced house, semi-detached house, detached house, flat/apartment, bungalow, commercial unit",
-  "totalAreaM2": number — estimated gross internal area in square metres based on what you see,
+  "totalAreaM2": number — estimated gross internal area in square metres,
   "condition": "string — one of: poor, fair, good",
   "finishLevel": "string — one of: budget, standard, premium — estimate what finish level the refurb would target",
-  "region": "string — one of: London, SouthEast, Midlands, North, Scotland, Wales — infer from any visible clues (architecture style, signage, etc.), or null if uncertain",
+  "region": "string — one of: London, SouthEast, Midlands, North, Scotland, Wales — infer from any visible clues (architecture style, signage, street furniture, brickwork), or null if uncertain",
   "confidence": "string — one of: high, medium, low — your overall confidence in the analysis",
-  "notes": "string — brief explanation of your reasoning (1-3 sentences)"
+  "notes": "string — brief explanation of your reasoning (2-4 sentences)"
 }
+
+Area estimation guidelines — use these UK benchmarks:
+- Terraced house (2-bed): 55-75 m², (3-bed): 75-95 m²
+- Semi-detached house (3-bed): 80-100 m², (4-bed): 100-130 m²
+- Detached house (3-bed): 100-140 m², (4-bed): 130-200 m²
+- Flat/apartment (1-bed): 35-50 m², (2-bed): 50-75 m²
+- Bungalow (2-bed): 60-80 m², (3-bed): 80-110 m²
+
+Think step by step:
+1. Identify the property type from architectural features
+2. Count visible windows/floors to estimate number of bedrooms
+3. Cross-reference bedroom count with the area benchmarks above
+4. Adjust for any visible extensions, conversions, or unusual proportions
+5. State your reasoning in the notes field
+
+Condition assessment:
+- poor: visible damp, damaged roof/guttering, cracked render, rotten windows, overgrown neglect
+- fair: dated but structurally sound, needs cosmetic work and possibly new kitchen/bathroom
+- good: well-maintained, mostly cosmetic refresh needed
+
 Rules:
 - Return ONLY valid JSON, no markdown fences
 - If the image is not a property photo, return: {"error": "not_a_property", "message": "Please upload a photo of a property"}
 - totalAreaM2 must be a positive number between 15 and 2000
-- Be conservative with area estimates — it is better to underestimate than overestimate`;
+- Be conservative — it is better to slightly underestimate area than overestimate
+- Always explain in notes how you arrived at the area estimate`;
 
 const REGION_VALUES: Region[] = [
   "London",

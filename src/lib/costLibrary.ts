@@ -7,17 +7,17 @@ import type {
 
 export const defaultCostLibrary: CostLibrary = {
   baseRefurbPerM2: {
-    low: 1000,
+    low: 1200,
     typical: 1800,
-    high: 3200
+    high: 2800
   },
   regionalMultipliers: {
-    London: 1.25,
-    SouthEast: 1.15,
+    London: 1.35,
+    SouthEast: 1.2,
     Midlands: 1.0,
-    North: 0.9,
-    Scotland: 0.95,
-    Wales: 0.95
+    North: 0.89,
+    Scotland: 0.94,
+    Wales: 0.9
   },
   conditionMultipliers: {
     poor: 1.3,
@@ -25,9 +25,9 @@ export const defaultCostLibrary: CostLibrary = {
     good: 0.8
   },
   finishMultipliers: {
-    budget: 0.75,
+    budget: 0.7,
     standard: 1.0,
-    premium: 1.5
+    premium: 1.55
   },
   categoryPercents: {
     kitchen: 0.18,
@@ -44,12 +44,12 @@ export const defaultCostLibrary: CostLibrary = {
     fees: 0.05
   },
   roomBaseRanges: {
-    kitchen: { low: 300, typical: 600, high: 1200 },
-    bathroom: { low: 350, typical: 700, high: 1400 },
-    bedroom: { low: 80, typical: 150, high: 300 },
-    living: { low: 100, typical: 180, high: 350 },
-    hallway: { low: 60, typical: 120, high: 250 },
-    utility: { low: 200, typical: 400, high: 800 }
+    kitchen: { low: 350, typical: 650, high: 1300 },
+    bathroom: { low: 400, typical: 750, high: 1500 },
+    bedroom: { low: 100, typical: 180, high: 350 },
+    living: { low: 120, typical: 200, high: 400 },
+    hallway: { low: 80, typical: 140, high: 280 },
+    utility: { low: 250, typical: 450, high: 900 }
   },
   roomCategoryAllocations: {
     kitchen: {

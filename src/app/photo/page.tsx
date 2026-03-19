@@ -2,6 +2,7 @@
 
 import { AlertCircle, Camera, RefreshCw, Sparkles, Upload } from "lucide-react";
 import Link from "next/link";
+import NextImage from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import EstimateResults from "@/components/EstimateResults";
 import { Badge } from "@/components/ui/badge";
@@ -352,11 +353,16 @@ export default function PhotoPage() {
           {selectedFile && previewUrl ? (
             <div className="space-y-4">
               <div className="rounded-lg border bg-muted/20 p-3">
-                <img
-                  src={previewUrl}
-                  alt="Selected property photo preview"
-                  className="mx-auto max-h-[300px] w-full rounded object-contain"
-                />
+                <div className="relative mx-auto h-[300px] w-full">
+                  <NextImage
+                    src={previewUrl}
+                    alt="Selected property photo preview"
+                    fill
+                    unoptimized
+                    className="rounded object-contain"
+                    sizes="(max-width: 640px) 100vw, 600px"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

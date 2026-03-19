@@ -1,20 +1,12 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
-import { LogOut, Menu, UserRound } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -25,6 +17,7 @@ import {
   SheetTitle,
   SheetTrigger
 } from "@/components/ui/sheet";
+import HeaderAuthActions from "@/components/HeaderAuthActions";
 
 const navItems = [
   { href: "/", label: "Quick Estimate" },
@@ -36,22 +29,22 @@ const navItems = [
 
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const router = useRouter();
-  const pathname = usePathname();
   const isSupabaseConfigured = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
+  const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
+  const router = useRouter();
+  const pathname = usePathname();
   const supabase = useMemo(() => (isSupabaseConfigured ? createClient() : null), [isSupabaseConfigured]);
 
   useEffect(() => {
     if (!supabase) {
-      setAuthLoading(false);
       return;
     }
     const supabaseClient = supabase;
 
     let isActive = true;
+
     async function loadUser() {
       const {
         data: { user: currentUser }
@@ -89,48 +82,12 @@ export default function Header() {
     router.refresh();
   }
 
-  function AuthActions() {
-    if (authLoading) {
-      return <span className="text-xs text-muted-foreground">Checking session...</span>;
-    }
-
-    if (!user) {
-      return (
-        <Button variant="outline" className="border-primary text-primary hover:bg-primary/10" asChild>
-          <Link href="/auth/login">Sign in</Link>
-        </Button>
-      );
-    }
-
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="max-w-44 justify-between gap-2">
-            <span className="truncate">{user.email}</span>
-            <UserRound className="size-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-60">
-          <DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            variant="destructive"
-            onSelect={(event) => {
-              event.preventDefault();
-              void handleSignOut();
-            }}
-          >
-            <LogOut className="size-4" />
-            Sign out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  }
-
   return (
     <header className="border-b border-border bg-background">
-      <nav aria-label="Main navigation" className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+      <nav
+        aria-label="Main navigation"
+        className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8"
+      >
         <div className="flex items-center gap-3">
           <Link href="/" className="inline-flex items-center gap-2">
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
@@ -158,7 +115,11 @@ export default function Header() {
         </div>
 
         <div className="ml-auto hidden items-center md:flex">
-          <AuthActions />
+          <HeaderAuthActions
+            authLoading={authLoading}
+            user={user}
+            onSignOut={() => void handleSignOut()}
+          />
         </div>
 
         <div className="md:hidden">
@@ -178,7 +139,7 @@ export default function Header() {
                   <SheetClose asChild key={item.href}>
                     <Button
                       variant="ghost"
-                      className={`justify-start ${pathname === item.href ? "font-semibold text-primary hover:text-primary" : ""}`}
+                      className={pathname === item.href ? "justify-start font-semibold text-primary hover:text-primary" : "justify-start"}
                       asChild
                     >
                       <Link href={item.href}>{item.label}</Link>

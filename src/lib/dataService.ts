@@ -6,9 +6,9 @@ import {
 } from "@/lib/storage";
 import {
   loadBudgetActuals as loadBudgetActualsLocal,
-  saveBudgetActuals as saveBudgetActualsLocal
+  saveBudgetActuals as saveBudgetActualsLocal,
+  type BudgetActuals
 } from "@/lib/budget";
-import type { BudgetActuals } from "@/lib/budget";
 import { createClient } from "@/lib/supabase/client";
 import {
   deleteScenarioFromDb,

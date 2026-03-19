@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import TermTooltip from "@/components/TermTooltip";
 import { Button } from "@/components/ui/button";
@@ -33,14 +33,17 @@ export default function SaveScenarioModal({
   const [gdv, setGdv] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setName("");
-      setPurchasePrice("");
-      setGdv("");
-      setNameError(null);
-    }
-  }, [isOpen]);
+  function resetForm() {
+    setName("");
+    setPurchasePrice("");
+    setGdv("");
+    setNameError(null);
+  }
+
+  function handleClose() {
+    resetForm();
+    onClose();
+  }
 
   function parseOptionalNumber(value: string): number | undefined {
     const trimmed = value.trim();
@@ -73,7 +76,7 @@ export default function SaveScenarioModal({
       open={isOpen}
       onOpenChange={(open) => {
         if (!open) {
-          onClose();
+          handleClose();
         }
       }}
     >
@@ -135,7 +138,7 @@ export default function SaveScenarioModal({
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isSaving}
             >
               Cancel

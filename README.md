@@ -37,3 +37,8 @@ Edit `src/lib/costLibrary.ts` to adjust:
 
 ## Build
 npm run build
+
+## Raycast Integration
+- Raycast extension lives in [`raycast-extension`](./raycast-extension)
+- It calls `POST /api/estimate/project` to run quick estimates from Raycast
+- Setup instructions: [`raycast-extension/README.md`](./raycast-extension/README.md)

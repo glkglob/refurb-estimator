@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AuthBanner from "@/components/AuthBanner";
 import EstimateResults from "@/components/EstimateResults";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
@@ -73,14 +73,14 @@ export default function RoomsPage() {
   ]);
   const [nextRoomId, setNextRoomId] = useState(3);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-  const [shouldScrollToResults, setShouldScrollToResults] = useState(false);
+  const shouldScrollToResultsRef = useRef(false);
   const { toast } = useToast();
 
   function updateRoom(id: string, patch: Partial<Omit<RoomInput, "id">>) {
     setRooms((prev) =>
       prev.map((room) => (room.id === id ? { ...room, ...patch } : room))
     );
-    setShouldScrollToResults(true);
+    shouldScrollToResultsRef.current = true;
   }
 
   function addRoom() {
@@ -95,7 +95,7 @@ export default function RoomsPage() {
       }
     ]);
     setNextRoomId((prev) => prev + 1);
-    setShouldScrollToResults(true);
+    shouldScrollToResultsRef.current = true;
   }
 
   function removeRoom(id: string) {
@@ -105,7 +105,7 @@ export default function RoomsPage() {
       }
       return prev.filter((room) => room.id !== id);
     });
-    setShouldScrollToResults(true);
+    shouldScrollToResultsRef.current = true;
   }
 
   const calculation = useMemo(() => {
@@ -123,15 +123,15 @@ export default function RoomsPage() {
   }, [rooms, region, condition]);
 
   useEffect(() => {
-    if (!shouldScrollToResults) {
+    if (!shouldScrollToResultsRef.current) {
       return;
     }
 
     if (calculation.result) {
       document.getElementById("results")?.scrollIntoView({ behavior: "smooth" });
-      setShouldScrollToResults(false);
+      shouldScrollToResultsRef.current = false;
     }
-  }, [calculation.result, shouldScrollToResults]);
+  }, [calculation.result]);
 
   const estimateInput = useMemo<EstimateInput>(() => {
     const totalAreaM2 = rooms.reduce((sum, room) => sum + room.areaM2, 0);
@@ -199,7 +199,7 @@ export default function RoomsPage() {
               value={region}
               onValueChange={(value) => {
                 setRegion(value as Region);
-                setShouldScrollToResults(true);
+                shouldScrollToResultsRef.current = true;
               }}
             >
               <SelectTrigger id="rooms-region" className="w-full">
@@ -221,7 +221,7 @@ export default function RoomsPage() {
               value={condition}
               onValueChange={(value) => {
                 setCondition(value as Condition);
-                setShouldScrollToResults(true);
+                shouldScrollToResultsRef.current = true;
               }}
             >
               <SelectTrigger id="rooms-condition" className="w-full">

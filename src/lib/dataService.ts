@@ -41,21 +41,21 @@ async function getAuthenticatedClient() {
     return null;
   }
 
-  const supabase = createClient();
-  const {
-    data: { user },
-    error
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+      error
+    } = await supabase.auth.getUser();
 
-  if (error) {
-    throw new Error(`Failed to check authentication: ${error.message}`);
-  }
+    if (error || !user) {
+      return null;
+    }
 
-  if (!user) {
+    return { supabase, user };
+  } catch {
     return null;
   }
-
-  return { supabase, user };
 }
 
 export async function saveScenario(scenario: Scenario): Promise<void> {

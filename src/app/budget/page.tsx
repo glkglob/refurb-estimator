@@ -480,14 +480,16 @@ export default function BudgetPage() {
                 <CardTitle>Planned vs Actual by Category</CardTitle>
               </CardHeader>
               <CardContent>
-                <BarChart
-                  data={plannedVsActualChartData}
-                  index="name"
-                  categories={["Planned", "Actual"]}
-                  colors={["teal", "slate"]}
-                  valueFormatter={(value) => gbpFormatter.format(value)}
-                  className="h-72"
-                />
+                <div className="overflow-x-auto">
+                  <BarChart
+                    data={plannedVsActualChartData}
+                    index="name"
+                    categories={["Planned", "Actual"]}
+                    colors={["teal", "slate"]}
+                    valueFormatter={(value) => gbpFormatter.format(value)}
+                    className="h-72 min-w-[500px]"
+                  />
+                </div>
               </CardContent>
             </Card>
           ) : null}

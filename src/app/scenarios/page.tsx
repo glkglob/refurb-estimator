@@ -279,14 +279,16 @@ export default function ScenariosPage() {
                 <CardTitle>Scenario Cost Comparison</CardTitle>
               </CardHeader>
               <CardContent>
-                <BarChart
-                  data={scenarioCostChartData}
-                  index="name"
-                  categories={["Low", "Typical", "High"]}
-                  colors={["emerald", "teal", "rose"]}
-                  valueFormatter={(value) => gbpFormatter.format(value)}
-                  className="h-72"
-                />
+                <div className="overflow-x-auto">
+                  <BarChart
+                    data={scenarioCostChartData}
+                    index="name"
+                    categories={["Low", "Typical", "High"]}
+                    colors={["emerald", "teal", "rose"]}
+                    valueFormatter={(value) => gbpFormatter.format(value)}
+                    className="h-72 min-w-[500px]"
+                  />
+                </div>
               </CardContent>
             </Card>
           ) : null}
@@ -297,14 +299,16 @@ export default function ScenariosPage() {
                 <CardTitle>Investment Analysis</CardTitle>
               </CardHeader>
               <CardContent>
-                <BarChart
-                  data={investmentChartData}
-                  index="name"
-                  categories={["Purchase", "Refurb Cost", "GDV", "Profit"]}
-                  colors={["slate", "teal", "emerald", "cyan"]}
-                  valueFormatter={(value) => gbpFormatter.format(value)}
-                  className="h-72"
-                />
+                <div className="overflow-x-auto">
+                  <BarChart
+                    data={investmentChartData}
+                    index="name"
+                    categories={["Purchase", "Refurb Cost", "GDV", "Profit"]}
+                    colors={["slate", "teal", "emerald", "cyan"]}
+                    valueFormatter={(value) => gbpFormatter.format(value)}
+                    className="h-72 min-w-[500px]"
+                  />
+                </div>
               </CardContent>
             </Card>
           ) : null}

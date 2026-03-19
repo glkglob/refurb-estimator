@@ -105,7 +105,7 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p className="text-2xl font-semibold">
+              <p className="whitespace-nowrap text-2xl font-semibold">
                 <CurrencyDisplay amount={card.total} />
               </p>
               <p className="text-sm text-muted-foreground">
@@ -122,17 +122,19 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
           <CardTitle>Cost Breakdown by Category</CardTitle>
         </CardHeader>
         <CardContent>
-          <DonutChart
-            data={donutData}
-            category="value"
-            index="name"
-            colors={CHART_COLORS}
-            valueFormatter={(value) => gbpFormatter.format(value)}
-            label={gbpFormatter.format(result.totalTypical)}
-            showLabel
-            showTooltip
-            className="h-56 md:h-72"
-          />
+          <div className="overflow-x-auto">
+            <DonutChart
+              data={donutData}
+              category="value"
+              index="name"
+              colors={CHART_COLORS}
+              valueFormatter={(value) => gbpFormatter.format(value)}
+              label={gbpFormatter.format(result.totalTypical)}
+              showLabel
+              showTooltip
+              className="h-56 md:h-72"
+            />
+          </div>
           <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
             {donutData.map((item, i) => (
               <div key={item.name} className="flex items-center gap-1.5">
@@ -148,7 +150,7 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
       </Card>
 
       <Card className="shadow-sm">
-        <CardContent className="space-y-2 p-0">
+        <CardContent className="overflow-x-auto space-y-2 p-0">
           <p className="px-4 pt-4 text-xs text-muted-foreground">
             Includes{" "}
             <TermTooltip
@@ -162,43 +164,41 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
             />
             .
           </p>
-          <div className="overflow-x-auto">
-            <Table className="min-w-[760px]">
-              <TableHeader className="bg-muted/60">
-                <TableRow>
-                  <TableHead className="px-4">Category</TableHead>
-                  <TableHead className="px-4">Low</TableHead>
-                  <TableHead className="px-4 font-semibold text-foreground">Typical</TableHead>
-                  <TableHead className="px-4">High</TableHead>
+          <Table className="min-w-[760px]">
+            <TableHeader className="bg-muted/60">
+              <TableRow>
+                <TableHead className="px-4">Category</TableHead>
+                <TableHead className="px-4">Low</TableHead>
+                <TableHead className="px-4 font-semibold text-foreground">Typical</TableHead>
+                <TableHead className="px-4">High</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {result.categories.map((category, index) => (
+                <TableRow
+                  key={category.category}
+                  className={
+                    index % 2 === 0 ? "bg-card hover:bg-muted/40" : "bg-muted/20 hover:bg-muted/40"
+                  }
+                >
+                  <TableCell className="px-4 font-medium">
+                    {renderCategoryLabel(category.category)}
+                  </TableCell>
+                  <TableCell className="px-4">
+                    <CurrencyDisplay amount={category.low} />
+                  </TableCell>
+                  <TableCell className="px-4">
+                    <span className="font-medium">
+                      <CurrencyDisplay amount={category.typical} />
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-4">
+                    <CurrencyDisplay amount={category.high} />
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {result.categories.map((category, index) => (
-                  <TableRow
-                    key={category.category}
-                    className={
-                      index % 2 === 0 ? "bg-card hover:bg-muted/40" : "bg-muted/20 hover:bg-muted/40"
-                    }
-                  >
-                    <TableCell className="px-4 font-medium">
-                      {renderCategoryLabel(category.category)}
-                    </TableCell>
-                    <TableCell className="px-4">
-                      <CurrencyDisplay amount={category.low} />
-                    </TableCell>
-                    <TableCell className="px-4">
-                      <span className="font-medium">
-                        <CurrencyDisplay amount={category.typical} />
-                      </span>
-                    </TableCell>
-                    <TableCell className="px-4">
-                      <CurrencyDisplay amount={category.high} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </section>

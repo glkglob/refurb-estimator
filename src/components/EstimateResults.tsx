@@ -162,39 +162,43 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
             />
             .
           </p>
-          <Table className="min-w-[760px]">
-            <TableHeader className="bg-muted/60">
-              <TableRow>
-                <TableHead className="px-4">Category</TableHead>
-                <TableHead className="px-4">Low</TableHead>
-                <TableHead className="px-4 font-semibold text-foreground">Typical</TableHead>
-                <TableHead className="px-4">High</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-            {result.categories.map((category, index) => (
-                <TableRow
-                  key={category.category}
-                  className={index % 2 === 0 ? "bg-card hover:bg-muted/40" : "bg-muted/20 hover:bg-muted/40"}
-                >
-                  <TableCell className="px-4 font-medium">
-                  {renderCategoryLabel(category.category)}
-                  </TableCell>
-                  <TableCell className="px-4">
-                  <CurrencyDisplay amount={category.low} />
-                  </TableCell>
-                  <TableCell className="px-4">
-                    <span className="font-medium">
-                      <CurrencyDisplay amount={category.typical} />
-                    </span>
-                  </TableCell>
-                  <TableCell className="px-4">
-                  <CurrencyDisplay amount={category.high} />
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[760px]">
+              <TableHeader className="bg-muted/60">
+                <TableRow>
+                  <TableHead className="px-4">Category</TableHead>
+                  <TableHead className="px-4">Low</TableHead>
+                  <TableHead className="px-4 font-semibold text-foreground">Typical</TableHead>
+                  <TableHead className="px-4">High</TableHead>
                 </TableRow>
-            ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {result.categories.map((category, index) => (
+                  <TableRow
+                    key={category.category}
+                    className={
+                      index % 2 === 0 ? "bg-card hover:bg-muted/40" : "bg-muted/20 hover:bg-muted/40"
+                    }
+                  >
+                    <TableCell className="px-4 font-medium">
+                      {renderCategoryLabel(category.category)}
+                    </TableCell>
+                    <TableCell className="px-4">
+                      <CurrencyDisplay amount={category.low} />
+                    </TableCell>
+                    <TableCell className="px-4">
+                      <span className="font-medium">
+                        <CurrencyDisplay amount={category.typical} />
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-4">
+                      <CurrencyDisplay amount={category.high} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </section>

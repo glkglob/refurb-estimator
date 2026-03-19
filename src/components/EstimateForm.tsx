@@ -240,7 +240,7 @@ export default function EstimateForm({ onSubmit }: EstimateFormProps) {
         </div>
       </div>
 
-      <Button type="submit">
+      <Button type="submit" variant="default">
         Calculate estimate
       </Button>
     </form>

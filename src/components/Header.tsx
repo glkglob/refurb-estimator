@@ -3,7 +3,7 @@
 import type { User } from "@supabase/supabase-js";
 import { LogOut, Menu, UserRound } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ export default function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
   const isSupabaseConfigured = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
@@ -94,7 +95,7 @@ export default function Header() {
 
     if (!user) {
       return (
-        <Button variant="outline" asChild>
+        <Button variant="outline" className="border-primary text-primary hover:bg-primary/10" asChild>
           <Link href="/auth/login">Sign in</Link>
         </Button>
       );
@@ -127,12 +128,16 @@ export default function Header() {
   }
 
   return (
-    <header className="border-b bg-card">
+    <header className="border-b border-border bg-background">
       <nav aria-label="Main navigation" className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
         <div className="hidden items-center gap-2 md:flex">
           {navItems.map((item, index) => (
             <div key={item.href} className="flex items-center gap-2">
-              <Button variant="ghost" asChild>
+              <Button
+                variant="ghost"
+                className={pathname === item.href ? "font-semibold text-primary hover:text-primary" : ""}
+                asChild
+              >
                 <Link href={item.href}>{item.label}</Link>
               </Button>
               {index < navItems.length - 1 ? <Separator orientation="vertical" className="h-5" /> : null}
@@ -159,7 +164,11 @@ export default function Header() {
               <div className="mt-2 flex flex-col gap-2 p-4">
                 {navItems.map((item) => (
                   <SheetClose asChild key={item.href}>
-                    <Button variant="ghost" asChild className="justify-start">
+                    <Button
+                      variant="ghost"
+                      className={`justify-start ${pathname === item.href ? "font-semibold text-primary hover:text-primary" : ""}`}
+                      asChild
+                    >
                       <Link href={item.href}>{item.label}</Link>
                     </Button>
                   </SheetClose>
@@ -179,7 +188,11 @@ export default function Header() {
                   </>
                 ) : (
                   <SheetClose asChild>
-                    <Button asChild>
+                    <Button
+                      variant="outline"
+                      className="border-primary text-primary hover:bg-primary/10"
+                      asChild
+                    >
                       <Link href="/auth/login">Sign in</Link>
                     </Button>
                   </SheetClose>

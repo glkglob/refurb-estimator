@@ -98,7 +98,7 @@ export default function HomePage() {
               {lastInput.condition} condition, {lastInput.finishLevel} finish
             </p>
           ) : null}
-          <Button type="button" onClick={() => setIsSaveModalOpen(true)}>
+          <Button type="button" variant="default" onClick={() => setIsSaveModalOpen(true)}>
             Save as Scenario
           </Button>
           <EstimateResults result={result} />

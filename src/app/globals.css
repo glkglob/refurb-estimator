@@ -1,49 +1,11 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
-
-body {
-  margin: 0;
-  min-height: 100vh;
-}
-
-:root {
-  --background: 0 0% 98%;
-  --foreground: 215 28% 17%;
-  --card: 0 0% 100%;
-  --card-foreground: 215 28% 17%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 215 28% 17%;
-  --primary: 166 91% 30%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 215 20% 95%;
-  --secondary-foreground: 215 28% 17%;
-  --muted: 215 20% 95%;
-  --muted-foreground: 215 16% 47%;
-  --accent: 166 91% 30%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 215 20% 88%;
-  --input: 215 20% 88%;
-  --ring: 166 91% 30%;
-  --radius: 0.5rem;
-  --chart-1: 166 91% 30%;
-  --chart-2: 215 28% 35%;
-  --chart-3: 215 16% 47%;
-  --chart-4: 215 20% 60%;
-  --chart-5: 215 20% 75%;
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 215 28% 17%;
-  --sidebar-primary: 166 91% 30%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 215 20% 95%;
-  --sidebar-accent-foreground: 215 28% 17%;
-  --sidebar-border: 215 20% 88%;
-  --sidebar-ring: 166 91% 30%;
-}
 
 .dark {
   --background: 215 28% 10%;
@@ -123,11 +85,49 @@ body {
 }
 
 @layer base {
+  :root {
+    --background: 40 20% 98%;
+    --foreground: 215 28% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
+    --primary: 166 91% 30%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 20% 95%;
+    --secondary-foreground: 215 28% 17%;
+    --muted: 215 20% 95%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 166 91% 30%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 20% 88%;
+    --input: 215 20% 88%;
+    --ring: 166 91% 30%;
+    --radius: 0.5rem;
+    --chart-1: 166 91% 30%;
+    --chart-2: 215 28% 35%;
+    --chart-3: 215 16% 47%;
+    --chart-4: 215 20% 60%;
+    --chart-5: 215 20% 75%;
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 215 28% 17%;
+    --sidebar-primary: 166 91% 30%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 20% 95%;
+    --sidebar-accent-foreground: 215 28% 17%;
+    --sidebar-border: 215 20% 88%;
+    --sidebar-ring: 166 91% 30%;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
 
   body {
+    margin: 0;
+    min-height: 100vh;
     @apply bg-background text-foreground;
   }
 

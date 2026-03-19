@@ -189,7 +189,7 @@ export default function RoomsPage() {
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Detailed Rooms</h1>
 
-      <Card>
+      <Card className="shadow-sm">
         <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2">
           <div className="space-y-1">
             <Label htmlFor="rooms-region">Region</Label>
@@ -256,7 +256,7 @@ export default function RoomsPage() {
           const hasAreaError = !Number.isFinite(room.areaM2) || room.areaM2 <= 0;
 
           return (
-            <Card key={room.id}>
+            <Card key={room.id} className="shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle className="text-lg">Room {index + 1}</CardTitle>
@@ -366,7 +366,7 @@ export default function RoomsPage() {
       {calculation.error ? <p className="text-sm font-medium text-red-600">{calculation.error}</p> : null}
       {calculation.result ? (
         <div id="results" className="space-y-4">
-          <Button type="button" onClick={() => setIsSaveModalOpen(true)}>
+          <Button type="button" variant="default" onClick={() => setIsSaveModalOpen(true)}>
             Save as Scenario
           </Button>
           <EstimateResults result={calculation.result} />

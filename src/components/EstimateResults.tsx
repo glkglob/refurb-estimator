@@ -61,7 +61,10 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
     <section className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row">
         {summaryCards.map((card) => (
-          <Card key={card.label} className="flex-1">
+          <Card
+            key={card.label}
+            className={`flex-1 shadow-sm ${card.label === "Typical" ? "border border-primary" : ""}`}
+          >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{card.label}</CardTitle>
             </CardHeader>
@@ -78,7 +81,7 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
         ))}
       </div>
 
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Cost Breakdown by Category</CardTitle>
         </CardHeader>
@@ -109,7 +112,7 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="shadow-sm">
         <CardContent className="p-0">
           <Table className="min-w-[760px]">
             <TableHeader className="bg-muted/60">

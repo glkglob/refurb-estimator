@@ -138,6 +138,7 @@ export default function SaveScenarioModal({
             </Button>
             <Button
               type="submit"
+              variant="default"
             >
               Save
             </Button>

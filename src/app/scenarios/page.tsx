@@ -151,7 +151,7 @@ export default function ScenariosPage() {
       {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
 
       {!isLoading && sortedScenarios.length === 0 ? (
-        <Card>
+        <Card className="shadow-sm">
           <CardContent className="p-4 text-sm text-muted-foreground">
             No scenarios saved yet. Create one from the{" "}
             <Link href="/" className="font-medium text-foreground underline">
@@ -257,7 +257,7 @@ export default function ScenariosPage() {
           </div>
 
           {scenarioCostChartData.length >= 2 ? (
-            <Card className="bg-card">
+            <Card className="bg-card shadow-sm">
               <CardHeader>
                 <CardTitle>Scenario Cost Comparison</CardTitle>
               </CardHeader>
@@ -275,7 +275,7 @@ export default function ScenariosPage() {
           ) : null}
 
           {investmentChartData.length > 0 ? (
-            <Card className="bg-card">
+            <Card className="bg-card shadow-sm">
               <CardHeader>
                 <CardTitle>Investment Analysis</CardTitle>
               </CardHeader>

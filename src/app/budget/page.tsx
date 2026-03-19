@@ -316,7 +316,7 @@ export default function BudgetPage() {
       <section className="space-y-6">
         <h1 className="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
         {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
-        <Card>
+        <Card className="shadow-sm">
           <CardContent className="p-4 text-sm text-muted-foreground">
             No scenarios saved yet. Save a scenario first to start tracking your budget. Create
             one from{" "}
@@ -370,7 +370,7 @@ export default function BudgetPage() {
       <h1 className="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
       {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
 
-      <Card>
+      <Card className="shadow-sm">
         <CardContent className="p-4">
           <div className="space-y-2">
             <p className="text-sm font-medium">Scenario</p>
@@ -457,7 +457,7 @@ export default function BudgetPage() {
           </div>
 
           {hasAnyActual ? (
-            <Card className="bg-card">
+            <Card className="bg-card shadow-sm">
               <CardHeader>
                 <CardTitle>Planned vs Actual by Category</CardTitle>
               </CardHeader>

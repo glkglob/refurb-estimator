@@ -50,7 +50,7 @@ export default function LoginPage() {
 
   return (
     <section className="mx-auto w-full max-w-md">
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Sign in</CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -85,7 +85,7 @@ export default function LoginPage() {
 
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-            <Button type="submit" disabled={isLoading} className="w-full">
+            <Button type="submit" variant="default" disabled={isLoading} className="w-full">
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>

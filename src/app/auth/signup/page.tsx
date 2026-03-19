@@ -51,7 +51,7 @@ export default function SignupPage() {
 
   return (
     <section className="mx-auto w-full max-w-md">
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Create account</CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -101,8 +101,8 @@ export default function SignupPage() {
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             {message ? <p className="text-sm text-green-600">{message}</p> : null}
 
-            <Button type="submit" disabled={isLoading} className="w-full">
-              {isLoading ? "Creating account..." : "Sign up"}
+            <Button type="submit" variant="default" disabled={isLoading} className="w-full">
+              {isLoading ? "Creating account..." : "Create account"}
             </Button>
           </form>
 

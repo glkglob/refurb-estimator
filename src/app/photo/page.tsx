@@ -1,6 +1,14 @@
 "use client";
 
-import { AlertCircle, Camera, RefreshCw, Sparkles, Upload } from "lucide-react";
+import {
+  AlertCircle,
+  Camera,
+  ChevronDown,
+  RefreshCw,
+  Sparkles,
+  Upload,
+  X
+} from "lucide-react";
 import Link from "next/link";
 import NextImage from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -8,6 +16,7 @@ import EstimateResults from "@/components/EstimateResults";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -34,6 +43,7 @@ type PhotoEstimateResponse = {
 
 const supportedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const maxBytes = 20 * 1024 * 1024;
+const maxPhotos = 3;
 const regions: Region[] = [
   "London",
   "SouthEast",
@@ -129,9 +139,13 @@ function confidenceBadgeClass(confidence: string): string {
 }
 
 export default function PhotoPage() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [regionOverride, setRegionOverride] = useState<Region | "auto">("auto");
+  const [bedrooms, setBedrooms] = useState<number | null>(null);
+  const [approxAreaM2, setApproxAreaM2] = useState<number | null>(null);
+  const [postcode, setPostcode] = useState("");
+  const [showDetails, setShowDetails] = useState(false);
   const [isAnalysing, setIsAnalysing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
@@ -154,11 +168,9 @@ export default function PhotoPage() {
 
   useEffect(() => {
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [previewUrl]);
+  }, [previewUrls]);
 
   const refineHref = useMemo(() => {
     if (!result) {
@@ -175,17 +187,14 @@ export default function PhotoPage() {
     return `/?${params.toString()}`;
   }, [result]);
 
-  function revokePreview(url: string | null) {
-    if (url) {
-      URL.revokeObjectURL(url);
-    }
-  }
-
   function resetAll() {
-    revokePreview(previewUrl);
-    setSelectedFile(null);
-    setPreviewUrl(null);
+    setSelectedFiles([]);
+    setPreviewUrls([]);
     setRegionOverride("auto");
+    setBedrooms(null);
+    setApproxAreaM2(null);
+    setPostcode("");
+    setShowDetails(false);
     setIsAnalysing(false);
     setError(null);
     setResult(null);
@@ -197,33 +206,60 @@ export default function PhotoPage() {
     }
   }
 
-  function handleFile(file: File | null) {
-    if (!file) {
+  function applyFiles(nextFiles: File[]) {
+    const validFiles: File[] = [];
+
+    for (const file of nextFiles) {
+      if (!supportedTypes.has(file.type)) {
+        setError("Please upload JPEG, PNG, or WebP images.");
+        return;
+      }
+
+      if (file.size > maxBytes) {
+        setError("One or more images are too large. Maximum size is 20MB each.");
+        return;
+      }
+
+      validFiles.push(file);
+    }
+
+    if (validFiles.length === 0) {
       return;
     }
 
-    if (!supportedTypes.has(file.type)) {
-      setError("Please upload a JPEG, PNG, or WebP image.");
-      return;
+    const limitedFiles = validFiles.slice(0, maxPhotos);
+    if (validFiles.length > maxPhotos) {
+      setError("You can upload up to 3 photos.");
+    } else {
+      setError(null);
     }
 
-    if (file.size > maxBytes) {
-      setError("Image is too large. Maximum size is 20MB.");
-      return;
-    }
-
-    revokePreview(previewUrl);
-    const nextPreviewUrl = URL.createObjectURL(file);
-
-    setSelectedFile(file);
-    setPreviewUrl(nextPreviewUrl);
-    setError(null);
+    setSelectedFiles(limitedFiles);
+    setPreviewUrls(limitedFiles.map((file) => URL.createObjectURL(file)));
     setResult(null);
   }
 
+  function appendFiles(files: File[]) {
+    if (files.length === 0) {
+      return;
+    }
+
+    const combinedFiles = [...selectedFiles, ...files];
+    applyFiles(combinedFiles);
+  }
+
+  function removeFile(index: number) {
+    const nextFiles = selectedFiles.filter((_, fileIndex) => fileIndex !== index);
+    if (nextFiles.length === 0) {
+      resetAll();
+      return;
+    }
+    applyFiles(nextFiles);
+  }
+
   async function handleAnalyse() {
-    if (!selectedFile) {
-      setError("Please select a property photo first.");
+    if (selectedFiles.length === 0) {
+      setError("Please select at least one property photo first.");
       return;
     }
 
@@ -231,17 +267,22 @@ export default function PhotoPage() {
     setError(null);
 
     try {
-      const base64DataUrl = await resizeToDataUrl(selectedFile);
-      if (estimateDataUrlBytes(base64DataUrl) > maxBytes) {
-        throw new Error("Image is too large after processing. Please use a smaller photo.");
+      const base64DataUrls = await Promise.all(selectedFiles.map((file) => resizeToDataUrl(file)));
+      for (const dataUrl of base64DataUrls) {
+        if (estimateDataUrlBytes(dataUrl) > maxBytes) {
+          throw new Error("One or more images are too large after processing. Please use smaller photos.");
+        }
       }
 
       const response = await fetch("/api/ai/photo-estimate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          image: base64DataUrl,
-          region: regionOverride !== "auto" ? regionOverride : undefined
+          image: base64DataUrls.length === 1 ? base64DataUrls[0] : base64DataUrls,
+          region: regionOverride !== "auto" ? regionOverride : undefined,
+          bedrooms: bedrooms && bedrooms > 0 ? bedrooms : undefined,
+          approxAreaM2: approxAreaM2 && approxAreaM2 > 0 ? approxAreaM2 : undefined,
+          postcode: postcode.trim() || undefined
         })
       });
 
@@ -289,8 +330,9 @@ export default function PhotoPage() {
             ref={uploadInputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
+            multiple
             className="hidden"
-            onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
+            onChange={(event) => appendFiles(Array.from(event.target.files ?? []))}
           />
           <input
             ref={cameraInputRef}
@@ -298,7 +340,7 @@ export default function PhotoPage() {
             accept="image/jpeg,image/png,image/webp"
             capture="environment"
             className="hidden"
-            onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
+            onChange={(event) => appendFiles(Array.from(event.target.files ?? []))}
           />
 
           <div
@@ -326,14 +368,16 @@ export default function PhotoPage() {
             onDrop={(event) => {
               event.preventDefault();
               setIsDragging(false);
-              handleFile(event.dataTransfer.files?.[0] ?? null);
+              appendFiles(Array.from(event.dataTransfer.files ?? []));
             }}
           >
             <Upload className="mx-auto mb-3 size-8 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">
-              Drag & drop a property photo or click to browse
+              Drag & drop property photos or click to browse
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">JPEG, PNG, or WebP · Max 20MB</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Up to 3 photos · JPEG, PNG, or WebP · Max 20MB each
+            </p>
 
             <div className="mt-4 sm:hidden">
               <Button
@@ -350,19 +394,38 @@ export default function PhotoPage() {
             </div>
           </div>
 
-          {selectedFile && previewUrl ? (
+          {selectedFiles.length > 0 && previewUrls.length > 0 ? (
             <div className="space-y-4">
-              <div className="rounded-lg border bg-muted/20 p-3">
-                <div className="relative mx-auto h-[300px] w-full">
-                  <NextImage
-                    src={previewUrl}
-                    alt="Selected property photo preview"
-                    fill
-                    unoptimized
-                    className="rounded object-contain"
-                    sizes="(max-width: 640px) 100vw, 600px"
-                  />
-                </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+                {previewUrls.map((url, index) => (
+                  <div key={url} className="rounded-lg border bg-muted/20 p-2">
+                    <div className="relative h-40 w-full overflow-hidden rounded">
+                      <NextImage
+                        src={url}
+                        alt={`Selected property preview ${index + 1}`}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                        sizes="(max-width: 640px) 100vw, 30vw"
+                      />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <p className="truncate text-xs text-muted-foreground">
+                        {selectedFiles[index]?.name ?? `Photo ${index + 1}`}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-7"
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="size-4" />
+                        <span className="sr-only">Remove photo {index + 1}</span>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -386,25 +449,105 @@ export default function PhotoPage() {
                   </Select>
                 </div>
 
-                <div className="flex items-end gap-2">
+                <div className="flex items-end">
                   <Button
                     type="button"
-                    variant="default"
-                    disabled={isAnalysing || !selectedFile}
-                    onClick={() => void handleAnalyse()}
-                    className="w-full sm:w-auto"
+                    variant="ghost"
+                    className="h-auto px-0 text-primary hover:bg-transparent hover:text-primary/90"
+                    onClick={() => setShowDetails((current) => !current)}
                   >
-                    {isAnalysing ? (
-                      <RefreshCw className="size-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="size-4" />
-                    )}
-                    {isAnalysing ? "Analysing property..." : "Analyse Photo"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={resetAll}>
-                    Change Photo
+                    <ChevronDown
+                      className={cn(
+                        "mr-2 size-4 transition-transform",
+                        showDetails ? "rotate-180" : "rotate-0"
+                      )}
+                    />
+                    Add property details for a more accurate estimate
                   </Button>
                 </div>
+              </div>
+
+              {showDetails ? (
+                <div className="rounded-lg border bg-muted/20 p-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">Bedrooms</p>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={10}
+                        step={1}
+                        placeholder="e.g. 3"
+                        value={bedrooms ?? ""}
+                        onChange={(event) => {
+                          if (event.target.value === "") {
+                            setBedrooms(null);
+                            return;
+                          }
+                          const value = Number(event.target.value);
+                          setBedrooms(Number.isFinite(value) ? value : null);
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">Area (m²)</p>
+                      <Input
+                        type="number"
+                        min={15}
+                        max={2000}
+                        step={1}
+                        placeholder="e.g. 85"
+                        value={approxAreaM2 ?? ""}
+                        onChange={(event) => {
+                          if (event.target.value === "") {
+                            setApproxAreaM2(null);
+                            return;
+                          }
+                          const value = Number(event.target.value);
+                          setApproxAreaM2(Number.isFinite(value) ? value : null);
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        If you know the approximate size
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">Postcode</p>
+                      <Input
+                        type="text"
+                        placeholder="e.g. SW1A 1AA"
+                        maxLength={8}
+                        value={postcode}
+                        onChange={(event) => setPostcode(event.target.value.toUpperCase())}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Helps determine region and local costs
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-end gap-2">
+                <Button
+                  type="button"
+                  variant="default"
+                  disabled={isAnalysing || selectedFiles.length === 0}
+                  onClick={() => void handleAnalyse()}
+                  className="w-full sm:w-auto"
+                >
+                  {isAnalysing ? (
+                    <RefreshCw className="size-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-4" />
+                  )}
+                  {isAnalysing ? "Analysing property..." : "Analyse Photo"}
+                </Button>
+                <Button type="button" variant="outline" onClick={resetAll}>
+                  Clear All
+                </Button>
               </div>
 
               {isAnalysing ? (

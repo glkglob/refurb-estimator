@@ -54,7 +54,8 @@ Rules:
 - If the image is not a property photo, return: {"error": "not_a_property", "message": "Please upload a photo of a property"}
 - totalAreaM2 must be a positive number between 15 and 2000
 - Be conservative — it is better to slightly underestimate area than overestimate
-- Always explain in notes how you arrived at the area estimate`;
+- Always explain in notes how you arrived at the area estimate
+- You may also receive optional user hints (bedrooms, approximate area, postcode). Treat these as supporting context and combine with visual evidence from all provided photos.`;
 
 const REGION_VALUES: Region[] = [
   "London",
@@ -72,6 +73,9 @@ type Confidence = (typeof CONFIDENCE_VALUES)[number];
 type PhotoEstimateRequestBody = {
   image?: unknown;
   region?: unknown;
+  bedrooms?: unknown;
+  approxAreaM2?: unknown;
+  postcode?: unknown;
 };
 
 type RateLimitEntry = {
@@ -187,6 +191,22 @@ function isValidDataUrlImage(image: string): boolean {
   return SUPPORTED_IMAGE_MIME_TYPES.has(match[1].toLowerCase());
 }
 
+function normalizeImagePayload(image: unknown): string[] {
+  if (typeof image === "string") {
+    const trimmed = image.trim();
+    return trimmed ? [trimmed] : [];
+  }
+
+  if (Array.isArray(image)) {
+    return image
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 function clampArea(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(parsed)) {
@@ -201,6 +221,40 @@ function asNonEmptyString(value: unknown, fallback: string): string {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function normalizeBedrooms(value: unknown): number | undefined {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return undefined;
+  }
+  const rounded = Math.round(parsed);
+  if (rounded < 1 || rounded > 10) {
+    return undefined;
+  }
+  return rounded;
+}
+
+function normalizeApproxArea(value: unknown): number | undefined {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return undefined;
+  }
+  if (parsed < 15 || parsed > 2000) {
+    return undefined;
+  }
+  return Math.round(parsed);
+}
+
+function normalizePostcode(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const normalized = value.trim().toUpperCase();
+  if (!normalized) {
+    return undefined;
+  }
+  return normalized.slice(0, 8);
 }
 
 export async function POST(request: Request) {
@@ -250,25 +304,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Image is required" }, { status: 400 });
     }
 
-    const image = typeof body.image === "string" ? body.image.trim() : "";
-
-    if (!image) {
+    const images = normalizeImagePayload(body.image);
+    if (images.length === 0) {
       return NextResponse.json({ error: "Image is required" }, { status: 400 });
     }
 
-    const imageSizeBytes = getBase64ByteSize(image);
-    if (imageSizeBytes > MAX_IMAGE_BYTES) {
+    if (images.length > 3) {
       return NextResponse.json(
-        { error: "Image is too large. Maximum size is 20MB" },
+        { error: "You can upload up to 3 images per estimate." },
         { status: 400 }
       );
     }
 
-    if (!isValidDataUrlImage(image)) {
-      return NextResponse.json(
-        { error: "Invalid image format. Please upload a JPEG, PNG, or WebP image." },
-        { status: 400 }
-      );
+    for (const image of images) {
+      const imageSizeBytes = getBase64ByteSize(image);
+      if (imageSizeBytes > MAX_IMAGE_BYTES) {
+        return NextResponse.json(
+          { error: "Image is too large. Maximum size is 20MB" },
+          { status: 400 }
+        );
+      }
+
+      if (!isValidDataUrlImage(image)) {
+        return NextResponse.json(
+          { error: "Invalid image format. Please upload a JPEG, PNG, or WebP image." },
+          { status: 400 }
+        );
+      }
     }
 
     if (!process.env.OPENAI_API_KEY) {
@@ -281,6 +343,26 @@ export async function POST(request: Request) {
     const openai = new OpenAI();
 
     const overrideRegion = isRegion(body.region) ? body.region : undefined;
+    const bedroomsHint = normalizeBedrooms(body.bedrooms);
+    const approxAreaHint = normalizeApproxArea(body.approxAreaM2);
+    const postcodeHint = normalizePostcode(body.postcode);
+
+    const hintLines = [
+      `Region override: ${overrideRegion ?? "none"}`,
+      `Bedrooms hint: ${bedroomsHint ?? "unknown"}`,
+      `Approx area hint (m2): ${approxAreaHint ?? "unknown"}`,
+      `Postcode hint: ${postcodeHint ?? "unknown"}`
+    ];
+
+    const userContent: Array<
+      { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }
+    > = [
+      {
+        type: "text",
+        text: `Analyse all provided property photos together.\n${hintLines.join("\n")}`
+      },
+      ...images.map((image) => ({ type: "image_url" as const, image_url: { url: image } }))
+    ];
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -288,10 +370,7 @@ export async function POST(request: Request) {
       max_tokens: 1000,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [{ type: "image_url", image_url: { url: image } }]
-        }
+        { role: "user", content: userContent }
       ]
     });
 

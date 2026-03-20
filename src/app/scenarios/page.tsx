@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart } from "@tremor/react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AuthBanner from "@/components/AuthBanner";
@@ -31,6 +31,14 @@ import type { Scenario } from "@/lib/types";
 function formatRoi(value: number): string {
   return `${value.toFixed(1)}%`;
 }
+
+const BarChart = dynamic(
+  () => import("@tremor/react").then((module) => module.BarChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-72 animate-pulse rounded bg-muted" />
+  }
+);
 
 export default function ScenariosPage() {
   const gbpFormatter = new Intl.NumberFormat("en-GB", {

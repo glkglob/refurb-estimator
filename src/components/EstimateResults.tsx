@@ -1,5 +1,5 @@
 import CurrencyDisplay from "@/components/CurrencyDisplay";
-import { DonutChart } from "@tremor/react";
+import dynamic from "next/dynamic";
 import TermTooltip from "@/components/TermTooltip";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,14 @@ import type { EstimateResult } from "@/lib/types";
 type EstimateResultsProps = {
   result: EstimateResult;
 };
+
+const DonutChart = dynamic(
+  () => import("@tremor/react").then((module) => module.DonutChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-56 animate-pulse rounded bg-muted md:h-72" />
+  }
+);
 
 const CHART_COLORS = [
   "#0d9488",

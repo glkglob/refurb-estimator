@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import AuthBanner from "@/components/AuthBanner";
 import EstimateForm from "@/components/EstimateForm";
-import EstimateResults from "@/components/EstimateResults";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,11 @@ import { defaultCostLibrary } from "@/lib/costLibrary";
 import { saveScenario } from "@/lib/dataService";
 import { estimateProject } from "@/lib/estimator";
 import type { EstimateInput, EstimateResult, Scenario } from "@/lib/types";
+
+const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
+  ssr: false,
+  loading: () => <div className="h-72 animate-pulse rounded-lg bg-muted" />
+});
 
 export default function HomePage() {
   const [formKey, setFormKey] = useState(0);

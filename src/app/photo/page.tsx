@@ -10,9 +10,9 @@ import {
   X
 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import NextImage from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import EstimateResults from "@/components/EstimateResults";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,11 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { EstimateInput, EstimateResult, Region } from "@/lib/types";
+
+const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
+  ssr: false,
+  loading: () => <div className="h-72 animate-pulse rounded-lg bg-muted" />
+});
 
 type PhotoEstimateResponse = {
   aiAnalysis: {

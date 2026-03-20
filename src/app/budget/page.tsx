@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart } from "@tremor/react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AuthBanner from "@/components/AuthBanner";
@@ -31,6 +31,14 @@ import {
   saveBudgetActuals
 } from "@/lib/dataService";
 import type { CostCategory, Scenario } from "@/lib/types";
+
+const BarChart = dynamic(
+  () => import("@tremor/react").then((module) => module.BarChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-72 animate-pulse rounded bg-muted" />
+  }
+);
 
 const COST_CATEGORIES: CostCategory[] = [
   "kitchen",

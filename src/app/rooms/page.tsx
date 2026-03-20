@@ -1,9 +1,9 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AuthBanner from "@/components/AuthBanner";
-import EstimateResults from "@/components/EstimateResults";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import TermTooltip from "@/components/TermTooltip";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,11 @@ import type {
   Scenario
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
+  ssr: false,
+  loading: () => <div className="h-72 animate-pulse rounded-lg bg-muted" />
+});
 
 const regions: Region[] = [
   "London",

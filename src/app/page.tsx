@@ -8,10 +8,14 @@ import EstimateForm from "@/components/EstimateForm";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { defaultCostLibrary } from "@/lib/costLibrary";
 import { saveScenario } from "@/lib/dataService";
-import { estimateProject } from "@/lib/estimator";
 import type { EstimateInput, EstimateResult, Scenario } from "@/lib/types";
+import {
+  calculateEnhancedEstimate,
+  conditionToRenovationScope,
+  getFallbackPostcodeDistrict,
+  inferPropertyCategory
+} from "@/lib/enhancedEstimator";
 
 const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
   ssr: false,
@@ -37,7 +41,15 @@ export default function HomePage() {
 
   function handleSubmit(input: EstimateInput) {
     try {
-      const nextResult = estimateProject(input, defaultCostLibrary);
+      const nextResult = calculateEnhancedEstimate({
+        propertyCategory: inferPropertyCategory(input.propertyType),
+        postcodeDistrict: getFallbackPostcodeDistrict(input.region),
+        totalAreaM2: input.totalAreaM2,
+        renovationScope: conditionToRenovationScope(input.condition),
+        qualityTier: input.finishLevel,
+        additionalFeatures: [],
+        listedBuilding: false
+      });
       setLastInput(input);
       setResult(nextResult);
       setSubmitError(null);

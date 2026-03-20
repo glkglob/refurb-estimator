@@ -12,6 +12,31 @@ export type Condition = "poor" | "fair" | "good";
 
 export type ProjectType = "refurb";
 
+export type RenovationScope = "cosmetic" | "standard" | "full" | "structural";
+
+export type PropertyCategory =
+  | "flat"
+  | "terraced"
+  | "semi-detached"
+  | "detached"
+  | "bungalow"
+  | "hmo"
+  | "commercial";
+
+export type AdditionalFeature =
+  | "loft_conversion"
+  | "extension_single_storey"
+  | "extension_double_storey"
+  | "basement_conversion"
+  | "new_roof"
+  | "full_rewire"
+  | "new_boiler"
+  | "underfloor_heating"
+  | "solar_panels"
+  | "new_windows_throughout"
+  | "garden_landscaping"
+  | "driveway";
+
 export type RoomType =
   | "kitchen"
   | "bathroom"
@@ -71,6 +96,58 @@ export type EstimateResult = {
     high: number;
   };
   categories: CategoryBreakdown[];
+};
+
+export type EnhancedEstimateInput = {
+  propertyCategory: PropertyCategory;
+  postcodeDistrict: string;
+  totalAreaM2: number;
+  renovationScope: RenovationScope;
+  qualityTier: FinishLevel;
+  additionalFeatures?: AdditionalFeature[];
+  yearBuilt?: number;
+  listedBuilding?: boolean;
+};
+
+export type EnhancedEstimateResult = {
+  totalLow: number;
+  totalTypical: number;
+  totalHigh: number;
+  costPerM2: {
+    low: number;
+    typical: number;
+    high: number;
+  };
+  baseRenovation: {
+    low: number;
+    typical: number;
+    high: number;
+  };
+  additionalFeatureCosts: Array<{
+    feature: AdditionalFeature;
+    label: string;
+    low: number;
+    typical: number;
+    high: number;
+  }>;
+  adjustments: Array<{
+    label: string;
+    amount: number;
+    reason: string;
+  }>;
+  categories: CategoryBreakdown[];
+  contingencyPercent: number;
+  feesPercent: number;
+  region: Region;
+  metadata: {
+    postcodeDistrict: string;
+    propertyCategory: PropertyCategory;
+    renovationScope: RenovationScope;
+    qualityTier: FinishLevel;
+    yearBuilt?: number;
+    listedBuilding: boolean;
+    estimatedAt: string;
+  };
 };
 
 export type Scenario = {

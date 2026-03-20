@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { defaultCostLibrary } from "@/lib/costLibrary";
-import { estimateProject } from "@/lib/estimator";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
   Condition,
@@ -9,6 +7,12 @@ import type {
   FinishLevel,
   Region
 } from "@/lib/types";
+import {
+  calculateEnhancedEstimate,
+  conditionToRenovationScope,
+  getFallbackPostcodeDistrict,
+  inferPropertyCategory
+} from "@/lib/enhancedEstimator";
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
@@ -421,7 +425,15 @@ export async function POST(request: Request) {
       finishLevel
     };
 
-    const estimateResult = estimateProject(estimateInput, defaultCostLibrary);
+    const estimateResult = calculateEnhancedEstimate({
+      propertyCategory: inferPropertyCategory(propertyType),
+      postcodeDistrict: postcodeHint ?? getFallbackPostcodeDistrict(region),
+      totalAreaM2,
+      renovationScope: conditionToRenovationScope(condition),
+      qualityTier: finishLevel,
+      additionalFeatures: [],
+      listedBuilding: false
+    });
 
     return NextResponse.json({
       aiAnalysis: {

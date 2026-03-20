@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
-import { defaultCostLibrary } from "@/lib/costLibrary";
-import { estimateProject } from "@/lib/estimator";
 import type {
+  AdditionalFeature,
   Condition,
   EstimateInput,
   FinishLevel,
+  PropertyCategory,
+  RenovationScope,
   Region
 } from "@/lib/types";
+import {
+  calculateEnhancedEstimate,
+  conditionToRenovationScope,
+  getFallbackPostcodeDistrict,
+  inferPropertyCategory
+} from "@/lib/enhancedEstimator";
 
 const REGION_VALUES: Region[] = [
   "London",
@@ -18,6 +25,35 @@ const REGION_VALUES: Region[] = [
 ];
 const CONDITION_VALUES: Condition[] = ["poor", "fair", "good"];
 const FINISH_LEVEL_VALUES: FinishLevel[] = ["budget", "standard", "premium"];
+const PROPERTY_CATEGORY_VALUES: PropertyCategory[] = [
+  "flat",
+  "terraced",
+  "semi-detached",
+  "detached",
+  "bungalow",
+  "hmo",
+  "commercial"
+];
+const RENOVATION_SCOPE_VALUES: RenovationScope[] = [
+  "cosmetic",
+  "standard",
+  "full",
+  "structural"
+];
+const ADDITIONAL_FEATURE_VALUES: AdditionalFeature[] = [
+  "loft_conversion",
+  "extension_single_storey",
+  "extension_double_storey",
+  "basement_conversion",
+  "new_roof",
+  "full_rewire",
+  "new_boiler",
+  "underfloor_heating",
+  "solar_panels",
+  "new_windows_throughout",
+  "garden_landscaping",
+  "driveway"
+];
 
 type EstimateProjectRequestBody = {
   region?: unknown;
@@ -25,6 +61,12 @@ type EstimateProjectRequestBody = {
   totalAreaM2?: unknown;
   condition?: unknown;
   finishLevel?: unknown;
+  postcodeDistrict?: unknown;
+  propertyCategory?: unknown;
+  renovationScope?: unknown;
+  additionalFeatures?: unknown;
+  yearBuilt?: unknown;
+  listedBuilding?: unknown;
 };
 
 function isRegion(value: unknown): value is Region {
@@ -48,6 +90,58 @@ function parsePositiveNumber(value: unknown): number | null {
     return null;
   }
   return parsed;
+}
+
+function isPropertyCategory(value: unknown): value is PropertyCategory {
+  return (
+    typeof value === "string" &&
+    PROPERTY_CATEGORY_VALUES.includes(value as PropertyCategory)
+  );
+}
+
+function isRenovationScope(value: unknown): value is RenovationScope {
+  return (
+    typeof value === "string" &&
+    RENOVATION_SCOPE_VALUES.includes(value as RenovationScope)
+  );
+}
+
+function parseAdditionalFeatures(value: unknown): AdditionalFeature[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  const features = value.filter(
+    (item): item is AdditionalFeature =>
+      typeof item === "string" &&
+      ADDITIONAL_FEATURE_VALUES.includes(item as AdditionalFeature)
+  );
+  return features.length === value.length ? features : null;
+}
+
+function parseYearBuilt(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed)) {
+    return undefined;
+  }
+  return parsed;
+}
+
+function parseListedBuilding(value: unknown): boolean | undefined {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    if (value.toLowerCase() === "true") {
+      return true;
+    }
+    if (value.toLowerCase() === "false") {
+      return false;
+    }
+  }
+  return undefined;
 }
 
 export async function POST(request: Request) {
@@ -97,8 +191,41 @@ export async function POST(request: Request) {
     finishLevel: body.finishLevel
   };
 
+  const postcodeDistrict =
+    typeof body.postcodeDistrict === "string" && body.postcodeDistrict.trim().length > 0
+      ? body.postcodeDistrict.trim().toUpperCase()
+      : getFallbackPostcodeDistrict(body.region);
+
+  const propertyCategory = isPropertyCategory(body.propertyCategory)
+    ? body.propertyCategory
+    : inferPropertyCategory(propertyType);
+
+  const renovationScope = isRenovationScope(body.renovationScope)
+    ? body.renovationScope
+    : conditionToRenovationScope(body.condition);
+
+  const additionalFeatures = parseAdditionalFeatures(body.additionalFeatures);
+  if (Array.isArray(body.additionalFeatures) && additionalFeatures === null) {
+    return NextResponse.json(
+      { error: "Invalid additionalFeatures" },
+      { status: 400 }
+    );
+  }
+
+  const yearBuilt = parseYearBuilt(body.yearBuilt);
+  const listedBuilding = parseListedBuilding(body.listedBuilding);
+
   try {
-    const estimateResult = estimateProject(estimateInput, defaultCostLibrary);
+    const estimateResult = calculateEnhancedEstimate({
+      propertyCategory,
+      postcodeDistrict,
+      totalAreaM2,
+      renovationScope,
+      qualityTier: body.finishLevel,
+      additionalFeatures: additionalFeatures ?? [],
+      yearBuilt,
+      listedBuilding
+    });
 
     return NextResponse.json(
       {

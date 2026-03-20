@@ -282,6 +282,7 @@ function toRoundedCategoryBreakdown(
   }));
 }
 
+// TODO: unused export
 export function postcodeToRegion(postcodeDistrict: string): Region {
   const area = extractPostcodeArea(postcodeDistrict);
 

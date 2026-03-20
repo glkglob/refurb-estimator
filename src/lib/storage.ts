@@ -57,6 +57,7 @@ export function loadScenarios(): Scenario[] {
   return readScenariosFromStorage();
 }
 
+// TODO: unused export
 export function loadLocal(): Scenario[] {
   return readScenariosFromStorage();
 }

@@ -10,6 +10,7 @@ export type FinishLevel = "budget" | "standard" | "premium";
 
 export type Condition = "poor" | "fair" | "good";
 
+// TODO: unused export
 export type ProjectType = "refurb";
 
 export type RenovationScope = "cosmetic" | "standard" | "full" | "structural";
@@ -84,6 +85,7 @@ export type CategoryBreakdown = {
   high: number;
 };
 
+// TODO: unused export
 export type RoomCategoryAllocation = Partial<Record<CostCategory, number>>;
 
 export type EstimateResult = {

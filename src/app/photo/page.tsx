@@ -4,6 +4,7 @@ import {
   AlertCircle,
   Camera,
   ChevronDown,
+  Loader2,
   RefreshCw,
   Sparkles,
   Upload,
@@ -25,6 +26,8 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import type { QuotePdfInput } from "@/lib/generateQuotePdf";
 import type { EstimateInput, EstimateResult, Region } from "@/lib/types";
 
 const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
@@ -152,6 +155,7 @@ export default function PhotoPage() {
   const [postcode, setPostcode] = useState("");
   const [showDetails, setShowDetails] = useState(false);
   const [isAnalysing, setIsAnalysing] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
     aiAnalysis: {
@@ -167,6 +171,7 @@ export default function PhotoPage() {
     estimateResult: EstimateResult;
   } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const { toast } = useToast();
 
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -314,6 +319,60 @@ export default function PhotoPage() {
       );
     } finally {
       setIsAnalysing(false);
+    }
+  }
+
+  async function handleDownloadPdf() {
+    if (!result) {
+      return;
+    }
+
+    setIsGeneratingPdf(true);
+
+    try {
+      const { estimateInput, estimateResult } = result;
+
+      const pdfInput: QuotePdfInput = {
+        propertyDescription: `${estimateInput.totalAreaM2}m² ${estimateInput.propertyType} in ${estimateInput.region}, ${estimateInput.condition} condition, ${estimateInput.finishLevel} finish`,
+        categories: estimateResult.categories.map((category) => ({
+          category: category.category,
+          low: category.low,
+          typical: category.typical,
+          high: category.high
+        })),
+        totalLow: estimateResult.totalLow,
+        totalTypical: estimateResult.totalTypical,
+        totalHigh: estimateResult.totalHigh,
+        costPerM2: estimateResult.costPerM2
+      };
+
+      const response = await fetch("/api/estimate/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: pdfInput })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "property-estimate.pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({
+        title: "PDF generation failed",
+        description: "Unable to generate the PDF. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingPdf(false);
     }
   }
 
@@ -632,10 +691,20 @@ export default function PhotoPage() {
           </Card>
 
           <EstimateResults result={result.estimateResult} />
-
-          <Button type="button" variant="outline" onClick={resetAll}>
-            Try Another Photo
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+            >
+              {isGeneratingPdf ? <Loader2 className="size-4 animate-spin" /> : null}
+              Download PDF
+            </Button>
+            <Button type="button" variant="outline" onClick={resetAll}>
+              Try Another Photo
+            </Button>
+          </div>
         </div>
       ) : null}
     </section>

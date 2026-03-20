@@ -9,6 +9,7 @@ import SaveScenarioModal from "@/components/SaveScenarioModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { saveScenario } from "@/lib/dataService";
+import type { QuotePdfInput } from "@/lib/generateQuotePdf";
 import type { EstimateInput, EstimateResult, Scenario } from "@/lib/types";
 import {
   calculateEnhancedEstimate,
@@ -29,6 +30,7 @@ export default function HomePage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -115,6 +117,58 @@ export default function HomePage() {
     document.getElementById("estimate-form")?.scrollIntoView({ behavior: "smooth" });
   }
 
+  async function handleDownloadPdf() {
+    if (!result || !lastInput) {
+      return;
+    }
+
+    setIsGeneratingPdf(true);
+
+    try {
+      const pdfInput: QuotePdfInput = {
+        propertyDescription: `${lastInput.totalAreaM2}m² ${lastInput.propertyType} in ${lastInput.region}, ${lastInput.condition} condition, ${lastInput.finishLevel} finish`,
+        categories: result.categories.map((category) => ({
+          category: category.category,
+          low: category.low,
+          typical: category.typical,
+          high: category.high
+        })),
+        totalLow: result.totalLow,
+        totalTypical: result.totalTypical,
+        totalHigh: result.totalHigh,
+        costPerM2: result.costPerM2
+      };
+
+      const response = await fetch("/api/estimate/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: pdfInput })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "property-estimate.pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({
+        title: "PDF generation failed",
+        description: "Unable to generate the PDF. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  }
+
   return (
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Quick Estimate</h1>
@@ -153,6 +207,15 @@ export default function HomePage() {
             >
               {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
               Save as Scenario
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+            >
+              {isGeneratingPdf ? <Loader2 className="size-4 animate-spin" /> : null}
+              Download PDF
             </Button>
             <Button type="button" variant="outline" onClick={handleNewEstimate}>
               New estimate

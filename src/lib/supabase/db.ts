@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from "./server";
+import { createClient } from "./client";
 import type { Scenario } from "../types";
 import type { BudgetActuals } from "../budget";
 
@@ -72,7 +72,7 @@ function mapActuals(
 }
 
 async function getAuthenticatedClient() {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createClient();
   const {
     data: { user },
     error

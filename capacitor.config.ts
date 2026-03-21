@@ -5,7 +5,8 @@ const config: CapacitorConfig = {
   appName: "Refurb Estimator",
   webDir: "out",
   server: {
-    androidScheme: "https",
+    url: "https://refurb-estimator.vercel.app",
+    cleartext: false,
   },
 };
 

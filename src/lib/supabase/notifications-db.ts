@@ -1,5 +1,4 @@
 import type { Notification, NotificationType } from "../platform-types";
-import { createClient } from "./client";
 import { createServerSupabaseClient } from "./server";
 
 type NotificationRow = {
@@ -30,7 +29,7 @@ export async function getNotifications(
   userId: string,
   options: { page: number; limit: number; unreadOnly?: boolean }
 ): Promise<{ data: Notification[]; total: number }> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const start = (options.page - 1) * options.limit;
   const end = start + options.limit - 1;
 
@@ -57,7 +56,7 @@ export async function getNotifications(
 }
 
 export async function getUnreadCount(userId: string): Promise<number> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const { count, error } = await supabase
     .from("notifications")
     .select("*", { count: "exact", head: true })
@@ -72,7 +71,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
 }
 
 export async function markAsRead(notificationId: string): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const { error } = await supabase
     .from("notifications")
     .update({ is_read: true })
@@ -84,7 +83,7 @@ export async function markAsRead(notificationId: string): Promise<void> {
 }
 
 export async function markAllAsRead(userId: string): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const { error } = await supabase
     .from("notifications")
     .update({ is_read: true })

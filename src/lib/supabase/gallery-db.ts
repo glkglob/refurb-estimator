@@ -1,5 +1,4 @@
 import type { GalleryItem, GalleryItemCreateInput, ProjectType } from "../platform-types";
-import { createClient } from "./client";
 import { createServerSupabaseClient } from "./server";
 
 type GalleryItemRow = {
@@ -66,7 +65,7 @@ export async function createGalleryItem(
   userId: string,
   data: GalleryItemCreateInput
 ): Promise<GalleryItem> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const payload: Partial<GalleryItemRow> = {
     user_id: userId,
     ...mapGalleryInputToRow(data)
@@ -89,7 +88,7 @@ export async function updateGalleryItem(
   itemId: string,
   data: Partial<GalleryItemCreateInput>
 ): Promise<GalleryItem> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const payload: Partial<GalleryItemRow> = {
     ...mapGalleryInputToRow(data),
     updated_at: new Date().toISOString()
@@ -110,7 +109,7 @@ export async function updateGalleryItem(
 }
 
 export async function deleteGalleryItem(itemId: string): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const { error } = await supabase.from("gallery").delete().eq("id", itemId);
 
   if (error) {
@@ -122,7 +121,7 @@ export async function getGalleryItemsByUser(
   userId: string,
   options: { page: number; limit: number }
 ): Promise<{ data: GalleryItem[]; total: number }> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const start = (options.page - 1) * options.limit;
   const end = start + options.limit - 1;
 
@@ -148,7 +147,7 @@ export async function getPublicGallery(options: {
   limit: number;
   projectType?: string;
 }): Promise<{ data: GalleryItem[]; total: number }> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const start = (options.page - 1) * options.limit;
   const end = start + options.limit - 1;
 
@@ -174,7 +173,7 @@ export async function getPublicGallery(options: {
 }
 
 export async function getFeaturedGalleryItems(limit: number): Promise<GalleryItem[]> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const boundedLimit = Math.max(1, Math.min(limit, 100));
   const { data, error } = await supabase
     .from("gallery")

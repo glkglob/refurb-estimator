@@ -1,4 +1,4 @@
-import { createClient } from "./client";
+import { createServerSupabaseClient } from "./server";
 
 function getExtensionFromFile(file: File): string {
   const trimmedName = file.name.trim();
@@ -18,7 +18,7 @@ function getExtensionFromFile(file: File): string {
 }
 
 export async function uploadFile(bucket: string, filePath: string, file: File): Promise<string> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const { error } = await supabase.storage.from(bucket).upload(filePath, file, {
     upsert: true,
     contentType: file.type
@@ -53,7 +53,7 @@ export async function uploadGalleryImage(
 }
 
 export async function deleteFile(bucket: string, filePath: string): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const { error } = await supabase.storage.from(bucket).remove([filePath]);
 
   if (error) {
@@ -66,7 +66,7 @@ export async function getSignedUrl(
   filePath: string,
   expiresIn: number = 3600
 ): Promise<string> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.storage
     .from(bucket)
     .createSignedUrl(filePath, expiresIn);

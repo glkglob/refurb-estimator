@@ -12,6 +12,8 @@ import {
   LayoutGrid,
   LogOut,
   Menu,
+  Palette,
+  Sparkles,
   UserCircle,
   Wallet,
   X
@@ -27,6 +29,8 @@ import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/s
 const navItems = [
   { href: "/", label: "Quick Estimate", icon: "Calculator" },
   { href: "/photo", label: "AI Estimate", icon: "Camera" },
+  { href: "/ai-pricing", label: "AI Pricing", icon: "Sparkles" },
+  { href: "/design-agent", label: "AI Design", icon: "Palette" },
   { href: "/new-build", label: "New Build", icon: "Building2" },
   { href: "/rooms", label: "Detailed Rooms", icon: "LayoutGrid" },
   { href: "/scenarios", label: "Scenario Comparison", icon: "GitCompare" },
@@ -48,7 +52,9 @@ const iconMap = {
   Wallet,
   LayoutDashboard,
   UserCircle,
-  Images
+  Images,
+  Sparkles,
+  Palette
 };
 
 function SidebarContent({

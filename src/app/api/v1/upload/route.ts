@@ -1,46 +1,14 @@
 import { NextResponse } from "next/server";
-import { HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { z } from "zod";
 import { requireRole } from "@/lib/rbac";
 import {
   AuthError,
   handleAuthError
 } from "@/lib/supabase/auth-helpers";
-import { validateJsonRequest } from "@/lib/validate";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-const bucketConfig = {
-  gallery: {
-    maxBytes: 5 * 1024 * 1024,
-    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"]
-  },
-  avatars: {
-    maxBytes: 2 * 1024 * 1024,
-    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"]
-  },
-  documents: {
-    maxBytes: 10 * 1024 * 1024,
-    allowedMimeTypes: ["application/pdf", "image/jpeg", "image/png", "image/webp"]
-  }
-} as const;
-
-type AllowedBucket = keyof typeof bucketConfig;
-
-const presignSchema = z.object({
-  action: z.literal("presign"),
-  bucket: z.enum(["gallery", "avatars", "documents"]),
-  fileName: z.string().min(1).max(255),
-  fileType: z.string().min(1).max(100),
-  fileSize: z.number().int().positive()
-});
-
-const confirmSchema = z.object({
-  action: z.literal("confirm"),
-  bucket: z.enum(["gallery", "avatars", "documents"]),
-  key: z.string().min(1).max(512)
-});
-
-const uploadBodySchema = z.discriminatedUnion("action", [presignSchema, confirmSchema]);
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+const ALLOWED_AVATAR_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const AVATAR_BUCKET = "avatars";
 
 function extensionFromMetadata(fileName: string, fileType: string): string {
   const lowerName = fileName.toLowerCase().trim();
@@ -59,113 +27,50 @@ function extensionFromMetadata(fileName: string, fileType: string): string {
   return mimeToExt[fileType] ?? "bin";
 }
 
-function getS3Client(): { client: S3Client; bucket: string; region: string } | null {
-  const bucket = process.env.NEXT_PUBLIC_S3_BUCKET;
-  const region = process.env.AWS_REGION;
-
-  if (!bucket || !region) {
-    return null;
-  }
-
-  return {
-    client: new S3Client({ region }),
-    bucket,
-    region
-  };
-}
-
-function buildPublicUrl(bucket: string, region: string, key: string): string {
-  const encodedKey = key
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-  return `https://${bucket}.s3.${region}.amazonaws.com/${encodedKey}`;
-}
-
 export async function POST(request: Request) {
   try {
     const user = await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
-    const parsedBody = await validateJsonRequest(
-      request,
-      uploadBodySchema,
-      { errorMessage: "Invalid upload payload" }
-    );
-    if (!parsedBody.success) {
-      return parsedBody.response;
-    }
-    const uploadRequest = parsedBody.data;
-    const s3Config = getS3Client();
+    const formData = await request.formData();
+    const file = formData.get("file");
 
-    if (!s3Config) {
-      return NextResponse.json(
-        {
-          error: "S3 is not configured. Set NEXT_PUBLIC_S3_BUCKET and AWS_REGION."
-        },
-        { status: 500 }
-      );
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    if (uploadRequest.action === "presign") {
-      const bucketValue: AllowedBucket = uploadRequest.bucket;
-      const config = bucketConfig[bucketValue];
-      const allowedMimeTypes = config.allowedMimeTypes as readonly string[];
-
-      if (!allowedMimeTypes.includes(uploadRequest.fileType)) {
-        return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
-      }
-
-      if (uploadRequest.fileSize > config.maxBytes) {
-        return NextResponse.json({ error: "File exceeds size limit" }, { status: 400 });
-      }
-
-      const extension = extensionFromMetadata(uploadRequest.fileName, uploadRequest.fileType);
-      const key =
-        bucketValue === "avatars"
-          ? `${user.id}/avatar.${extension}`
-          : `${user.id}/${crypto.randomUUID()}.${extension}`;
-
-      const putCommand = new PutObjectCommand({
-        Bucket: s3Config.bucket,
-        Key: key,
-        ContentType: uploadRequest.fileType
-      });
-      const expiresIn = 300;
-      const uploadUrl = await getSignedUrl(s3Config.client, putCommand, { expiresIn });
-      const publicUrl = buildPublicUrl(s3Config.bucket, s3Config.region, key);
-
-      return NextResponse.json(
-        {
-          uploadUrl,
-          key,
-          bucket: bucketValue,
-          publicUrl,
-          expiresIn
-        },
-        { status: 200 }
-      );
+    if (!ALLOWED_AVATAR_MIME_TYPES.has(file.type)) {
+      return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
     }
 
-    const bucketValue: AllowedBucket = uploadRequest.bucket;
-    const key = uploadRequest.key;
-    if (!key.startsWith(`${user.id}/`)) {
-      return NextResponse.json({ error: "Invalid file key" }, { status: 403 });
+    if (file.size <= 0) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    try {
-      await s3Config.client.send(
-        new HeadObjectCommand({
-          Bucket: s3Config.bucket,
-          Key: key
-        })
-      );
-    } catch {
-      return NextResponse.json({ error: "File upload not found" }, { status: 400 });
+    if (file.size > AVATAR_MAX_BYTES) {
+      return NextResponse.json({ error: "File exceeds size limit" }, { status: 400 });
     }
 
-    const publicUrl = buildPublicUrl(s3Config.bucket, s3Config.region, key);
+    const extension = extensionFromMetadata(file.name, file.type);
+    const filePath = `${user.id}/avatar.${extension}`;
+    const supabase = await createServerSupabaseClient();
+
+    const { error: uploadError } = await supabase.storage.from(AVATAR_BUCKET).upload(filePath, file, {
+      upsert: true,
+      contentType: file.type
+    });
+
+    if (uploadError) {
+      throw new Error(`Failed to upload file: ${uploadError.message}`);
+    }
+
+    const { data: publicData } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(filePath);
+
     return NextResponse.json(
-      { url: publicUrl, path: key, bucket: bucketValue, confirmed: true },
-      { status: 200 }
+      {
+        url: publicData.publicUrl,
+        path: filePath,
+        bucket: AVATAR_BUCKET
+      },
+      { status: 201 }
     );
   } catch (error) {
     if (error instanceof AuthError) {

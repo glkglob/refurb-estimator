@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import TermTooltip from "@/components/TermTooltip";
 import { Button } from "@/components/ui/button";
 import {
@@ -102,9 +102,14 @@ export default function SaveScenarioModal({
                 }
               }}
               aria-invalid={Boolean(nameError)}
-              className={nameError ? "border-red-500 focus-visible:ring-red-200" : ""}
+              className={nameError ? "border-destructive" : ""}
             />
-            {nameError ? <p className="text-sm text-red-600">{nameError}</p> : null}
+            {nameError ? (
+              <div className="bp-warning mt-1 flex items-start gap-1.5 rounded-md border px-2 py-1">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                <p className="text-sm text-destructive">{nameError}</p>
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-1">

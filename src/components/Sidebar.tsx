@@ -1,0 +1,256 @@
+"use client";
+
+import type { User } from "@supabase/supabase-js";
+import {
+  Building2,
+  Calculator,
+  Camera,
+  GitCompare,
+  LayoutGrid,
+  LogOut,
+  Menu,
+  Wallet,
+  X
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
+const navItems = [
+  { href: "/", label: "Quick Estimate", icon: "Calculator" },
+  { href: "/photo", label: "AI Estimate", icon: "Camera" },
+  { href: "/new-build", label: "New Build", icon: "Building2" },
+  { href: "/rooms", label: "Detailed Rooms", icon: "LayoutGrid" },
+  { href: "/scenarios", label: "Scenario Comparison", icon: "GitCompare" },
+  { href: "/budget", label: "Budget Tracker", icon: "Wallet" }
+] as const;
+
+const iconMap = {
+  Calculator,
+  Camera,
+  Building2,
+  LayoutGrid,
+  GitCompare,
+  Wallet
+};
+
+function SidebarContent({
+  pathname,
+  authLoading,
+  user,
+  onSignOut,
+  onNavigate,
+  useSheetClose = false
+}: {
+  pathname: string;
+  authLoading: boolean;
+  user: User | null;
+  onSignOut: () => Promise<void>;
+  onNavigate?: () => void;
+  useSheetClose?: boolean;
+}) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="border-b border-sidebar-border px-4 py-4">
+        <Link href="/" onClick={onNavigate} className="inline-flex items-center gap-2">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
+            RE
+          </span>
+          <span className="font-mono text-sm font-semibold text-sidebar-foreground">
+            Refurb Estimator
+          </span>
+        </Link>
+      </div>
+
+      <nav className="flex flex-col gap-1 px-2 py-4">
+        {navItems.map((item) => {
+          const Icon = iconMap[item.icon];
+          const isActive = pathname === item.href;
+          const linkClassName = isActive
+            ? "flex items-center gap-2 rounded-r-md border-l-2 border-primary bg-sidebar-accent px-3 py-2 text-sm font-medium text-sidebar-primary"
+            : "flex items-center gap-2 rounded-r-md border-l-2 border-l-transparent px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent/50";
+          const linkNode = (
+            <Link key={item.href} href={item.href} onClick={onNavigate} className={linkClassName}>
+              <Icon className="size-4" />
+              <span>{item.label}</span>
+            </Link>
+          );
+
+          if (useSheetClose) {
+            return (
+              <SheetClose asChild key={item.href}>
+                {linkNode}
+              </SheetClose>
+            );
+          }
+
+          return linkNode;
+        })}
+      </nav>
+
+      <div className="mt-auto border-t border-sidebar-border px-3 py-4">
+        {authLoading ? (
+          <p className="text-sm text-muted-foreground">Checking session...</p>
+        ) : user ? (
+          <div className="space-y-2">
+            <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+            <Button
+              variant="destructive"
+              className="w-full justify-start"
+              onClick={() => void onSignOut()}
+            >
+              <LogOut className="size-4" />
+              Sign out
+            </Button>
+          </div>
+        ) : (
+          useSheetClose ? (
+            <SheetClose asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-start border-primary text-primary hover:bg-primary/10"
+                asChild
+              >
+                <Link href="/auth/login" onClick={onNavigate}>
+                  Sign in
+                </Link>
+              </Button>
+            </SheetClose>
+          ) : (
+            <Button
+              variant="outline"
+              className="w-full justify-start border-primary text-primary hover:bg-primary/10"
+              asChild
+            >
+              <Link href="/auth/login" onClick={onNavigate}>
+                Sign in
+              </Link>
+            </Button>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function Sidebar() {
+  const [user, setUser] = useState<User | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const isSupabaseConfigured = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+  const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
+  const router = useRouter();
+  const pathname = usePathname();
+  const supabase = useMemo(
+    () => (isSupabaseConfigured ? createClient() : null),
+    [isSupabaseConfigured]
+  );
+
+  useEffect(() => {
+    if (!supabase) {
+      return;
+    }
+    const supabaseClient = supabase;
+    let isActive = true;
+
+    async function loadUser() {
+      const {
+        data: { user: currentUser }
+      } = await supabaseClient.auth.getUser();
+
+      if (isActive) {
+        setUser(currentUser);
+        setAuthLoading(false);
+      }
+    }
+
+    void loadUser();
+
+    const {
+      data: { subscription }
+    } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    return () => {
+      isActive = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  async function handleSignOut() {
+    if (!supabase) {
+      return;
+    }
+
+    await supabase.auth.signOut();
+    setUser(null);
+    setIsOpen(false);
+    router.push("/");
+    router.refresh();
+  }
+
+  function handleNavigate() {
+    setIsOpen(false);
+  }
+
+  return (
+    <>
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[240px] border-r border-sidebar-border bg-sidebar md:block">
+        <SidebarContent
+          pathname={pathname}
+          authLoading={authLoading}
+          user={user}
+          onSignOut={handleSignOut}
+        />
+      </aside>
+
+      <div className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-sidebar-border bg-sidebar px-4 md:hidden">
+        <Link href="/" className="inline-flex items-center gap-2">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
+            RE
+          </span>
+          <span className="font-mono text-sm font-semibold text-sidebar-foreground">
+            Refurb Estimator
+          </span>
+        </Link>
+
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Open sidebar navigation">
+              <Menu className="size-4" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent
+            side="left"
+            className="w-[85vw] max-w-[240px] border-r border-sidebar-border bg-sidebar p-0"
+          >
+            <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-4">
+              <span className="font-mono text-sm font-semibold text-sidebar-foreground">
+                Refurb Estimator
+              </span>
+              <SheetClose asChild>
+                <Button variant="ghost" size="icon" aria-label="Close sidebar navigation">
+                  <X className="size-4" />
+                </Button>
+              </SheetClose>
+            </div>
+            <SidebarContent
+              pathname={pathname}
+              authLoading={authLoading}
+              user={user}
+              onSignOut={handleSignOut}
+              onNavigate={handleNavigate}
+              useSheetClose
+            />
+          </SheetContent>
+        </Sheet>
+      </div>
+    </>
+  );
+}

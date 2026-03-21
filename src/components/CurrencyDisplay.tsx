@@ -9,5 +9,5 @@ const gbpFormatter = new Intl.NumberFormat("en-GB", {
 });
 
 export default function CurrencyDisplay({ amount }: CurrencyDisplayProps) {
-  return <>{gbpFormatter.format(amount)}</>;
+  return <span className="font-mono">{gbpFormatter.format(amount)}</span>;
 }

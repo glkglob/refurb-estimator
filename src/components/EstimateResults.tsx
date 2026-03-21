@@ -26,18 +26,18 @@ const DonutChart = dynamic(
 );
 
 const CHART_COLORS = [
-  "#0d9488",
-  "#06b6d4",
-  "#3b82f6",
-  "#6366f1",
-  "#64748b",
-  "#10b981",
-  "#f59e0b",
-  "#8b5cf6",
-  "#f43f5e",
-  "#78716c",
-  "#84cc16",
-  "#f97316"
+  "blue",
+  "amber",
+  "cyan",
+  "violet",
+  "emerald",
+  "blue",
+  "amber",
+  "cyan",
+  "violet",
+  "emerald",
+  "blue",
+  "amber"
 ];
 
 export default function EstimateResults({ result }: EstimateResultsProps) {
@@ -113,19 +113,19 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p className="whitespace-nowrap text-2xl font-semibold">
+              <p className="whitespace-nowrap text-2xl font-semibold font-mono">
                 <CurrencyDisplay amount={card.total} />
               </p>
               <p className="text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">Cost per m²:</span>{" "}
-                <CurrencyDisplay amount={card.perM2} /> /m²
+                <CurrencyDisplay amount={card.perM2} /> <span className="font-mono">/m²</span>
               </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Card className="shadow-sm">
+      <Card className="bp-card-border bg-card">
         <CardHeader>
           <CardTitle>Cost Breakdown by Category</CardTitle>
         </CardHeader>
@@ -140,7 +140,7 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
               label={gbpFormatter.format(result.totalTypical)}
               showLabel
               showTooltip
-              className="h-56 md:h-72"
+              className="h-56 md:h-72 [&_.tremor-base]:bg-transparent [&_[role='tooltip']]:border-border [&_[role='tooltip']]:bg-card [&_[role='tooltip']]:text-foreground"
             />
           </div>
           <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">

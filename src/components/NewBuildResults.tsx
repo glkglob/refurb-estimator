@@ -106,12 +106,12 @@ export default function NewBuildResults({ result }: NewBuildResultsProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p className="whitespace-nowrap text-2xl font-semibold">
+              <p className="whitespace-nowrap text-2xl font-semibold font-mono">
                 <CurrencyDisplay amount={card.total} />
               </p>
               <p className="text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">Cost per m²:</span>{" "}
-                <CurrencyDisplay amount={card.perM2} /> /m²
+                <CurrencyDisplay amount={card.perM2} /> <span className="font-mono">/m²</span>
               </p>
             </CardContent>
           </Card>
@@ -225,7 +225,7 @@ export default function NewBuildResults({ result }: NewBuildResultsProps) {
                   <span className="font-medium text-foreground">
                     {adjustment.label}
                   </span>
-                  <span className="text-sm text-foreground">
+                  <span className="text-sm text-foreground font-mono">
                     <CurrencyDisplay amount={adjustment.amount} />
                   </span>
                 </div>
@@ -253,33 +253,33 @@ export default function NewBuildResults({ result }: NewBuildResultsProps) {
           </div>
           <div>
             <span className="text-muted-foreground">Bedrooms:</span>{" "}
-            {result.metadata.bedrooms}
+            <span className="font-mono">{result.metadata.bedrooms}</span>
           </div>
           <div>
             <span className="text-muted-foreground">Storeys:</span>{" "}
-            {result.metadata.storeys}
+            <span className="font-mono">{result.metadata.storeys}</span>
           </div>
           <div>
             <span className="text-muted-foreground">Postcode:</span>{" "}
-            {result.metadata.postcodeDistrict}
+            <span className="font-mono">{result.metadata.postcodeDistrict}</span>
           </div>
           <div>
             <span className="text-muted-foreground">Region:</span> {result.region}
           </div>
           <div>
             <span className="text-muted-foreground">Estimated:</span>{" "}
-            {formattedDate}
+            <span className="font-mono">{formattedDate}</span>
           </div>
           {result.metadata.numberOfUnits ? (
             <div>
               <span className="text-muted-foreground">Units:</span>{" "}
-              {result.metadata.numberOfUnits}
+              <span className="font-mono">{result.metadata.numberOfUnits}</span>
             </div>
           ) : null}
           {result.metadata.numberOfLettableRooms ? (
             <div>
               <span className="text-muted-foreground">Lettable rooms:</span>{" "}
-              {result.metadata.numberOfLettableRooms}
+              <span className="font-mono">{result.metadata.numberOfLettableRooms}</span>
             </div>
           ) : null}
           {result.metadata.commercialType ? (

@@ -1,17 +1,26 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource/ibm-plex-mono/600.css";
 import Layout from "@/components/Layout";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
-import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "UK Property Refurb Estimator",
-  description: "Quick estimate tools for UK property refurbishment"
+  title: "Refurb Estimator — UK Property Refurbishment Cost Calculator",
+  description:
+    "Professional-grade UK property refurbishment cost estimator with room-level breakdowns, scenario comparison, and budget tracking."
+};
+
+export const viewport = {
+  themeColor: "#0f1117",
+  colorScheme: "dark"
 };
 
 type RootLayoutProps = {
@@ -20,7 +29,7 @@ type RootLayoutProps = {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" className="dark font-sans" style={{ colorScheme: "dark" }}>
       <body>
         <TooltipProvider>
           <Layout>{children}</Layout>

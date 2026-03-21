@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
@@ -51,17 +51,19 @@ export default function LoginPage() {
 
   return (
     <section className="mx-auto w-full max-w-md">
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Sign in</CardTitle>
+      <Card className="bg-card bp-card-border rounded-xl p-6">
+        <CardHeader className="border-border p-0 pb-4">
+          <CardTitle className="text-2xl text-foreground">Sign in</CardTitle>
           <p className="text-sm text-muted-foreground">
             Access your saved scenarios and budget tracking.
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-foreground">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -73,7 +75,9 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-foreground">
+                Password
+              </Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -96,13 +100,21 @@ export default function LoginPage() {
                 </Button>
               </div>
               <div className="text-right">
-                <Link href="/auth/forgot-password" className="text-xs font-medium text-primary underline">
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-xs font-medium text-primary hover:text-primary/80"
+                >
                   Forgot password?
                 </Link>
               </div>
             </div>
 
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {error ? (
+              <div className="bp-error flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+                <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-400" />
+                <p className="font-medium text-red-300">{error}</p>
+              </div>
+            ) : null}
 
             <Button type="submit" variant="default" disabled={isLoading} className="w-full">
               {isLoading ? "Signing in..." : "Sign in"}
@@ -111,7 +123,7 @@ export default function LoginPage() {
 
           <p className="mt-4 text-sm text-muted-foreground">
             New here?{" "}
-            <Link href="/auth/signup" className="font-medium text-foreground underline">
+            <Link href="/auth/signup" className="font-medium text-primary hover:text-primary/80">
               Create an account
             </Link>
           </p>

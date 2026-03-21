@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { AlertCircle } from "lucide-react";
 import AuthBanner from "@/components/AuthBanner";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
 import TermTooltip from "@/components/TermTooltip";
@@ -160,7 +161,7 @@ export default function ScenariosPage() {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="shadow-sm">
+            <Card key={i}>
               <CardContent className="space-y-3 p-4">
                 <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
                 <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
@@ -170,10 +171,15 @@ export default function ScenariosPage() {
           ))}
         </div>
       ) : null}
-      {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
+      {loadError ? (
+        <div className="bp-error flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+          <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-400" />
+          <p className="font-medium text-red-300">{loadError}</p>
+        </div>
+      ) : null}
 
       {!isLoading && sortedScenarios.length === 0 ? (
-        <Card className="py-12 text-center shadow-sm">
+        <Card className="py-12 text-center">
           <CardContent className="space-y-3">
             <p className="text-lg font-medium text-foreground">No scenarios saved yet</p>
             <p className="text-sm text-muted-foreground">
@@ -191,7 +197,7 @@ export default function ScenariosPage() {
         </Card>
       ) : !isLoading ? (
         <>
-          <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
+          <div className="overflow-x-auto rounded-lg border border-border bg-card">
             <Table className="min-w-[960px]">
               <TableHeader className="bg-muted/60">
                 <TableRow>
@@ -233,30 +239,30 @@ export default function ScenariosPage() {
                   return (
                     <TableRow key={scenario.id} className={index % 2 !== 0 ? "bg-muted/20" : ""}>
                       <TableCell className="px-4 font-medium">{scenario.name}</TableCell>
-                      <TableCell className="px-4">
+                      <TableCell className="px-4 font-mono">
                         <CurrencyDisplay amount={totalTypical} />
                       </TableCell>
-                      <TableCell className="px-4">
+                      <TableCell className="px-4 font-mono">
                         <CurrencyDisplay amount={costPerM2Typical} />
                       </TableCell>
-                      <TableCell className="px-4">
+                      <TableCell className="px-4 font-mono">
                         {typeof purchasePrice === "number" ? (
                           <CurrencyDisplay amount={purchasePrice} />
                         ) : (
                           "—"
                         )}
                       </TableCell>
-                      <TableCell className="px-4">
+                      <TableCell className="px-4 font-mono">
                         {typeof gdv === "number" ? <CurrencyDisplay amount={gdv} /> : "—"}
                       </TableCell>
-                      <TableCell className="px-4">
+                      <TableCell className="px-4 font-mono">
                         {profit !== null ? <CurrencyDisplay amount={profit} /> : "—"}
                       </TableCell>
                       <TableCell className="px-4">
                         {roi !== null ? (
                           <Badge
                             variant={roiPositive ? "default" : "destructive"}
-                            className="font-medium"
+                            className="font-medium font-mono"
                           >
                             {formatRoi(roi)}
                           </Badge>
@@ -282,7 +288,7 @@ export default function ScenariosPage() {
           </div>
 
           {scenarioCostChartData.length >= 2 ? (
-            <Card className="bg-card shadow-sm">
+            <Card className="bp-card-border bg-card">
               <CardHeader>
                 <CardTitle>Scenario Cost Comparison</CardTitle>
               </CardHeader>
@@ -292,9 +298,9 @@ export default function ScenariosPage() {
                     data={scenarioCostChartData}
                     index="name"
                     categories={["Low", "Typical", "High"]}
-                    colors={["emerald", "teal", "rose"]}
+                    colors={["blue", "amber", "cyan"]}
                     valueFormatter={(value) => gbpFormatter.format(value)}
-                    className="h-72 min-w-[500px]"
+                    className="h-72 min-w-[500px] [&_.tremor-base]:bg-transparent [&_[role='tooltip']]:border-border [&_[role='tooltip']]:bg-card [&_[role='tooltip']]:text-foreground"
                   />
                 </div>
               </CardContent>
@@ -302,7 +308,7 @@ export default function ScenariosPage() {
           ) : null}
 
           {investmentChartData.length > 0 ? (
-            <Card className="bg-card shadow-sm">
+            <Card className="bp-card-border bg-card">
               <CardHeader>
                 <CardTitle>Investment Analysis</CardTitle>
               </CardHeader>
@@ -312,9 +318,9 @@ export default function ScenariosPage() {
                     data={investmentChartData}
                     index="name"
                     categories={["Purchase", "Refurb Cost", "GDV", "Profit"]}
-                    colors={["slate", "teal", "emerald", "cyan"]}
+                    colors={["blue", "amber", "cyan", "emerald"]}
                     valueFormatter={(value) => gbpFormatter.format(value)}
-                    className="h-72 min-w-[500px]"
+                    className="h-72 min-w-[500px] [&_.tremor-base]:bg-transparent [&_[role='tooltip']]:border-border [&_[role='tooltip']]:bg-card [&_[role='tooltip']]:text-foreground"
                   />
                 </div>
               </CardContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AuthBanner from "@/components/AuthBanner";
@@ -196,7 +196,7 @@ export default function RoomsPage() {
       <h1 className="text-3xl font-semibold tracking-tight">Detailed Rooms</h1>
       <AuthBanner />
 
-      <Card className="shadow-sm">
+      <Card>
         <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2">
           <div className="space-y-1">
             <Label htmlFor="rooms-region">Region</Label>
@@ -263,7 +263,7 @@ export default function RoomsPage() {
           const hasAreaError = !Number.isFinite(room.areaM2) || room.areaM2 <= 0;
 
           return (
-            <Card key={room.id} className="shadow-sm">
+            <Card key={room.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle className="text-lg">Room {index + 1}</CardTitle>
@@ -310,10 +310,13 @@ export default function RoomsPage() {
                       value={room.areaM2}
                       onChange={(event) => updateRoom(room.id, { areaM2: Number(event.target.value) })}
                       aria-invalid={hasAreaError}
-                      className={cn("w-full", hasAreaError && "border-red-500 focus-visible:ring-red-200")}
+                      className={cn("w-full", hasAreaError && "border-destructive")}
                     />
                     {hasAreaError ? (
-                      <p className="text-sm text-red-600">Area must be greater than zero</p>
+                      <div className="bp-warning mt-1 flex items-start gap-1.5 rounded-md border px-2 py-1 text-sm">
+                        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                        <p className="text-destructive">Area must be greater than zero</p>
+                      </div>
                     ) : null}
                   </div>
 
@@ -370,7 +373,12 @@ export default function RoomsPage() {
         Add room
       </Button>
 
-      {calculation.error ? <p className="text-sm font-medium text-red-600">{calculation.error}</p> : null}
+      {calculation.error ? (
+        <div className="bp-warning flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+          <p className="font-medium text-destructive">{calculation.error}</p>
+        </div>
+      ) : null}
       {calculation.result ? (
         <div id="results" className="space-y-4">
           <Button type="button" variant="default" onClick={() => setIsSaveModalOpen(true)}>

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { AlertCircle, AlertTriangle } from "lucide-react";
 import AuthBanner from "@/components/AuthBanner";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
 import TermTooltip from "@/components/TermTooltip";
@@ -75,19 +76,29 @@ function getStatus(actual: number | undefined, planned: number): BudgetStatus {
 
 function getStatusBadge(status: BudgetStatus) {
   if (status === "ok") {
-    return <Badge className="bg-green-600 text-white">✓ On budget</Badge>;
-  }
-
-  if (status === "warning") {
     return (
-      <Badge className="bg-amber-500 text-white hover:bg-amber-500/90">
-        ⚠ Near limit
+      <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+        ✓ On budget
       </Badge>
     );
   }
 
+  if (status === "warning") {
+    return (
+      <div className="bp-warning inline-flex items-center gap-1.5 rounded-md border px-2 py-1">
+        <AlertTriangle className="size-4 text-destructive" />
+        <span className="text-xs font-medium text-destructive">Near limit</span>
+      </div>
+    );
+  }
+
   if (status === "alert") {
-    return <Badge variant="destructive">✗ Over budget</Badge>;
+    return (
+      <div className="bp-warning inline-flex items-center gap-1.5 rounded-md border px-2 py-1">
+        <AlertTriangle className="size-4 text-destructive" />
+        <span className="text-xs font-medium text-destructive">Over budget</span>
+      </div>
+    );
   }
 
   return (
@@ -103,11 +114,11 @@ function getVarianceClass(actual: number | undefined, variance: number | undefin
   }
 
   if (variance > 0) {
-    return "text-red-600";
+    return "text-destructive";
   }
 
   if (variance < 0) {
-    return "text-green-600";
+    return "text-primary";
   }
 
   return "text-foreground";
@@ -319,7 +330,7 @@ export default function BudgetPage() {
         <AuthBanner />
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="shadow-sm">
+            <Card key={i}>
               <CardContent className="space-y-3 p-4">
                 <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
                 <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
@@ -337,8 +348,13 @@ export default function BudgetPage() {
       <section className="space-y-6">
         <h1 className="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
         <AuthBanner />
-        {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
-        <Card className="py-12 text-center shadow-sm">
+        {loadError ? (
+          <div className="bp-error flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+            <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-400" />
+            <p className="font-medium text-red-300">{loadError}</p>
+          </div>
+        ) : null}
+        <Card className="py-12 text-center">
           <CardContent className="space-y-3">
             <p className="text-lg font-medium text-foreground">No scenarios to track</p>
             <p className="text-sm text-muted-foreground">
@@ -394,9 +410,14 @@ export default function BudgetPage() {
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
       <AuthBanner />
-      {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
+      {loadError ? (
+        <div className="bp-error flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+          <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-400" />
+          <p className="font-medium text-red-300">{loadError}</p>
+        </div>
+      ) : null}
 
-      <Card className="shadow-sm">
+      <Card>
         <CardContent className="p-4">
           <div className="space-y-2">
             <p className="text-sm font-medium">Scenario</p>
@@ -418,7 +439,7 @@ export default function BudgetPage() {
 
       {selectedScenario ? (
         <>
-          <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
+          <div className="overflow-x-auto rounded-lg border border-border bg-card">
             <Table className="min-w-[980px]">
               <TableHeader className="bg-muted/60">
                 <TableRow>
@@ -433,7 +454,7 @@ export default function BudgetPage() {
                 {rows.map((row, index) => (
                   <TableRow key={row.category} className={index % 2 !== 0 ? "bg-muted/20" : ""}>
                     <TableCell className="px-4 font-medium">{renderCategoryLabel(row.category)}</TableCell>
-                    <TableCell className="px-4">
+                    <TableCell className="px-4 font-mono">
                       <CurrencyDisplay amount={row.planned} />
                     </TableCell>
                     <TableCell className="px-4">
@@ -444,10 +465,10 @@ export default function BudgetPage() {
                         placeholder="£0"
                         value={typeof row.actual === "number" ? row.actual : ""}
                         onChange={(event) => handleActualChange(row.category, event.target.value)}
-                        className="h-8 w-full max-w-40 text-right"
+                        className="h-8 w-full max-w-40 text-right font-mono"
                       />
                     </TableCell>
-                    <TableCell className={`px-4 ${getVarianceClass(row.actual, row.variance)}`}>
+                    <TableCell className={`px-4 font-mono ${getVarianceClass(row.actual, row.variance)}`}>
                       {typeof row.variance === "number" ? (
                         <CurrencyDisplay amount={row.variance} />
                       ) : (
@@ -459,17 +480,17 @@ export default function BudgetPage() {
                 ))}
                 <TableRow className="bg-muted/50 font-semibold">
                   <TableCell className="px-4">Total</TableCell>
-                  <TableCell className="px-4">
+                  <TableCell className="px-4 font-mono">
                     <CurrencyDisplay amount={totalPlanned} />
                   </TableCell>
-                  <TableCell className="px-4">
+                  <TableCell className="px-4 font-mono">
                     {typeof totalActual === "number" ? (
                       <CurrencyDisplay amount={totalActual} />
                     ) : (
                       "—"
                     )}
                   </TableCell>
-                  <TableCell className={`px-4 ${getVarianceClass(totalActual, totalVariance)}`}>
+                  <TableCell className={`px-4 font-mono ${getVarianceClass(totalActual, totalVariance)}`}>
                     {typeof totalVariance === "number" ? (
                       <CurrencyDisplay amount={totalVariance} />
                     ) : (
@@ -483,7 +504,7 @@ export default function BudgetPage() {
           </div>
 
           {hasAnyActual ? (
-            <Card className="bg-card shadow-sm">
+            <Card className="bp-card-border bg-card">
               <CardHeader>
                 <CardTitle>Planned vs Actual by Category</CardTitle>
               </CardHeader>
@@ -493,9 +514,9 @@ export default function BudgetPage() {
                     data={plannedVsActualChartData}
                     index="name"
                     categories={["Planned", "Actual"]}
-                    colors={["teal", "slate"]}
+                    colors={["blue", "amber"]}
                     valueFormatter={(value) => gbpFormatter.format(value)}
-                    className="h-72 min-w-[500px]"
+                    className="h-72 min-w-[500px] [&_.tremor-base]:bg-transparent [&_[role='tooltip']]:border-border [&_[role='tooltip']]:bg-card [&_[role='tooltip']]:text-foreground"
                   />
                 </div>
               </CardContent>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,17 +51,19 @@ export default function SignupPage() {
 
   return (
     <section className="mx-auto w-full max-w-md">
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Create account</CardTitle>
+      <Card className="bg-card bp-card-border rounded-xl p-6">
+        <CardHeader className="border-border p-0 pb-4">
+          <CardTitle className="text-2xl text-foreground">Create account</CardTitle>
           <p className="text-sm text-muted-foreground">
             Sign up to sync scenarios and budget tracking.
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-foreground">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -72,7 +75,9 @@ export default function SignupPage() {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-foreground">
+                Password
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -85,7 +90,9 @@ export default function SignupPage() {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="confirmPassword">Confirm password</Label>
+              <Label htmlFor="confirmPassword" className="text-foreground">
+                Confirm password
+              </Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -97,8 +104,13 @@ export default function SignupPage() {
               />
             </div>
 
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            {message ? <p className="text-sm text-green-600">{message}</p> : null}
+            {error ? (
+              <div className="bp-error flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+                <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-400" />
+                <p className="font-medium text-red-300">{error}</p>
+              </div>
+            ) : null}
+            {message ? <p className="text-sm text-primary">{message}</p> : null}
 
             <Button type="submit" variant="default" disabled={isLoading} className="w-full">
               {isLoading ? "Creating account..." : "Create account"}
@@ -107,7 +119,7 @@ export default function SignupPage() {
 
           <p className="mt-4 text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/auth/login" className="font-medium text-foreground underline">
+            <Link href="/auth/login" className="font-medium text-primary hover:text-primary/80">
               Sign in
             </Link>
           </p>

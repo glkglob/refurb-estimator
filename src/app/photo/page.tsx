@@ -138,11 +138,11 @@ function labelForRegion(region: Region): string {
 function confidenceBadgeClass(confidence: string): string {
   switch (confidence) {
     case "high":
-      return "border-emerald-300 bg-emerald-50 text-emerald-700";
+      return "border-primary/40 bg-primary/10 text-primary";
     case "medium":
-      return "border-amber-300 bg-amber-50 text-amber-700";
+      return "border-secondary bg-secondary text-secondary-foreground";
     default:
-      return "border-red-300 bg-red-50 text-red-700";
+      return "border-destructive/40 bg-destructive/10 text-destructive";
   }
 }
 
@@ -385,7 +385,7 @@ export default function PhotoPage() {
         </p>
       </div>
 
-      <Card className="mx-auto w-full max-w-2xl shadow-sm">
+      <Card className="mx-auto w-full max-w-2xl">
         <CardHeader>
           <CardTitle className="text-lg">Upload Property Photo</CardTitle>
         </CardHeader>
@@ -626,15 +626,15 @@ export default function PhotoPage() {
           ) : null}
 
           {error ? (
-            <div className="space-y-3 rounded-md border border-red-300 bg-red-50 p-3 text-red-700">
+            <div className="bp-error space-y-3 rounded-md border p-3">
               <div className="flex items-start gap-2 text-sm">
-                <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                <p>{error}</p>
+                <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-400" />
+                <p className="text-red-300">{error}</p>
               </div>
               <Button
                 type="button"
                 variant="outline"
-                className="border-red-300 text-red-700 hover:bg-red-100"
+                className="border-red-400/40 text-red-300 hover:bg-red-500/10"
                 onClick={() => setError(null)}
               >
                 Try Again
@@ -646,7 +646,7 @@ export default function PhotoPage() {
 
       {result ? (
         <div id="photo-results" className="space-y-4">
-          <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-sm">
+          <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card">
             <CardHeader>
               <CardTitle className="text-lg">AI Analysis</CardTitle>
             </CardHeader>

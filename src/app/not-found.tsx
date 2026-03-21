@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 export default function NotFoundPage() {
   return (
     <section className="flex min-h-[50vh] items-center justify-center">
-      <Card className="max-w-md text-center shadow-sm">
+      <Card className="max-w-md text-center">
         <CardContent className="space-y-4 p-8">
           <h2 className="text-lg font-semibold text-foreground">Page not found</h2>
           <p className="text-sm text-muted-foreground">

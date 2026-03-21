@@ -5,7 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-sans);
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
   --color-sidebar-ring: hsl(var(--sidebar-ring));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
@@ -48,39 +49,107 @@
 }
 
 :root {
-  --background: 40 20% 98%;
-  --foreground: 215 28% 17%;
-  --card: 0 0% 100%;
-  --card-foreground: 215 28% 17%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 215 28% 17%;
-  --primary: 166 91% 30%;
+  /* Core surfaces */
+  --background: 225 25% 7%;
+  --foreground: 213 31% 91%;
+
+  /* Cards */
+  --card: 224 25% 15%;
+  --card-foreground: 213 31% 91%;
+
+  /* Popovers */
+  --popover: 224 25% 15%;
+  --popover-foreground: 213 31% 91%;
+
+  /* Primary - electric blue */
+  --primary: 217 91% 60%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 215 20% 95%;
-  --secondary-foreground: 215 28% 17%;
-  --muted: 215 20% 95%;
-  --muted-foreground: 215 16% 47%;
-  --accent: 166 91% 30%;
+
+  /* Secondary */
+  --secondary: 224 25% 20%;
+  --secondary-foreground: 213 31% 91%;
+
+  /* Muted */
+  --muted: 224 25% 20%;
+  --muted-foreground: 215 20% 55%;
+
+  /* Accent - electric blue at lower saturation */
+  --accent: 217 91% 60%;
   --accent-foreground: 0 0% 100%;
-  --destructive: 0 84% 60%;
+
+  /* Destructive / warnings - amber */
+  --destructive: 38 92% 50%;
   --destructive-foreground: 0 0% 100%;
-  --border: 215 20% 88%;
-  --input: 215 20% 88%;
-  --ring: 166 91% 30%;
+
+  /* Borders & inputs */
+  --border: 224 25% 22%;
+  --input: 224 25% 18%;
+  --ring: 217 91% 60%;
+
+  /* Radius */
   --radius: 0.5rem;
-  --chart-1: 166 91% 30%;
-  --chart-2: 215 28% 35%;
-  --chart-3: 215 16% 47%;
-  --chart-4: 215 20% 60%;
-  --chart-5: 215 20% 75%;
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 215 28% 17%;
-  --sidebar-primary: 166 91% 30%;
+
+  /* Charts - blue/amber spectrum */
+  --chart-1: 217 91% 60%;
+  --chart-2: 38 92% 50%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 262 83% 58%;
+  --chart-5: 142 71% 45%;
+
+  /* Sidebar */
+  --sidebar: 225 25% 9%;
+  --sidebar-foreground: 213 31% 91%;
+  --sidebar-primary: 217 91% 60%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 215 20% 95%;
-  --sidebar-accent-foreground: 215 28% 17%;
-  --sidebar-border: 215 20% 88%;
-  --sidebar-ring: 166 91% 30%;
+  --sidebar-accent: 224 25% 18%;
+  --sidebar-accent-foreground: 213 31% 91%;
+  --sidebar-border: 224 25% 22%;
+  --sidebar-ring: 217 91% 60%;
+}
+
+/* Blueprint grid dot pattern overlay */
+.bp-grid {
+  background-image: radial-gradient(circle, hsl(217 91% 60% / 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Glowing focus ring for inputs */
+.bp-focus-ring:focus-within {
+  box-shadow:
+    0 0 0 2px hsl(217 91% 60% / 0.3),
+    0 0 12px hsl(217 91% 60% / 0.15);
+  border-color: hsl(217 91% 60% / 0.6);
+}
+
+/* Blue gradient button */
+.bp-btn-gradient {
+  background: linear-gradient(135deg, hsl(217 91% 55%), hsl(217 91% 65%));
+  transition: box-shadow 0.2s ease;
+}
+
+.bp-btn-gradient:hover {
+  box-shadow: 0 0 16px hsl(217 91% 60% / 0.4);
+}
+
+/* Card border glow */
+.bp-card-border {
+  border: 1px solid hsl(217 91% 60% / 0.25);
+}
+
+.bp-card-border:hover {
+  border-color: hsl(217 91% 60% / 0.5);
+}
+
+/* Amber warning card */
+.bp-warning {
+  border-color: hsl(38 92% 50% / 0.4);
+  background-color: hsl(38 92% 50% / 0.08);
+}
+
+/* Red error card for network/auth/system errors */
+.bp-error {
+  border-color: hsl(0 84% 60% / 0.4);
+  background-color: hsl(0 84% 60% / 0.08);
 }
 
 * {
@@ -89,6 +158,7 @@
 }
 
 body {
+  @apply selection:bg-primary/30 selection:text-foreground;
   margin: 0;
   min-height: 100vh;
   background-color: hsl(var(--background));

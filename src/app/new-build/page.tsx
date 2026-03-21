@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
 import NewBuildResults from "@/components/NewBuildResults";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -365,7 +365,7 @@ export default function NewBuildPage() {
         professional fees, and contingency.
       </p>
 
-      <Card className="shadow-sm">
+      <Card>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -463,7 +463,7 @@ export default function NewBuildPage() {
             </div>
 
             {isBlockOfFlats ? (
-              <Card className="border border-border/60 shadow-sm">
+              <Card className="border border-border/60">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">Block of flats</CardTitle>
                 </CardHeader>
@@ -522,7 +522,7 @@ export default function NewBuildPage() {
             ) : null}
 
             {isHmo ? (
-              <Card className="border border-border/60 shadow-sm">
+              <Card className="border border-border/60">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">HMO details</CardTitle>
                 </CardHeader>
@@ -587,7 +587,7 @@ export default function NewBuildPage() {
             ) : null}
 
             {isCommercial ? (
-              <Card className="border border-border/60 shadow-sm">
+              <Card className="border border-border/60">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">Commercial details</CardTitle>
                 </CardHeader>
@@ -727,7 +727,12 @@ export default function NewBuildPage() {
               ) : null}
             </div>
 
-            {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
+            {error ? (
+              <div className="bp-warning flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                <p className="font-medium text-destructive">{error}</p>
+              </div>
+            ) : null}
 
             <div className="flex flex-wrap gap-2">
               <Button type="submit" variant="default">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import AuthBanner from "@/components/AuthBanner";
 import EstimateForm from "@/components/EstimateForm";
@@ -189,7 +189,12 @@ export default function HomePage() {
           }
         />
       </div>
-      {submitError ? <p className="text-sm font-medium text-red-600">{submitError}</p> : null}
+      {submitError ? (
+        <div className="bp-warning flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+          <p className="font-medium text-destructive">{submitError}</p>
+        </div>
+      ) : null}
       {result ? (
         <div id="results" className="mt-8 space-y-6">
           {lastInput ? (

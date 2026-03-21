@@ -2,41 +2,50 @@
 
 ## Phase 1 — MVP ✅
 - [x] Pure calculation engine with UK cost data
-- [x] Quick Estimate page (whole-property)
-- [x] Detailed Rooms page (room-by-room)
-- [x] Scenario Comparison page with charts
-- [x] Budget Tracker with variance analysis
-- [x] 15 unit tests passing
+- [x] Quick Estimate, Detailed Rooms, Scenario Comparison, Budget Tracker
+- [x] 15+ unit tests passing
 - [x] Deployed to Vercel
 
 ## Phase 2 — Data & Persistence ✅
 - [x] Supabase Auth (email/password)
-- [x] Supabase PostgreSQL database
+- [x] PostgreSQL database with RLS
 - [x] Cloud sync with localStorage fallback
-- [x] Login, signup, forgot-password flows
 
 ## Phase 3 — Visual & UX Polish ✅
-- [x] shadcn/ui component library
-- [x] Tremor charts (donut + bar)
-- [x] Teal/slate theme with CSS variables
-- [x] Mobile responsive layout with Sheet drawer nav
-- [x] Tooltips for financial terms (Contingency, Fees, GDV, ROI)
+- [x] Blueprint Pro dark theme (charcoal + electric blue)
+- [x] shadcn/ui + Tremor charts
+- [x] Vertical sidebar navigation
+- [x] IBM Plex Mono for data, Inter for UI
+- [x] Mobile responsive with slide-out drawer
 
-## Phase 4 — Intelligence (Next)
+## Phase 4 — Intelligence ✅
+- [x] Enhanced estimator with contractor-style quotes
 - [x] New build cost estimator
-- [ ] Live material price API integration (Travis Perkins, Screwfix)
-- [ ] AI text-to-estimate: describe a project, get a cost estimate
-- [ ] Photo-to-estimate: upload property photos, AI suggests scope and costs
-- [ ] Postcode-level pricing using Land Registry and regional trade data
+- [x] AI photo-to-estimate (GPT-4o Vision)
 
-## Phase 5 — Output & Sharing
-- [ ] Export estimates to PDF with professional formatting
-- [ ] Export to Excel/CSV for accountants and lenders
-- [ ] Shareable estimate links
-- [ ] White-label mode for property professionals
+## Phase 5 — Platform ✅
+- [x] User roles (customer, tradesperson, admin)
+- [x] Tradesperson profiles with public directory
+- [x] Work gallery with photo uploads (Supabase Storage)
+- [x] Notification system
+- [x] Admin dashboard with user management
+- [x] Versioned API (v1)
+- [x] Shareable estimate links
+- [x] CSV export
+- [x] GitHub Actions CI pipeline
 
-## Phase 6 — Scale
+## Phase 6 — Mobile (In Progress)
+- [x] Capacitor configuration for iOS
+- [ ] TestFlight build and internal testing
+- [ ] App Store submission
+- [ ] Camera integration for mobile photo-to-estimate
+- [ ] Push notifications
+
+## Phase 7 — Growth (Planned)
+- [ ] Live material price API (Travis Perkins, Screwfix)
 - [ ] Multi-property portfolio dashboard
-- [ ] Contractor marketplace integration
-- [ ] HMO conversion calculator with licensing requirements
+- [ ] Contractor marketplace with booking
+- [ ] HMO conversion calculator
 - [ ] Planning permission checker by local authority
+- [ ] White-label mode for property professionals
+- [ ] Email notifications (transactional)

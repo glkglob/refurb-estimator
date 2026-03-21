@@ -15,6 +15,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/lib/apiClient";
 import { calculateNewBuild } from "@/lib/newBuildEstimator";
 import type {
   NewBuildInput,
@@ -327,15 +328,10 @@ export default function NewBuildPage() {
         }
       };
 
-      const response = await fetch("/api/estimate/pdf", {
+      const response = await apiFetch("/api/v1/estimate/pdf", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input: pdfInput })
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate PDF");
-      }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);

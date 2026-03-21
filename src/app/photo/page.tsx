@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/lib/apiClient";
 import type { QuotePdfInput } from "@/lib/generateQuotePdf";
 import type { EstimateInput, EstimateResult, Region } from "@/lib/types";
 
@@ -71,19 +72,6 @@ function estimateDataUrlBytes(dataUrl: string): number {
       ? 1
       : 0;
   return Math.floor((compactPayload.length * 3) / 4) - padding;
-}
-
-function parseApiError(payload: unknown): string {
-  if (payload && typeof payload === "object") {
-    const data = payload as Record<string, unknown>;
-    if (typeof data.message === "string" && data.message.trim()) {
-      return data.message;
-    }
-    if (typeof data.error === "string" && data.error.trim()) {
-      return data.error;
-    }
-  }
-  return "Unable to analyse the photo. Please try again.";
 }
 
 function isPhotoEstimateResponse(payload: unknown): payload is PhotoEstimateResponse {
@@ -284,9 +272,8 @@ export default function PhotoPage() {
         }
       }
 
-      const response = await fetch("/api/ai/photo-estimate", {
+      const response = await apiFetch("/api/v1/ai/photo-estimate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           image: base64DataUrls.length === 1 ? base64DataUrls[0] : base64DataUrls,
           region: regionOverride !== "auto" ? regionOverride : undefined,
@@ -297,10 +284,6 @@ export default function PhotoPage() {
       });
 
       const payload = (await response.json().catch(() => null)) as unknown;
-
-      if (!response.ok) {
-        throw new Error(parseApiError(payload));
-      }
 
       if (!isPhotoEstimateResponse(payload)) {
         throw new Error("Unexpected response from the AI service.");
@@ -346,15 +329,10 @@ export default function PhotoPage() {
         costPerM2: estimateResult.costPerM2
       };
 
-      const response = await fetch("/api/estimate/pdf", {
+      const response = await apiFetch("/api/v1/estimate/pdf", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input: pdfInput })
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate PDF");
-      }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);

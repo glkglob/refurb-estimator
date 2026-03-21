@@ -11,6 +11,11 @@
     "lint:check": "eslint ."
   },
   "dependencies": {
+    "@capacitor/camera": "8.0.2",
+    "@capacitor/core": "8.2.0",
+    "@capacitor/filesystem": "8.1.2",
+    "@capacitor/ios": "8.2.0",
+    "@capacitor/share": "8.0.1",
     "@fontsource/ibm-plex-mono": "5.2.7",
     "@fontsource/inter": "5.2.8",
     "@supabase/ssr": "0.9.0",
@@ -32,6 +37,7 @@
     "zod": "4.3.6"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.2.0",
     "@eslint/eslintrc": "3.3.5",
     "@tailwindcss/postcss": "4.2.2",
     "@types/jest": "30.0.0",

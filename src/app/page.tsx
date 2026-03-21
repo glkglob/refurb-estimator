@@ -8,8 +8,11 @@ import EstimateForm from "@/components/EstimateForm";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/lib/apiClient";
 import { saveScenario } from "@/lib/dataService";
+import { exportToCsv } from "@/lib/exportCsv";
 import type { QuotePdfInput } from "@/lib/generateQuotePdf";
+import { shareOrCopy } from "@/lib/share";
 import type { EstimateInput, EstimateResult, Scenario } from "@/lib/types";
 import {
   calculateEnhancedEstimate,
@@ -139,15 +142,10 @@ export default function HomePage() {
         costPerM2: result.costPerM2
       };
 
-      const response = await fetch("/api/estimate/pdf", {
+      const response = await apiFetch("/api/v1/estimate/pdf", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input: pdfInput })
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate PDF");
-      }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -166,6 +164,28 @@ export default function HomePage() {
       });
     } finally {
       setIsGeneratingPdf(false);
+    }
+  }
+
+  async function handleShareEstimate() {
+    if (!result || !lastInput) {
+      return;
+    }
+
+    try {
+      const shareText =
+        `Refurb estimate for ${lastInput.region}\n` +
+        `Low: £${result.totalLow.toLocaleString("en-GB")}\n` +
+        `Typical: £${result.totalTypical.toLocaleString("en-GB")}\n` +
+        `High: £${result.totalHigh.toLocaleString("en-GB")}`;
+
+      await shareOrCopy("Refurb Estimate", shareText);
+    } catch {
+      toast({
+        title: "Share failed",
+        description: "Unable to share the estimate. Please try again.",
+        variant: "destructive"
+      });
     }
   }
 
@@ -221,6 +241,33 @@ export default function HomePage() {
             >
               {isGeneratingPdf ? <Loader2 className="size-4 animate-spin" /> : null}
               Download PDF
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                result &&
+                lastInput &&
+                exportToCsv(`${lastInput.region.toLowerCase()}-estimate.csv`, [
+                  ...result.categories.map((category) => ({
+                    category: category.category,
+                    low: category.low,
+                    typical: category.typical,
+                    high: category.high
+                  })),
+                  {
+                    category: "TOTAL",
+                    low: result.totalLow,
+                    typical: result.totalTypical,
+                    high: result.totalHigh
+                  }
+                ])
+              }
+            >
+              Download CSV
+            </Button>
+            <Button type="button" variant="outline" onClick={() => void handleShareEstimate()}>
+              Share
             </Button>
             <Button type="button" variant="outline" onClick={handleNewEstimate}>
               New estimate

@@ -1,44 +1,83 @@
-# Refurb Estimator
+# Refurb Estimator Platform
 
-AI-powered UK property refurbishment cost estimator.
-
-## Prerequisites
-- Node.js 18+ (LTS recommended)
-- npm 9+
-
-## Setup
-npm install
-WATCHPACK_POLLING=true npm run dev -- --webpack
-Open http://localhost:3000
-
-## Testing
-npm test
-
-## Pages
-- **/** — Quick Estimate: enter property details, get instant low/typical/high cost breakdown
-- **/rooms** — Detailed Rooms: add individual rooms for granular cost estimates
-- **/scenarios** — Scenarios: save and compare multiple estimates with profit/ROI analysis
-- **/budget** — Budget Tracker: track actual spend against planned costs per category
-
-## Customising Cost Data
-Edit `src/lib/costLibrary.ts` to adjust:
-- `baseRefurbPerM2` — overall refurb cost per m² (low/typical/high)
-- `regionalMultipliers` — price adjustment by UK region
-- `conditionMultipliers` — adjustment for property condition
-- `finishMultipliers` — adjustment for finish quality level
-- `categoryPercents` — how total cost splits across categories (must sum to 1.0)
-- `roomBaseRanges` — base cost ranges per room type
+## Platform Overview
+Refurb Estimator is a UK-focused property cost platform combining refurbishment and new-build estimate engines with AI photo analysis, scenario planning, budget tracking, shareable outputs, and a tradesperson ecosystem (profiles, gallery, notifications, and admin tooling).
 
 ## Tech Stack
-- Next.js 14+ (App Router, webpack mode)
-- TypeScript (strict)
-- Tailwind CSS
-- Jest + ts-jest
+- Next.js 16 (App Router) + React 19 + TypeScript (strict)
+- Tailwind CSS v4 + shadcn/ui + Lucide + Tremor charts
+- Supabase Auth + PostgreSQL + RLS + Storage
+- Zod v4 validation
+- Jest test suite
+- pdf-lib for estimate PDF export
+- Capacitor configuration for iOS packaging
 
-## Build
+## Getting Started
+1. Install dependencies:
+```bash
+npm install
+```
+2. Configure environment:
+```bash
+cp .env.local.example .env.local
+```
+3. Fill required env vars in `.env.local` (Supabase + OpenAI if using AI photo estimate).
+4. Start development server:
+```bash
+WATCHPACK_POLLING=true npm run dev -- --webpack
+```
+5. Open [http://localhost:3000](http://localhost:3000).
+
+## Database Migrations (Supabase CLI)
+Use Supabase CLI to apply SQL migrations in `supabase/migrations/`.
+
+```bash
+supabase db push
+```
+
+If creating a new migration:
+```bash
+npx supabase migration new <name>
+```
+
+## API Routes (v1)
+| Method | Route | Purpose |
+|---|---|---|
+| POST | `/api/v1/estimate/project` | Refurb project estimate |
+| POST | `/api/v1/estimate/pdf` | Generate estimate PDF |
+| POST | `/api/v1/estimate/csv` | Generate estimate CSV |
+| POST | `/api/v1/estimate/new-build` | New-build estimate |
+| POST | `/api/v1/estimate/share` | Create shareable estimate link |
+| POST | `/api/v1/ai/photo-estimate` | AI photo-to-estimate |
+| GET, PATCH | `/api/v1/profile` | Current user profile |
+| GET | `/api/v1/profile/[userId]` | Public tradesperson profile |
+| GET, POST | `/api/v1/gallery` | Public gallery list, create gallery item |
+| GET, PATCH, DELETE | `/api/v1/gallery/[itemId]` | Read/update/delete gallery item |
+| GET | `/api/v1/gallery/my` | Current user gallery items |
+| GET | `/api/v1/notifications` | User notifications list |
+| POST | `/api/v1/notifications/read` | Mark one/all notifications read |
+| GET | `/api/v1/notifications/count` | Unread notification count |
+| POST | `/api/v1/upload` | Storage upload endpoint |
+| GET, PATCH | `/api/v1/admin/users` | Admin user management |
+
+## iOS Build
+Capacitor setup and iOS workflow are documented in:
+
+- [docs/CAPACITOR.md](./docs/CAPACITOR.md)
+
+## Testing
+Run unit tests:
+```bash
+npm test
+```
+
+Recommended local verification:
+```bash
+npx tsc --noEmit
+npm test
 npm run build
+```
 
-## Raycast Integration
-- Raycast extension lives in [`raycast-extension`](./raycast-extension)
-- It calls `POST /api/estimate/project` to run quick estimates from Raycast
-- Setup instructions: [`raycast-extension/README.md`](./raycast-extension/README.md)
+## Deployment
+- Web: deploy on Vercel (SSR + App Router routes).
+- iOS: build static bundle via Capacitor workflow, then package in Xcode/TestFlight.

@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <Layout>{children}</Layout>
           <Toaster position="top-right" richColors />
         </TooltipProvider>
+        <SpeedInsights />
       </body>
     </html>
   );

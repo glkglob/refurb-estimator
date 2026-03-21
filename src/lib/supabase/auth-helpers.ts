@@ -47,6 +47,12 @@ export async function requireAuth(allowedRoles?: UserRole[]): Promise<Authentica
     .single();
 
   if (profileError && profileError.code !== "PGRST116") {
+    console.error("[auth-helpers] profiles query failed:", {
+      code: profileError.code,
+      message: profileError.message,
+      hint: profileError.hint,
+      details: profileError.details
+    });
     throw new AuthError("Internal server error", 500);
   }
 

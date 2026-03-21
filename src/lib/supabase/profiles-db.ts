@@ -74,7 +74,7 @@ export function mapProfileRowToProfile(row: ProfileRow): Profile {
 }
 
 export async function getProfileById(userId: string): Promise<Profile | null> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
 
   if (error) {
@@ -89,7 +89,7 @@ export async function getProfileById(userId: string): Promise<Profile | null> {
 }
 
 export async function getPublicProfile(userId: string): Promise<Profile | null> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
@@ -110,7 +110,7 @@ export async function getPublicProfile(userId: string): Promise<Profile | null> 
 }
 
 export async function updateProfile(userId: string, data: ProfileUpdateInput): Promise<Profile> {
-  const supabase = createClient();
+  const supabase = await createServerSupabaseClient();
   const updates = {
     ...mapProfileUpdateInputToRow(data),
     updated_at: new Date().toISOString()

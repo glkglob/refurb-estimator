@@ -1,5 +1,4 @@
 import type { Profile, ProfileUpdateInput, UserRole } from "@/lib/platform-types";
-import { createClient } from "./client";
 import { createServerSupabaseClient } from "./server";
 
 type ProfileRow = {

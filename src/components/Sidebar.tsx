@@ -79,8 +79,8 @@ function SidebarContent({
     const Icon = iconMap[item.icon];
     const isActive = pathname === item.href;
     const linkClassName = isActive
-      ? "flex items-center gap-2 rounded-r-md border-l-2 border-primary bg-sidebar-accent px-3 py-2 text-sm font-medium text-sidebar-primary"
-      : "flex items-center gap-2 rounded-r-md border-l-2 border-l-transparent px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent/50";
+      ? "flex items-center gap-2 rounded-r-md border-l-4 border-[var(--primary)] bg-sidebar-accent px-3 py-2 text-sm font-medium text-sidebar-primary"
+      : "flex items-center gap-2 rounded-r-md border-l-4 border-l-transparent px-3 py-2 text-sm text-sidebar-foreground hover:bg-[#1A2533] hover:text-[var(--primary)]";
     const linkNode = (
       <Link key={item.href} href={item.href} onClick={onNavigate} className={linkClassName}>
         <Icon className="size-4" />
@@ -101,7 +101,7 @@ function SidebarContent({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-sidebar-border px-4 py-4">
+      <div className="border-b border-[var(--border)] px-4 py-4">
         <Link href="/" onClick={onNavigate} className="inline-flex items-center gap-2">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
             RE
@@ -114,11 +114,11 @@ function SidebarContent({
 
       <nav className="flex flex-col gap-1 px-2 py-4">
         {navItems.map((item) => renderNavLink(item))}
-        {user ? <div className="mx-3 my-2 border-t border-sidebar-border" /> : null}
+        {user ? <div className="mx-3 my-2 border-t border-[var(--border)]" /> : null}
         {dashboardItems.map((item) => renderNavLink(item, true))}
       </nav>
 
-      <div className="mt-auto border-t border-sidebar-border px-3 py-4">
+      <div className="mt-auto border-t border-[var(--border)] px-3 py-4">
         {authLoading ? (
           <p className="text-sm text-muted-foreground">Checking session...</p>
         ) : user ? (
@@ -129,7 +129,7 @@ function SidebarContent({
                 <SheetClose asChild>
                   <Button
                     variant="outline"
-                    className="relative w-full justify-start border-primary/40 text-primary hover:bg-primary/10"
+                    className="relative w-full justify-start border-[var(--border)] text-primary hover:bg-primary/10"
                     asChild
                   >
                     <Link href="/dashboard/notifications" onClick={onNavigate}>
@@ -144,7 +144,7 @@ function SidebarContent({
               ) : (
                 <Button
                   variant="outline"
-                  className="relative w-full justify-start border-primary/40 text-primary hover:bg-primary/10"
+                  className="relative w-full justify-start border-[var(--border)] text-primary hover:bg-primary/10"
                   asChild
                 >
                   <Link href="/dashboard/notifications" onClick={onNavigate}>
@@ -171,7 +171,7 @@ function SidebarContent({
             <SheetClose asChild>
               <Button
                 variant="outline"
-                className="w-full justify-start border-primary text-primary hover:bg-primary/10"
+                className="w-full justify-start border-[var(--border)] text-primary hover:bg-primary/10"
                 asChild
               >
                 <Link href="/auth/login" onClick={onNavigate}>
@@ -182,7 +182,7 @@ function SidebarContent({
           ) : (
             <Button
               variant="outline"
-              className="w-full justify-start border-primary text-primary hover:bg-primary/10"
+              className="w-full justify-start border-[var(--border)] text-primary hover:bg-primary/10"
               asChild
             >
               <Link href="/auth/login" onClick={onNavigate}>
@@ -303,7 +303,7 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[240px] border-r border-sidebar-border bg-sidebar md:block">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[240px] border-r border-[var(--border)] bg-[#0A1420] md:block">
         <SidebarContent
           pathname={pathname}
           authLoading={authLoading}
@@ -313,7 +313,7 @@ export default function Sidebar() {
         />
       </aside>
 
-      <div className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-sidebar-border bg-sidebar px-4 md:hidden">
+      <div className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-[var(--border)] bg-[#0A1420] px-4 md:hidden">
         <Link href="/" className="inline-flex items-center gap-2">
           <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
             RE
@@ -331,9 +331,9 @@ export default function Sidebar() {
           </SheetTrigger>
           <SheetContent
             side="left"
-            className="w-[85vw] max-w-[240px] border-r border-sidebar-border bg-sidebar p-0"
+            className="w-[85vw] max-w-[240px] border-r border-[var(--border)] bg-[#0A1420] p-0"
           >
-            <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-4">
+            <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-4">
               <span className="font-mono text-sm font-semibold text-sidebar-foreground">
                 Refurb Estimator
               </span>

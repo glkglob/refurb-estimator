@@ -19,6 +19,7 @@
     "@capacitor/core": "8.2.0",
     "@capacitor/filesystem": "8.1.2",
     "@capacitor/ios": "8.2.0",
+    "@capacitor/push-notifications": "8.0.2",
     "@capacitor/share": "8.0.1",
     "@fontsource/ibm-plex-mono": "5.2.7",
     "@fontsource/inter": "5.2.8",

@@ -49,21 +49,24 @@ async function getContextUser(): Promise<AuthenticatedUser | null> {
   };
 }
 
-const apolloServer = new ApolloServer<GraphQLContext>({
+const server = new ApolloServer<GraphQLContext>({
   typeDefs,
   resolvers
 });
 
-const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
-  apolloServer,
-  {
-    context: async () => {
-      const user = await getContextUser();
-      return {
-        req: { user }
-      };
-    }
+const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(server, {
+  context: async (_req) => {
+    const user = await getContextUser();
+    return {
+      req: { user }
+    };
   }
-);
+});
 
-export { handler as GET, handler as POST };
+export async function GET(req: NextRequest) {
+  return handler(req);
+}
+
+export async function POST(req: NextRequest) {
+  return handler(req);
+}

@@ -3,6 +3,7 @@ import { z } from "zod";
 export const profileUpdateSchema = z.object({
   displayName: z.string().min(1).max(100).optional(),
   phone: z.string().max(20).optional(),
+  avatarUrl: z.string().url().max(500).optional().or(z.literal("")),
   businessName: z.string().max(200).optional(),
   tradeSpecialty: z.string().max(100).optional(),
   bio: z.string().max(2000).optional(),

@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validateJsonRequest } from "@/lib/validate";
 
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
 const designAgentRequestSchema = z.object({
   photos: z.array(z.string().trim().min(1)).min(1).max(5),
   roomType: z.enum([

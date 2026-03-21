@@ -128,18 +128,58 @@ function mapRoomTypeToProjectType(roomType: DesignRoomType): GalleryProjectType 
   return "other";
 }
 
-function fileToDataUrl(file: File): Promise<string> {
+function estimateDataUrlSizeKb(dataUrl: string): number {
+  const base64 = dataUrl.split(",")[1] ?? "";
+  return (base64.length * 3) / (4 * 1024);
+}
+
+async function compressImage(file: File, maxSizeKB: number = 500): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
-    reader.onload = () => {
-      if (typeof reader.result !== "string") {
-        reject(new Error(`Invalid image encoding for ${file.name}`));
-        return;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      reject(new Error("Image compression failed to initialize."));
+      return;
+    }
+
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      let { width, height } = img;
+      const maxDim = 1024;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
       }
-      resolve(reader.result);
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+
+      let quality = 0.7;
+      let compressedBase64 = canvas.toDataURL("image/jpeg", quality);
+
+      while (estimateDataUrlSizeKb(compressedBase64) > maxSizeKB && quality > 0.2) {
+        quality -= 0.1;
+        compressedBase64 = canvas.toDataURL("image/jpeg", quality);
+      }
+
+      resolve(compressedBase64);
     };
-    reader.readAsDataURL(file);
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error(`Failed to process ${file.name}`));
+    };
+
+    img.src = url;
   });
 }
 
@@ -217,12 +257,15 @@ export default function DesignAgentPage() {
     setInfoMessage(null);
 
     try {
-      const photoPayloads = await Promise.all(photos.map(fileToDataUrl));
+      const selectedFiles = [...photos];
+      const compressedPhotos = await Promise.all(
+        selectedFiles.map((file) => compressImage(file))
+      );
 
       const response = await apiFetch("/api/v1/ai/design-agent", {
         method: "POST",
         body: JSON.stringify({
-          photos: photoPayloads,
+          photos: compressedPhotos,
           roomType,
           style,
           budget,
@@ -236,7 +279,7 @@ export default function DesignAgentPage() {
       }
 
       setResult(payload);
-      setSubmittedPhotoPayloads(photoPayloads);
+      setSubmittedPhotoPayloads(compressedPhotos);
       setInfoMessage("Design concept generated. Review details and save to gallery if needed.");
     } catch (error: unknown) {
       setResult(null);

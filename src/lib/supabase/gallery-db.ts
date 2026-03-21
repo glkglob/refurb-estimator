@@ -73,7 +73,7 @@ export async function createGalleryItem(
   };
 
   const { data: created, error } = await supabase
-    .from("gallery_items")
+    .from("gallery")
     .insert(payload)
     .select("*")
     .single();
@@ -96,7 +96,7 @@ export async function updateGalleryItem(
   };
 
   const { data: updated, error } = await supabase
-    .from("gallery_items")
+    .from("gallery")
     .update(payload)
     .eq("id", itemId)
     .select("*")
@@ -111,7 +111,7 @@ export async function updateGalleryItem(
 
 export async function deleteGalleryItem(itemId: string): Promise<void> {
   const supabase = createClient();
-  const { error } = await supabase.from("gallery_items").delete().eq("id", itemId);
+  const { error } = await supabase.from("gallery").delete().eq("id", itemId);
 
   if (error) {
     throw new Error(`Failed to delete gallery item: ${error.message}`);
@@ -127,7 +127,7 @@ export async function getGalleryItemsByUser(
   const end = start + options.limit - 1;
 
   const { data, error, count } = await supabase
-    .from("gallery_items")
+    .from("gallery")
     .select("*", { count: "exact" })
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
@@ -153,7 +153,7 @@ export async function getPublicGallery(options: {
   const end = start + options.limit - 1;
 
   let query = supabase
-    .from("gallery_items")
+    .from("gallery")
     .select("*", { count: "exact" })
     .order("created_at", { ascending: false });
 
@@ -177,7 +177,7 @@ export async function getFeaturedGalleryItems(limit: number): Promise<GalleryIte
   const supabase = createClient();
   const boundedLimit = Math.max(1, Math.min(limit, 100));
   const { data, error } = await supabase
-    .from("gallery_items")
+    .from("gallery")
     .select("*")
     .eq("is_featured", true)
     .order("created_at", { ascending: false })
@@ -200,7 +200,7 @@ export async function getPublicGalleryByUser(
   const end = start + options.limit - 1;
 
   const { data, error, count } = await supabase
-    .from("gallery_items")
+    .from("gallery")
     .select("*", { count: "exact" })
     .eq("user_id", userId)
     .order("created_at", { ascending: false })

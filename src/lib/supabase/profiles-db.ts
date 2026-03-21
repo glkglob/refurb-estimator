@@ -76,6 +76,11 @@ export function mapProfileRowToProfile(row: ProfileRow): Profile {
 export async function getProfileById(userId: string): Promise<Profile | null> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  console.error("[getProfileById] query result:", {
+    data,
+    error: error?.message,
+    userId
+  });
 
   if (error) {
     throw new Error(`Failed to fetch profile: ${error.message}`);

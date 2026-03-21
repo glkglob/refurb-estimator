@@ -36,6 +36,12 @@ export async function requireAuth(allowedRoles?: UserRole[]): Promise<Authentica
     error: userError
   } = await supabase.auth.getUser();
 
+  console.error("[requireAuth] getUser result:", {
+    userId: user?.id,
+    userEmail: user?.email,
+    userError: userError?.message
+  });
+
   if (userError || !user) {
     throw new AuthError("Not authenticated", 401);
   }

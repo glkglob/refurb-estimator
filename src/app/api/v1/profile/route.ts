@@ -21,6 +21,7 @@ export async function GET() {
 
     return NextResponse.json(profile, { status: 200 });
   } catch (error) {
+    console.error("[profile GET] full error:", error);
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }

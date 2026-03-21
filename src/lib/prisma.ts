@@ -283,7 +283,7 @@ export const prisma = {
     }): Promise<GalleryItem[]> {
       const supabase = await createServerSupabaseClient();
       let query = supabase
-        .from("gallery_items")
+        .from("gallery")
         .select("*")
         .eq("user_id", options.where.userId)
         .order("created_at", {

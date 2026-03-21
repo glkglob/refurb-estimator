@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requireRole } from "@/lib/rbac";
 import {
   AuthError,
-  handleAuthError,
-  requireAuth
+  handleAuthError
 } from "@/lib/supabase/auth-helpers";
 import {
   deleteGalleryItem,
@@ -10,6 +10,7 @@ import {
   updateGalleryItem
 } from "@/lib/supabase/gallery-db";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { validateJsonRequest } from "@/lib/validate";
 import { galleryItemUpdateSchema } from "@/lib/validation";
 
 type RouteContext = {
@@ -18,8 +19,12 @@ type RouteContext = {
   }>;
 };
 
+const galleryUpdateSchema = galleryItemUpdateSchema;
+
 export async function GET(_request: NextRequest, context: RouteContext) {
   try {
+    await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
+
     const { itemId } = await context.params;
     const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase
@@ -39,6 +44,10 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     const item = mapGalleryRow(data as Parameters<typeof mapGalleryRow>[0]);
     return NextResponse.json(item, { status: 200 });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return handleAuthError(error);
+    }
+
     const message = error instanceof Error ? error.message : "Failed to fetch gallery item";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -46,24 +55,13 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
-    await requireAuth(["tradesperson", "admin"]);
+    await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    const parsed = galleryItemUpdateSchema.safeParse(body);
+    const parsed = await validateJsonRequest(request, galleryUpdateSchema, {
+      errorMessage: "Invalid gallery item update payload"
+    });
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid gallery item update payload",
-          details: parsed.error.issues.map((issue) => issue.message)
-        },
-        { status: 400 }
-      );
+      return parsed.response;
     }
 
     const { itemId } = await context.params;
@@ -81,7 +79,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   try {
-    await requireAuth(["tradesperson", "admin"]);
+    await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
     const { itemId } = await context.params;
     await deleteGalleryItem(itemId);
     return new NextResponse(null, { status: 204 });

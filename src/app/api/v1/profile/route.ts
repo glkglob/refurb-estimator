@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
+import { requireRole } from "@/lib/rbac";
 import { profileUpdateSchema } from "@/lib/validation";
+import { validateJsonRequest } from "@/lib/validate";
 import {
   AuthError,
-  handleAuthError,
-  requireAuth
+  handleAuthError
 } from "@/lib/supabase/auth-helpers";
 import { getProfileById, updateProfile } from "@/lib/supabase/profiles-db";
 
+const profilePatchSchema = profileUpdateSchema;
+
 export async function GET() {
   try {
-    const user = await requireAuth();
+    const user = await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
     const profile = await getProfileById(user.id);
 
     if (!profile) {
@@ -29,24 +32,13 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const user = await requireAuth();
+    const user = await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    const parsed = profileUpdateSchema.safeParse(body);
+    const parsed = await validateJsonRequest(request, profilePatchSchema, {
+      errorMessage: "Invalid profile update payload"
+    });
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid profile update payload",
-          details: parsed.error.issues.map((issue) => issue.message)
-        },
-        { status: 400 }
-      );
+      return parsed.response;
     }
 
     const updated = await updateProfile(user.id, parsed.data);

@@ -17,6 +17,8 @@ export type Profile = {
   locationCity: string | null;
   locationPostcode: string | null;
   websiteUrl: string | null;
+  serviceRadiusMiles: number | null;
+  onboardingComplete: boolean;
   isVerified: boolean;
   isPublic: boolean;
   createdAt: string;

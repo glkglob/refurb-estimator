@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { calculateNewBuild } from "@/lib/newBuildEstimator";
+import { requireRole } from "@/lib/rbac";
+import { AuthError, handleAuthError } from "@/lib/supabase/auth-helpers";
 import type { NewBuildInput } from "@/lib/types";
+import { validateJsonRequest } from "@/lib/validate";
 
 const newBuildSchema = z
   .object({
@@ -60,17 +63,23 @@ const newBuildSchema = z
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as NewBuildInput;
-    const parsed = newBuildSchema.safeParse(body);
+    await requireRole(["TRADESPERSON", "ADMIN"]);
 
+    const parsed = await validateJsonRequest(request, newBuildSchema, {
+      errorMessage: "Invalid new build estimate payload"
+    });
     if (!parsed.success) {
-      const message = parsed.error.issues[0]?.message ?? "Invalid request body";
-      return NextResponse.json({ error: message }, { status: 400 });
+      return parsed.response;
     }
 
-    const result = calculateNewBuild(parsed.data);
-    return NextResponse.json({ input: parsed.data, result }, { status: 200 });
+    const input = parsed.data as NewBuildInput;
+    const result = calculateNewBuild(input);
+    return NextResponse.json({ input, result }, { status: 200 });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return handleAuthError(error);
+    }
+
     const message =
       error instanceof Error ? error.message : "Failed to calculate new build estimate";
     return NextResponse.json({ error: message }, { status: 400 });

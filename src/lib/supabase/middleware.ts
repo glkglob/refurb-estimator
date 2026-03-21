@@ -2,7 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 const PROTECTED_ROUTES: string[] = ["/scenarios", "/budget"];
-const PUBLIC_ROUTES = ["/", "/rooms", "/photo", "/auth/login", "/auth/signup"];
+const PUBLIC_ROUTES = [
+  "/",
+  "/rooms",
+  "/photo",
+  "/auth/login",
+  "/auth/signup",
+  "/auth/onboarding"
+];
+const ONBOARDING_ALLOWED_ROUTES = ["/auth/onboarding", "/auth/login", "/auth/signup", "/auth/forgot-password"];
 
 function matchesRoute(pathname: string, route: string): boolean {
   return pathname === route || pathname.startsWith(`${route}/`);
@@ -50,7 +58,41 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  let isTradesperson = false;
+  let isOnboardingComplete = true;
+
+  if (user) {
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("role, onboarding_complete")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    isTradesperson = profileData?.role === "tradesperson";
+    isOnboardingComplete = profileData?.onboarding_complete === true;
+
+    if (isTradesperson && !isOnboardingComplete) {
+      const canAccessWithoutOnboarding = ONBOARDING_ALLOWED_ROUTES.some((route) =>
+        matchesRoute(pathname, route)
+      );
+
+      if (!canAccessWithoutOnboarding) {
+        const onboardingUrl = request.nextUrl.clone();
+        onboardingUrl.pathname = "/auth/onboarding";
+        onboardingUrl.searchParams.delete("redirectedFrom");
+        return NextResponse.redirect(onboardingUrl);
+      }
+    }
+  }
+
   if (user && (pathname === "/auth/login" || pathname === "/auth/signup")) {
+    if (isTradesperson && !isOnboardingComplete) {
+      const onboardingUrl = request.nextUrl.clone();
+      onboardingUrl.pathname = "/auth/onboarding";
+      onboardingUrl.searchParams.delete("redirectedFrom");
+      return NextResponse.redirect(onboardingUrl);
+    }
+
     const scenariosUrl = request.nextUrl.clone();
     scenariosUrl.pathname = "/scenarios";
     scenariosUrl.searchParams.delete("redirectedFrom");

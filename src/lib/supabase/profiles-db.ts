@@ -16,6 +16,8 @@ type ProfileRow = {
   location_city: string | null;
   location_postcode: string | null;
   website_url: string | null;
+  service_radius_miles: number | null;
+  onboarding_complete: boolean | null;
   is_verified: boolean;
   is_public: boolean;
   created_at: string;
@@ -62,6 +64,8 @@ export function mapProfileRowToProfile(row: ProfileRow): Profile {
     locationCity: row.location_city,
     locationPostcode: row.location_postcode,
     websiteUrl: row.website_url,
+    serviceRadiusMiles: row.service_radius_miles,
+    onboardingComplete: row.onboarding_complete ?? false,
     isVerified: row.is_verified,
     isPublic: row.is_public,
     createdAt: row.created_at,

@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import {
   AuthError,
   handleAuthError,
   requireAuth
 } from "@/lib/supabase/auth-helpers";
 import { markAllAsRead, markAsRead } from "@/lib/supabase/notifications-db";
+import { validateWithSchema } from "@/lib/validate";
 
-type MarkReadBody = {
-  notificationId?: string;
-};
+const markReadSchema = z.object({
+  notificationId: z.string().trim().min(1).optional()
+});
+
+type MarkReadBody = z.infer<typeof markReadSchema>;
 
 export async function POST(request: Request) {
   try {
@@ -21,18 +25,16 @@ export async function POST(request: Request) {
       body = {};
     }
 
-    if (
-      body.notificationId !== undefined &&
-      (typeof body.notificationId !== "string" || body.notificationId.trim() === "")
-    ) {
-      return NextResponse.json(
-        { error: "notificationId must be a non-empty string when provided" },
-        { status: 400 }
-      );
+    const parsedBody = validateWithSchema(markReadSchema, body, {
+      errorMessage: "Invalid notifications read payload"
+    });
+    if (!parsedBody.success) {
+      return parsedBody.response;
     }
+    const validatedBody: MarkReadBody = parsedBody.data;
 
-    if (body.notificationId) {
-      await markAsRead(body.notificationId);
+    if (validatedBody.notificationId) {
+      await markAsRead(validatedBody.notificationId);
     } else {
       await markAllAsRead(user.id);
     }

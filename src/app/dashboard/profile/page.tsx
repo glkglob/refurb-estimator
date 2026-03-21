@@ -75,15 +75,14 @@ function toFormState(profile: Profile): FormState {
   };
 }
 
-function parseApiError(payload: unknown, fallback: string): string {
-  if (payload && typeof payload === "object") {
-    const data = payload as Record<string, unknown>;
-    if (typeof data.error === "string" && data.error.trim()) {
-      return data.error;
-    }
-  }
-  return fallback;
-}
+type UploadPresignResponse = {
+  uploadUrl: string;
+  key: string;
+};
+
+type UploadConfirmResponse = {
+  url: string;
+};
 
 function validate(form: FormState): Partial<Record<FieldName, string>> {
   const errors: Partial<Record<FieldName, string>> = {};
@@ -208,36 +207,46 @@ export default function DashboardProfilePage() {
     setErrors((previous) => ({ ...previous, avatarUrl: undefined }));
 
     try {
-      const uploadFormData = new FormData();
-      uploadFormData.append("bucket", "avatars");
-      uploadFormData.append("file", file);
-
-      const uploadResponse = await fetch("/api/v1/upload", {
+      const presignResponse = await apiFetch("/api/v1/upload", {
         method: "POST",
-        body: uploadFormData
+        body: JSON.stringify({
+          action: "presign",
+          bucket: "avatars",
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size
+        })
       });
+      const presignPayload = (await presignResponse.json()) as UploadPresignResponse;
 
-      if (uploadResponse.status === 401) {
-        router.replace("/auth/login");
-        return;
+      const putResponse = await fetch(presignPayload.uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": file.type
+        },
+        body: file
+      });
+      if (!putResponse.ok) {
+        throw new Error("Failed to upload avatar directly to storage.");
       }
 
-      const uploadPayload = (await uploadResponse.json().catch(() => null)) as unknown;
-      if (!uploadResponse.ok) {
-        throw new Error(parseApiError(uploadPayload, "Failed to upload avatar."));
-      }
+      const confirmResponse = await apiFetch("/api/v1/upload", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "confirm",
+          bucket: "avatars",
+          key: presignPayload.key
+        })
+      });
+      const confirmPayload = (await confirmResponse.json()) as UploadConfirmResponse;
 
-      const url =
-        uploadPayload && typeof uploadPayload === "object"
-          ? (uploadPayload as Record<string, unknown>).url
-          : undefined;
-      if (typeof url !== "string" || url.trim().length === 0) {
+      if (typeof confirmPayload.url !== "string" || confirmPayload.url.trim().length === 0) {
         throw new Error("Upload response did not include a valid URL.");
       }
 
       const patchResponse = await apiFetch("/api/v1/profile", {
         method: "PATCH",
-        body: JSON.stringify({ avatarUrl: url })
+        body: JSON.stringify({ avatarUrl: confirmPayload.url })
       });
       const patchPayload = (await patchResponse.json()) as Profile;
 

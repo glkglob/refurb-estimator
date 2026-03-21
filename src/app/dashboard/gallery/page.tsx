@@ -64,15 +64,15 @@ const INITIAL_FORM: GalleryFormState = {
   beforeImageUrl: ""
 };
 
-function parseError(payload: unknown, fallback: string): string {
-  if (payload && typeof payload === "object") {
-    const data = payload as Record<string, unknown>;
-    if (typeof data.error === "string" && data.error.trim()) {
-      return data.error;
-    }
-  }
-  return fallback;
-}
+type UploadPresignResponse = {
+  uploadUrl: string;
+  key: string;
+  publicUrl: string;
+};
+
+type UploadConfirmResponse = {
+  url: string;
+};
 
 export default function DashboardGalleryPage() {
   const router = useRouter();
@@ -209,34 +209,45 @@ export default function DashboardGalleryPage() {
   }
 
   async function uploadImage(file: File) {
-    const uploadFormData = new FormData();
-    uploadFormData.append("bucket", "gallery");
-    uploadFormData.append("file", file);
-
-    const response = await fetch("/api/v1/upload", {
+    const presignResponse = await apiFetch("/api/v1/upload", {
       method: "POST",
-      body: uploadFormData
+      body: JSON.stringify({
+        action: "presign",
+        bucket: "gallery",
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size
+      })
+    });
+    const presignPayload = (await presignResponse.json()) as UploadPresignResponse;
+
+    const putResponse = await fetch(presignPayload.uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": file.type
+      },
+      body: file
     });
 
-    if (response.status === 401) {
-      router.replace("/auth/login");
-      throw new Error("Please sign in to continue.");
+    if (!putResponse.ok) {
+      throw new Error("Failed to upload image directly to storage.");
     }
 
-    const payload = (await response.json().catch(() => null)) as unknown;
-    if (!response.ok) {
-      throw new Error(parseError(payload, "Failed to upload image."));
-    }
+    const confirmResponse = await apiFetch("/api/v1/upload", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "confirm",
+        bucket: "gallery",
+        key: presignPayload.key
+      })
+    });
+    const confirmPayload = (await confirmResponse.json()) as UploadConfirmResponse;
 
-    const url =
-      payload && typeof payload === "object"
-        ? (payload as Record<string, unknown>).url
-        : undefined;
-    if (typeof url !== "string" || url.trim().length === 0) {
+    if (typeof confirmPayload.url !== "string" || confirmPayload.url.trim().length === 0) {
       throw new Error("Upload succeeded but no file URL was returned.");
     }
 
-    return url;
+    return confirmPayload.url;
   }
 
   async function refreshGallery() {

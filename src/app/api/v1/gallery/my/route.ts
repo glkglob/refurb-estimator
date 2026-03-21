@@ -1,15 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requireRole } from "@/lib/rbac";
 import {
   AuthError,
-  handleAuthError,
-  requireAuth
+  handleAuthError
 } from "@/lib/supabase/auth-helpers";
 import { getGalleryItemsByUser } from "@/lib/supabase/gallery-db";
 import { paginationSchema } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth(["tradesperson", "admin"]);
+    const user = await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
 
     const parsed = paginationSchema.safeParse({
       page: request.nextUrl.searchParams.get("page") ?? undefined,

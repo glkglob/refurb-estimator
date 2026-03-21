@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
   Condition,
@@ -13,6 +14,7 @@ import {
   getFallbackPostcodeDistrict,
   inferPropertyCategory
 } from "@/lib/enhancedEstimator";
+import { validateJsonRequest } from "@/lib/validate";
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
@@ -81,6 +83,16 @@ type PhotoEstimateRequestBody = {
   approxAreaM2?: unknown;
   postcode?: unknown;
 };
+
+const photoEstimateBodySchema = z
+  .object({
+    image: z.union([z.string(), z.array(z.string())]).optional(),
+    region: z.string().optional(),
+    bedrooms: z.union([z.string(), z.number()]).optional(),
+    approxAreaM2: z.union([z.string(), z.number()]).optional(),
+    postcode: z.string().optional()
+  })
+  .passthrough();
 
 type RateLimitEntry = {
   count: number;
@@ -301,12 +313,14 @@ export async function POST(request: Request) {
       }
     }
 
-    let body: PhotoEstimateRequestBody;
-    try {
-      body = (await request.json()) as PhotoEstimateRequestBody;
-    } catch {
-      return NextResponse.json({ error: "Image is required" }, { status: 400 });
+    const parsedBody = await validateJsonRequest(request, photoEstimateBodySchema, {
+      invalidJsonMessage: "Image is required",
+      errorMessage: "Invalid photo estimate payload"
+    });
+    if (!parsedBody.success) {
+      return parsedBody.response;
     }
+    const body = parsedBody.data as PhotoEstimateRequestBody;
 
     const images = normalizeImagePayload(body.image);
     if (images.length === 0) {

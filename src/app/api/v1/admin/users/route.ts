@@ -1,12 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { validateJsonRequest } from "@/lib/validate";
 import { paginationSchema } from "@/lib/validation";
+import { requireRole } from "@/lib/rbac";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { mapProfileRowToProfile, listAllProfiles } from "@/lib/supabase/profiles-db";
 import {
   AuthError,
   handleAuthError,
-  requireAuth,
   type UserRole
 } from "@/lib/supabase/auth-helpers";
 
@@ -68,7 +69,7 @@ function getQueryParams(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAuth(["admin"]);
+    await requireRole("ADMIN");
 
     const parsedQuery = getQueryParams(request);
     if (!parsedQuery.ok) {
@@ -125,25 +126,14 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAuth(["admin"]);
+    await requireRole("ADMIN");
     const supabase = await createServerSupabaseClient();
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    const parsed = updateUserSchema.safeParse(body);
+    const parsed = await validateJsonRequest(request, updateUserSchema, {
+      errorMessage: "Invalid update payload"
+    });
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid update payload",
-          details: parsed.error.issues.map((issue) => issue.message)
-        },
-        { status: 400 }
-      );
+      return parsed.response;
     }
 
     const updates: Record<string, unknown> = {

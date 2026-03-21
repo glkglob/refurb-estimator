@@ -1,11 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requireRole } from "@/lib/rbac";
 import {
   AuthError,
-  handleAuthError,
-  requireAuth
+  handleAuthError
 } from "@/lib/supabase/auth-helpers";
 import { createGalleryItem, getPublicGallery } from "@/lib/supabase/gallery-db";
+import { validateJsonRequest } from "@/lib/validate";
 import { galleryItemCreateSchema, paginationSchema } from "@/lib/validation";
+
+const galleryCreateSchema = galleryItemCreateSchema;
 
 function getPaginationFromRequest(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -32,6 +35,8 @@ function getPaginationFromRequest(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
+
     const pagination = getPaginationFromRequest(request);
     if (!pagination.ok) {
       return pagination.response;
@@ -54,6 +59,10 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
+    if (error instanceof AuthError) {
+      return handleAuthError(error);
+    }
+
     const message = error instanceof Error ? error.message : "Failed to fetch gallery";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -61,24 +70,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireAuth(["tradesperson", "admin"]);
+    const user = await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    const parsed = galleryItemCreateSchema.safeParse(body);
+    const parsed = await validateJsonRequest(request, galleryCreateSchema, {
+      errorMessage: "Invalid gallery item payload"
+    });
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid gallery item payload",
-          details: parsed.error.issues.map((issue) => issue.message)
-        },
-        { status: 400 }
-      );
+      return parsed.response;
     }
 
     const created = await createGalleryItem(user.id, parsed.data);

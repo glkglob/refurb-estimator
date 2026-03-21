@@ -22,6 +22,7 @@ import HeaderAuthActions from "@/components/HeaderAuthActions";
 const navItems = [
   { href: "/", label: "Quick Estimate" },
   { href: "/photo", label: "AI Estimate" },
+  { href: "/new-build", label: "New Build" },
   { href: "/rooms", label: "Detailed Rooms" },
   { href: "/scenarios", label: "Scenario Comparison" },
   { href: "/budget", label: "Budget Tracker" }

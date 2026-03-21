@@ -1,0 +1,515 @@
+import { defaultCostLibrary } from "./costLibrary";
+import { postcodeToRegion } from "./enhancedEstimator";
+import type {
+  NewBuildCategory,
+  NewBuildInput,
+  NewBuildPropertyType,
+  NewBuildResult,
+  NewBuildSpec
+} from "./types";
+
+type Tier = "low" | "typical" | "high";
+type TierAmounts = Record<Tier, number>;
+
+const TIERS: Tier[] = ["low", "typical", "high"];
+
+const baseBuildRates: Record<
+  NewBuildPropertyType,
+  Record<NewBuildSpec, TierAmounts>
+> = {
+  flat: {
+    basic: { low: 1600, typical: 2100, high: 2600 },
+    standard: { low: 2100, typical: 2600, high: 3200 },
+    premium: { low: 2600, typical: 3300, high: 4200 }
+  },
+  terraced: {
+    basic: { low: 1550, typical: 2000, high: 2500 },
+    standard: { low: 2000, typical: 2500, high: 3100 },
+    premium: { low: 2500, typical: 3200, high: 4000 }
+  },
+  "semi-detached": {
+    basic: { low: 1650, typical: 2100, high: 2650 },
+    standard: { low: 2100, typical: 2650, high: 3200 },
+    premium: { low: 2650, typical: 3300, high: 4200 }
+  },
+  detached: {
+    basic: { low: 1750, typical: 2200, high: 2800 },
+    standard: { low: 2200, typical: 2800, high: 3400 },
+    premium: { low: 2800, typical: 3500, high: 4500 }
+  },
+  bungalow: {
+    basic: { low: 1850, typical: 2350, high: 2900 },
+    standard: { low: 2350, typical: 2900, high: 3500 },
+    premium: { low: 2900, typical: 3600, high: 4600 }
+  },
+  hmo: {
+    basic: { low: 1900, typical: 2400, high: 3000 },
+    standard: { low: 2400, typical: 3000, high: 3700 },
+    premium: { low: 3000, typical: 3800, high: 4800 }
+  },
+  block_of_flats: {
+    basic: { low: 1800, typical: 2400, high: 3000 },
+    standard: { low: 2200, typical: 2800, high: 3500 },
+    premium: { low: 2800, typical: 3500, high: 4500 }
+  },
+  commercial: {
+    basic: { low: 1200, typical: 1800, high: 2500 },
+    standard: { low: 1800, typical: 2500, high: 3200 },
+    premium: { low: 2500, typical: 3300, high: 4500 }
+  }
+};
+
+const newBuildCategoryPercents: Record<NewBuildCategory, number> = {
+  substructure: 0.12,
+  superstructure: 0.2,
+  external_envelope: 0.13,
+  windows_and_doors: 0.06,
+  internal_finishes: 0.1,
+  kitchen: 0.06,
+  bathrooms: 0.05,
+  electrics: 0.08,
+  plumbing_and_heating: 0.07,
+  external_works: 0.05,
+  preliminaries: 0.08,
+  contingency: 0,
+  professional_fees: 0
+};
+
+const garageCost: TierAmounts = { low: 15000, typical: 25000, high: 40000 };
+const renewableCost: TierAmounts = { low: 8000, typical: 15000, high: 25000 };
+const basementPerM2: TierAmounts = { low: 1500, typical: 2200, high: 3500 };
+const liftCost: TierAmounts = { low: 40000, typical: 65000, high: 100000 };
+
+const fireSafetyCost: TierAmounts = { low: 3000, typical: 5500, high: 9000 };
+const enSuiteCostPerRoom: TierAmounts = { low: 4000, typical: 6500, high: 10000 };
+const fireEscapeCost: TierAmounts = { low: 8000, typical: 14000, high: 22000 };
+const meteringCostPerRoom: TierAmounts = { low: 800, typical: 1200, high: 1800 };
+const licensingCost: TierAmounts = { low: 500, typical: 1000, high: 2000 };
+
+const ddaCost: TierAmounts = { low: 5000, typical: 12000, high: 25000 };
+const extractionCost: TierAmounts = { low: 8000, typical: 18000, high: 35000 };
+const parkingCostPerSpace: TierAmounts = { low: 5000, typical: 10000, high: 20000 };
+
+const fitOutRates: Record<"shell_only" | "cat_a" | "cat_b", TierAmounts> = {
+  shell_only: { low: 0, typical: 0, high: 0 },
+  cat_a: { low: 300, typical: 500, high: 800 },
+  cat_b: { low: 500, typical: 900, high: 1500 }
+};
+
+const categoryOrder: NewBuildCategory[] = [
+  "substructure",
+  "superstructure",
+  "external_envelope",
+  "windows_and_doors",
+  "internal_finishes",
+  "kitchen",
+  "bathrooms",
+  "electrics",
+  "plumbing_and_heating",
+  "external_works",
+  "preliminaries",
+  "contingency",
+  "professional_fees"
+];
+
+function multiplyTier(amounts: TierAmounts, multiplier: number): TierAmounts {
+  return {
+    low: amounts.low * multiplier,
+    typical: amounts.typical * multiplier,
+    high: amounts.high * multiplier
+  };
+}
+
+function addTier(target: TierAmounts, addition: TierAmounts): TierAmounts {
+  return {
+    low: target.low + addition.low,
+    typical: target.typical + addition.typical,
+    high: target.high + addition.high
+  };
+}
+
+function getStoreyAdjustment(storeys: number): number {
+  if (storeys >= 4) {
+    return 0.9;
+  }
+  if (storeys === 3) {
+    return 0.92;
+  }
+  if (storeys === 2) {
+    return 0.95;
+  }
+  return 1;
+}
+
+function initializeCategoryTotals(): Record<NewBuildCategory, TierAmounts> {
+  return categoryOrder.reduce<Record<NewBuildCategory, TierAmounts>>((acc, category) => {
+    acc[category] = { low: 0, typical: 0, high: 0 };
+    return acc;
+  }, {} as Record<NewBuildCategory, TierAmounts>);
+}
+
+function validateNewBuildInput(input: NewBuildInput) {
+  if (!Number.isFinite(input.totalAreaM2) || input.totalAreaM2 <= 0 || input.totalAreaM2 > 10000) {
+    throw new Error("Total area must be between 1 and 10,000 square metres");
+  }
+
+  if (!Number.isFinite(input.bedrooms) || input.bedrooms < 1 || input.bedrooms > 20) {
+    throw new Error("Bedrooms must be between 1 and 20");
+  }
+
+  if (input.postcodeDistrict.trim().length === 0) {
+    throw new Error("Postcode district is required");
+  }
+
+  const storeyLimit = input.propertyType === "block_of_flats" ? 20 : 5;
+  if (!Number.isFinite(input.storeys) || input.storeys < 1 || input.storeys > storeyLimit) {
+    throw new Error(`Storeys must be between 1 and ${storeyLimit}`);
+  }
+
+  if (input.propertyType === "block_of_flats") {
+    if (!input.numberOfUnits || input.numberOfUnits < 2) {
+      throw new Error("Block of flats must include at least 2 units");
+    }
+  }
+
+  if (input.propertyType === "hmo" && input.numberOfLettableRooms !== undefined) {
+    if (input.numberOfLettableRooms < 3) {
+      throw new Error("HMOs require at least 3 lettable rooms");
+    }
+  }
+
+  if (input.propertyType === "commercial" && input.parkingSpaces !== undefined) {
+    if (input.parkingSpaces < 0 || input.parkingSpaces > 500) {
+      throw new Error("Parking spaces must be between 0 and 500");
+    }
+  }
+}
+
+export function calculateNewBuild(input: NewBuildInput): NewBuildResult {
+  validateNewBuildInput(input);
+
+  const normalizedPostcode = input.postcodeDistrict.trim().toUpperCase();
+  const region = postcodeToRegion(normalizedPostcode);
+  const regionalMultiplier = defaultCostLibrary.regionalMultipliers[region];
+
+  const storeyCount =
+    input.propertyType === "block_of_flats"
+      ? input.numberOfStoreys ?? input.storeys
+      : input.storeys;
+
+  const baseRate = baseBuildRates[input.propertyType][input.spec];
+  const storeyAdjustment = getStoreyAdjustment(storeyCount);
+
+  let baseCost = multiplyTier(
+    baseRate,
+    input.totalAreaM2 * regionalMultiplier * storeyAdjustment
+  );
+
+  const adjustments: Array<{ label: string; amount: number; reason: string }> = [];
+
+  if (input.propertyType === "block_of_flats" && input.numberOfUnits && input.numberOfUnits > 10) {
+    const discount = multiplyTier(baseCost, -0.05);
+    adjustments.push({
+      label: "Economies of scale discount",
+      amount: Math.round(discount.typical),
+      reason: "Blocks with 10+ units benefit from bulk procurement efficiencies."
+    });
+    baseCost = multiplyTier(baseCost, 0.95);
+  }
+
+  const categoryTotals = initializeCategoryTotals();
+
+  categoryOrder.forEach((category) => {
+    if (category === "contingency" || category === "professional_fees") {
+      return;
+    }
+    const share = newBuildCategoryPercents[category];
+    const allocation = multiplyTier(baseCost, share);
+    categoryTotals[category] = addTier(categoryTotals[category], allocation);
+  });
+
+  const addAdjustment = (
+    category: NewBuildCategory,
+    amounts: TierAmounts,
+    label: string,
+    reason: string
+  ) => {
+    categoryTotals[category] = addTier(categoryTotals[category], amounts);
+    adjustments.push({
+      label,
+      amount: Math.round(amounts.typical),
+      reason
+    });
+  };
+
+  const includeGarage =
+    Boolean(input.garage) && input.propertyType !== "flat";
+  const includeBasement =
+    Boolean(input.basementIncluded) && input.propertyType !== "flat";
+
+  if (includeGarage) {
+    const garageAmounts = multiplyTier(garageCost, regionalMultiplier);
+    addAdjustment(
+      "external_works",
+      garageAmounts,
+      "Garage",
+      "Garage construction with basic finishes."
+    );
+  }
+
+  if (input.renewableEnergy) {
+    const renewableAmounts = multiplyTier(renewableCost, regionalMultiplier);
+    addAdjustment(
+      "electrics",
+      renewableAmounts,
+      "Renewable energy",
+      "Solar PV and/or air source heat pump installation."
+    );
+  }
+
+  if (includeBasement) {
+    const basementAmounts = multiplyTier(
+      basementPerM2,
+      input.totalAreaM2 * 0.7 * regionalMultiplier
+    );
+    addAdjustment(
+      "substructure",
+      basementAmounts,
+      "Basement construction",
+      "Basement excavation and waterproofing to ~70% of footprint."
+    );
+  }
+
+  if (input.propertyType === "block_of_flats" && input.numberOfUnits) {
+    if (input.liftIncluded) {
+      const liftsRequired = Math.max(1, Math.ceil(input.numberOfUnits / 10));
+      const liftAmounts = multiplyTier(liftCost, regionalMultiplier * liftsRequired);
+      addAdjustment(
+        "superstructure",
+        liftAmounts,
+        "Passenger lift",
+        `Includes ${liftsRequired} lift(s) for multi-storey access.`
+      );
+    }
+
+    if (input.commercialGroundFloor) {
+      const groundFloorArea = input.totalAreaM2 / storeyCount;
+      const premiumAmounts = multiplyTier(
+        baseRate,
+        groundFloorArea * 0.15 * regionalMultiplier
+      );
+      addAdjustment(
+        "external_envelope",
+        premiumAmounts,
+        "Commercial ground floor premium",
+        "Enhanced structural and façade requirements for mixed-use ground floor."
+      );
+    }
+  }
+
+  if (input.propertyType === "hmo") {
+    const numberOfRooms = input.numberOfLettableRooms ?? input.bedrooms;
+    const fireSafetyAmounts = multiplyTier(fireSafetyCost, regionalMultiplier);
+    addAdjustment(
+      "preliminaries",
+      fireSafetyAmounts,
+      "HMO fire safety package",
+      "Fire doors, alarm systems, emergency lighting, and signage."
+    );
+
+    if (input.enSuitePerRoom) {
+      const enSuiteAmounts = multiplyTier(
+        enSuiteCostPerRoom,
+        numberOfRooms * regionalMultiplier
+      );
+      addAdjustment(
+        "bathrooms",
+        enSuiteAmounts,
+        "En-suite bathrooms",
+        "Private shower rooms for each lettable room."
+      );
+    }
+
+    if (input.fireEscapeRequired || input.storeys >= 3) {
+      const fireEscapeAmounts = multiplyTier(fireEscapeCost, regionalMultiplier);
+      addAdjustment(
+        "external_works",
+        fireEscapeAmounts,
+        "External fire escape",
+        "Required for multi-storey HMO compliance."
+      );
+    }
+
+    const meteringAmounts = multiplyTier(
+      meteringCostPerRoom,
+      numberOfRooms * regionalMultiplier
+    );
+    addAdjustment(
+      "electrics",
+      meteringAmounts,
+      "Utility metering",
+      "Separate utility metering per room."
+    );
+
+    addAdjustment(
+      "preliminaries",
+      licensingCost,
+      "HMO licensing",
+      "Council licensing and compliance fees."
+    );
+  }
+
+  if (input.propertyType === "commercial") {
+    const fitOutLevel = input.fitOutLevel ?? "cat_a";
+    const fitOutAmounts = multiplyTier(
+      fitOutRates[fitOutLevel],
+      input.totalAreaM2 * regionalMultiplier
+    );
+    addAdjustment(
+      "internal_finishes",
+      fitOutAmounts,
+      "Commercial fit-out",
+      `Fit-out level: ${fitOutLevel.replace("_", " ").toUpperCase()}.`
+    );
+
+    if (input.disabledAccess) {
+      const ddaAmounts = multiplyTier(ddaCost, regionalMultiplier);
+      addAdjustment(
+        "preliminaries",
+        ddaAmounts,
+        "DDA compliance",
+        "Accessible WC, ramps/lifts, and compliant door widths."
+      );
+    }
+
+    if (input.extractionSystem) {
+      const extractionAmounts = multiplyTier(extractionCost, regionalMultiplier);
+      addAdjustment(
+        "plumbing_and_heating",
+        extractionAmounts,
+        "Commercial extraction",
+        "Kitchen extraction and ventilation system."
+      );
+    }
+
+    if (input.parkingSpaces && input.parkingSpaces > 0) {
+      const parkingAmounts = multiplyTier(
+        parkingCostPerSpace,
+        input.parkingSpaces * regionalMultiplier
+      );
+      addAdjustment(
+        "external_works",
+        parkingAmounts,
+        "Parking provision",
+        "Surface parking construction."
+      );
+    }
+  }
+
+  const subtotal = categoryOrder.reduce<TierAmounts>(
+    (acc, category) => {
+      if (category === "contingency" || category === "professional_fees") {
+        return acc;
+      }
+      return addTier(acc, categoryTotals[category]);
+    },
+    { low: 0, typical: 0, high: 0 }
+  );
+
+  const contingencyPercent = input.spec === "premium" ? 12 : 10;
+  const feesPercent = 12;
+  const contingencyAmounts = multiplyTier(subtotal, contingencyPercent / 100);
+  const feeAmounts = multiplyTier(subtotal, feesPercent / 100);
+
+  categoryTotals.contingency = addTier(categoryTotals.contingency, contingencyAmounts);
+  categoryTotals.professional_fees = addTier(
+    categoryTotals.professional_fees,
+    feeAmounts
+  );
+
+  const total = addTier(addTier(subtotal, contingencyAmounts), feeAmounts);
+
+  const roundedTotals: TierAmounts = {
+    low: Math.round(total.low),
+    typical: Math.round(total.typical),
+    high: Math.round(total.high)
+  };
+
+  const roundedByTier: Record<Tier, Record<NewBuildCategory, number>> = {
+    low: {} as Record<NewBuildCategory, number>,
+    typical: {} as Record<NewBuildCategory, number>,
+    high: {} as Record<NewBuildCategory, number>
+  };
+
+  for (const tier of TIERS) {
+    let runningSum = 0;
+    for (const category of categoryOrder) {
+      if (category === "professional_fees") {
+        continue;
+      }
+      const roundedValue = Math.round(categoryTotals[category][tier]);
+      roundedByTier[tier][category] = roundedValue;
+      runningSum += roundedValue;
+    }
+    roundedByTier[tier].professional_fees = roundedTotals[tier] - runningSum;
+  }
+
+  const categories = categoryOrder.map((category) => ({
+    category,
+    low: roundedByTier.low[category],
+    typical: roundedByTier.typical[category],
+    high: roundedByTier.high[category]
+  }));
+
+  const costPerM2 = {
+    low: Math.round(roundedTotals.low / input.totalAreaM2),
+    typical: Math.round(roundedTotals.typical / input.totalAreaM2),
+    high: Math.round(roundedTotals.high / input.totalAreaM2)
+  };
+
+  const metadata: NewBuildResult["metadata"] = {
+    propertyType: input.propertyType,
+    spec: input.spec,
+    bedrooms: input.bedrooms,
+    storeys: storeyCount,
+    postcodeDistrict: normalizedPostcode,
+    estimatedAt: new Date().toISOString()
+  };
+
+  if (input.propertyType === "block_of_flats" && input.numberOfUnits) {
+    metadata.numberOfUnits = input.numberOfUnits;
+    metadata.costPerUnit = {
+      low: Math.round(roundedTotals.low / input.numberOfUnits),
+      typical: Math.round(roundedTotals.typical / input.numberOfUnits),
+      high: Math.round(roundedTotals.high / input.numberOfUnits)
+    };
+  }
+
+  if (input.propertyType === "hmo") {
+    const lettableRooms = input.numberOfLettableRooms ?? input.bedrooms;
+    metadata.numberOfLettableRooms = lettableRooms;
+    metadata.costPerLettableRoom = {
+      low: Math.round(roundedTotals.low / lettableRooms),
+      typical: Math.round(roundedTotals.typical / lettableRooms),
+      high: Math.round(roundedTotals.high / lettableRooms)
+    };
+  }
+
+  if (input.propertyType === "commercial") {
+    metadata.commercialType = input.commercialType ?? "office";
+    metadata.fitOutLevel = input.fitOutLevel ?? "cat_a";
+  }
+
+  return {
+    totalLow: roundedTotals.low,
+    totalTypical: roundedTotals.typical,
+    totalHigh: roundedTotals.high,
+    costPerM2,
+    categories,
+    adjustments,
+    contingencyPercent,
+    feesPercent,
+    region,
+    metadata
+  };
+}

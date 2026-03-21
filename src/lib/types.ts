@@ -11,7 +11,7 @@ export type FinishLevel = "budget" | "standard" | "premium";
 export type Condition = "poor" | "fair" | "good";
 
 // TODO: unused export
-export type ProjectType = "refurb";
+export type ProjectType = "refurb" | "new_build";
 
 export type RenovationScope = "cosmetic" | "standard" | "full" | "structural";
 
@@ -149,6 +149,95 @@ export type EnhancedEstimateResult = {
     yearBuilt?: number;
     listedBuilding: boolean;
     estimatedAt: string;
+  };
+};
+
+export type NewBuildCategory =
+  | "substructure"
+  | "superstructure"
+  | "external_envelope"
+  | "windows_and_doors"
+  | "internal_finishes"
+  | "kitchen"
+  | "bathrooms"
+  | "electrics"
+  | "plumbing_and_heating"
+  | "external_works"
+  | "preliminaries"
+  | "contingency"
+  | "professional_fees";
+
+export type NewBuildPropertyType =
+  | "flat"
+  | "terraced"
+  | "semi-detached"
+  | "detached"
+  | "bungalow"
+  | "hmo"
+  | "block_of_flats"
+  | "commercial";
+
+export type NewBuildSpec = "basic" | "standard" | "premium";
+
+export type NewBuildInput = {
+  propertyType: NewBuildPropertyType;
+  spec: NewBuildSpec;
+  totalAreaM2: number;
+  bedrooms: number;
+  storeys: number;
+  postcodeDistrict: string;
+  garage?: boolean;
+  renewableEnergy?: boolean;
+  basementIncluded?: boolean;
+  numberOfUnits?: number;
+  numberOfStoreys?: number;
+  liftIncluded?: boolean;
+  commercialGroundFloor?: boolean;
+  numberOfLettableRooms?: number;
+  enSuitePerRoom?: boolean;
+  communalKitchen?: boolean;
+  fireEscapeRequired?: boolean;
+  commercialType?: "office" | "retail" | "warehouse" | "restaurant";
+  fitOutLevel?: "shell_only" | "cat_a" | "cat_b";
+  disabledAccess?: boolean;
+  extractionSystem?: boolean;
+  parkingSpaces?: number;
+};
+
+export type NewBuildCategoryBreakdown = {
+  category: NewBuildCategory;
+  low: number;
+  typical: number;
+  high: number;
+};
+
+export type NewBuildResult = {
+  totalLow: number;
+  totalTypical: number;
+  totalHigh: number;
+  costPerM2: { low: number; typical: number; high: number };
+  categories: NewBuildCategoryBreakdown[];
+  adjustments: Array<{
+    label: string;
+    amount: number;
+    reason: string;
+  }>;
+  contingencyPercent: number;
+  feesPercent: number;
+  region: Region;
+  metadata: {
+    propertyType: NewBuildPropertyType;
+    spec: NewBuildSpec;
+    bedrooms: number;
+    storeys: number;
+    postcodeDistrict: string;
+    estimatedAt: string;
+    numberOfUnits?: number;
+    costPerUnit?: { low: number; typical: number; high: number };
+    numberOfLettableRooms?: number;
+    costPerLettableRoom?: { low: number; typical: number; high: number };
+    commercialType?: "office" | "retail" | "warehouse" | "restaurant";
+    fitOutLevel?: "shell_only" | "cat_a" | "cat_b";
   };
 };
 

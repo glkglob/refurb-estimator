@@ -23,6 +23,7 @@
 - [x] Tooltips for financial terms (Contingency, Fees, GDV, ROI)
 
 ## Phase 4 — Intelligence (Next)
+- [x] New build cost estimator
 - [ ] Live material price API integration (Travis Perkins, Screwfix)
 - [ ] AI text-to-estimate: describe a project, get a cost estimate
 - [ ] Photo-to-estimate: upload property photos, AI suggests scope and costs

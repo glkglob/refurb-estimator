@@ -64,7 +64,6 @@ type DesignAgentRequest = z.infer<typeof designAgentRequestSchema>;
 type DesignAgentResponse = z.infer<typeof designAgentResponseSchema>;
 
 const SYSTEM_PROMPT = `You are an expert interior designer and property renovation specialist. Analyse the provided photos and create detailed design recommendations. Describe the transformed space vividly including colours, materials, fixtures, furniture layout. Provide a mood board description and specific product recommendations with approximate costs. Focus on UK market products and suppliers.
-
 Rules:
 - Return only valid JSON, no markdown.
 - Be explicit, practical, and renovation-ready.
@@ -86,7 +85,6 @@ function normalizeDesignResponse(payload: DesignAgentResponse): DesignAgentRespo
     Math.max(payload.estimatedCost.low, payload.estimatedCost.typical, payload.estimatedCost.high)
   );
   const typical = Math.round(Math.min(high, Math.max(low, payload.estimatedCost.typical)));
-
   return {
     ...payload,
     colourPalette: payload.colourPalette.map((item) => ({
@@ -115,48 +113,40 @@ function buildUserPrompt(input: DesignAgentRequest): string {
     `Specific requirements: ${input.requirements || "None provided"}`,
     `Photos provided: ${input.photos.length}`
   ];
-
   for (const [index, photo] of input.photos.entries()) {
     const trimmed = photo.trim();
     if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
       lines.push(`Reference room photo URL ${index + 1}: ${trimmed}`);
     }
   }
-
   lines.push(
     "Return JSON in the exact shape:",
     "{",
-    '  "currentAssessment": "string",',
-    '  "designConcept": "string",',
-    '  "colourPalette": [{ "name": "string", "hex": "#AABBCC", "usage": "string" }],',
-    '  "materialRecommendations": [{ "item": "string", "description": "string", "supplier": "string", "estimatedCost": number }],',
-    '  "roomTransformation": "string",',
-    '  "estimatedCost": { "low": number, "typical": number, "high": number },',
-    '  "nextSteps": ["string"]',
+    ' "currentAssessment": "string",',
+    ' "designConcept": "string",',
+    ' "colourPalette": [{ "name": "string", "hex": "#AABBCC", "usage": "string" }],',
+    ' "materialRecommendations": [{ "item": "string", "description": "string", "supplier": "string", "estimatedCost": number }],',
+    ' "roomTransformation": "string",',
+    ' "estimatedCost": { "low": number, "typical": number, "high": number },',
+    ' "nextSteps": ["string"]',
     "}"
   );
-
   return lines.join("\n");
 }
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
-
   try {
     const parsed = await validateJsonRequest(request, designAgentRequestSchema, {
       errorMessage: "Invalid design-agent payload"
     });
-
     if (!parsed.success) {
       return parsed.response;
     }
-
     const serverEnv = getServerEnv();
     const apiKey = serverEnv.HUGGINGFACE_REFURB_DESIGN_KEY;
-
     const input = parsed.data;
     const client = new InferenceClient(apiKey);
-
     const result = await client.chatCompletion({
       model: "meta-llama/Llama-3.3-70B-Instruct",
       messages: [
@@ -165,20 +155,16 @@ export async function POST(request: Request) {
       ],
       temperature: 0.2
     });
-
     const rawText = result.choices[0]?.message?.content ?? "";
     if (!rawText) {
       throw new Error("HuggingFace returned an empty design response");
     }
-
     const json = parseJson(rawText);
     const validated = designAgentResponseSchema.parse(json);
     const normalized = normalizeDesignResponse(validated);
-
     return jsonSuccess(normalized, requestId);
   } catch (error: unknown) {
     logError("design-agent", requestId, error);
-
     if (error instanceof z.ZodError) {
       return jsonError(
         "HuggingFace design response validation failed",
@@ -187,7 +173,6 @@ export async function POST(request: Request) {
         { details: error.issues.map((issue) => issue.message) }
       );
     }
-
     const message = error instanceof Error ? error.message : "Design agent request failed";
     return jsonError(message, requestId);
   }

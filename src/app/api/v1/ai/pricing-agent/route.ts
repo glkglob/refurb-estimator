@@ -35,7 +35,6 @@ type PricingAgentRequest = z.infer<typeof pricingAgentRequestSchema>;
 type PricingAgentResponse = z.infer<typeof pricingAgentResponseSchema>;
 
 const SYSTEM_PROMPT = `You are an expert UK property refurbishment pricing consultant with 20 years experience. You provide detailed, accurate cost estimates for UK properties based on current 2024-2025 market rates. Always provide Low/Typical/High ranges. Break costs down by trade category. Consider regional price variations across UK. Be specific and professional.
-
 Rules:
 - Return valid JSON only, no markdown.
 - All money values are GBP numbers only (no currency symbols in values).
@@ -53,7 +52,6 @@ function normalizePricingResponse(payload: PricingAgentResponse): PricingAgentRe
     const low = Math.round(Math.min(category.low, category.typical, category.high));
     const high = Math.round(Math.max(category.low, category.typical, category.high));
     const typical = Math.round(clampTypical(low, category.typical, high));
-
     return {
       ...category,
       low,
@@ -61,11 +59,9 @@ function normalizePricingResponse(payload: PricingAgentResponse): PricingAgentRe
       high
     };
   });
-
   const totalLow = categories.reduce((sum, category) => sum + category.low, 0);
   const totalTypical = categories.reduce((sum, category) => sum + category.typical, 0);
   const totalHigh = categories.reduce((sum, category) => sum + category.high, 0);
-
   return {
     summary: payload.summary.trim(),
     advice: payload.advice.trim(),
@@ -86,7 +82,6 @@ function buildUserPrompt(input: PricingAgentRequest): string {
     `Renovation scope: ${input.scope}`,
     `Photos provided: ${input.photos?.length ?? 0}`
   ];
-
   if (input.photos && input.photos.length > 0) {
     for (const [index, photo] of input.photos.entries()) {
       const trimmed = photo.trim();
@@ -95,40 +90,33 @@ function buildUserPrompt(input: PricingAgentRequest): string {
       }
     }
   }
-
   lines.push(
     "Return JSON in the exact shape:",
     "{",
-    '  "summary": "string",',
-    '  "categories": [{ "name": "string", "low": number, "typical": number, "high": number, "notes": "string" }],',
-    '  "totalLow": number,',
-    '  "totalTypical": number,',
-    '  "totalHigh": number,',
-    '  "advice": "string"',
+    ' "summary": "string",',
+    ' "categories": [{ "name": "string", "low": number, "typical": number, "high": number, "notes": "string" }],',
+    ' "totalLow": number,',
+    ' "totalTypical": number,',
+    ' "totalHigh": number,',
+    ' "advice": "string"',
     "}"
   );
-
   return lines.join("\n");
 }
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
-
   try {
     const parsed = await validateJsonRequest(request, pricingAgentRequestSchema, {
       errorMessage: "Invalid pricing-agent payload"
     });
-
     if (!parsed.success) {
       return parsed.response;
     }
-
     const serverEnv = getServerEnv();
     const apiKey = serverEnv.HUGGINGFACE_PRICING_API_KEY;
-
     const input = parsed.data;
     const client = new InferenceClient(apiKey);
-
     const result = await client.chatCompletion({
       model: "meta-llama/Llama-3.3-70B-Instruct",
       messages: [
@@ -137,20 +125,16 @@ export async function POST(request: Request) {
       ],
       temperature: 0.2
     });
-
     const rawText = result.choices[0]?.message?.content ?? "";
     if (!rawText) {
       throw new Error("HuggingFace returned an empty pricing response");
     }
-
     const json = parseJson(rawText);
     const validated = pricingAgentResponseSchema.parse(json);
     const normalized = normalizePricingResponse(validated);
-
     return jsonSuccess(normalized, requestId);
   } catch (error: unknown) {
     logError("pricing-agent", requestId, error);
-
     if (error instanceof z.ZodError) {
       return jsonError(
         "HuggingFace pricing response validation failed",
@@ -159,7 +143,6 @@ export async function POST(request: Request) {
         { details: error.issues.map((issue) => issue.message) }
       );
     }
-
     const message = error instanceof Error ? error.message : "Pricing agent request failed";
     return jsonError(message, requestId);
   }

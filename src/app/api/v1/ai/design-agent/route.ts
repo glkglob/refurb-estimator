@@ -1,6 +1,6 @@
-import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
-import { NextResponse } from "next/server";
 import { z } from "zod";
+import { NextResponse } from "next/server";
+import { generateTextWithHuggingFace } from "@/lib/huggingface";
 import { validateJsonRequest } from "@/lib/validate";
 
 export const maxDuration = 60;
@@ -81,7 +81,17 @@ function stripCodeFences(value: string): string {
 }
 
 function parseJson(text: string): unknown {
-  return JSON.parse(stripCodeFences(text));
+  const cleaned = stripCodeFences(text);
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+    }
+    throw new Error("AI design response did not contain valid JSON");
+  }
 }
 
 function normalizeHex(value: string): string {
@@ -117,37 +127,6 @@ function normalizeDesignResponse(payload: DesignAgentResponse): DesignAgentRespo
   };
 }
 
-function toGeminiPhotoParts(photos: string[]): Part[] {
-  const photoParts: Part[] = [];
-
-  for (const [index, photo] of photos.entries()) {
-    const trimmed = photo.trim();
-    const dataUrlMatch = trimmed.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-
-    if (dataUrlMatch) {
-      const mimeType = dataUrlMatch[1];
-      const data = dataUrlMatch[2]?.replace(/\s/g, "");
-      if (data) {
-        photoParts.push({
-          inlineData: {
-            mimeType,
-            data
-          }
-        });
-      }
-      continue;
-    }
-
-    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-      photoParts.push({
-        text: `Reference room photo URL ${index + 1}: ${trimmed}`
-      });
-    }
-  }
-
-  return photoParts;
-}
-
 function buildUserPrompt(input: DesignAgentRequest): string {
   return [
     "Create a detailed design concept from these room photos and project constraints.",
@@ -169,6 +148,48 @@ function buildUserPrompt(input: DesignAgentRequest): string {
   ].join("\n");
 }
 
+function summarizePhotosForTextModel(photos: string[]): string {
+  return photos
+    .map((photo, index) => {
+      const trimmed = photo.trim();
+      if (trimmed.startsWith("data:image/")) {
+        return `Photo ${index + 1}: inline image uploaded (binary omitted).`;
+      }
+
+      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+        return `Photo ${index + 1}: ${trimmed}`;
+      }
+
+      return `Photo ${index + 1}: unsupported image reference format.`;
+    })
+    .join("\n");
+}
+
+async function generateDesignWithHuggingFace(
+  token: string,
+  input: DesignAgentRequest
+): Promise<string> {
+  const model = process.env.HUGGINGFACE_DESIGN_MODEL ?? "mistralai/Mistral-7B-Instruct-v0.3";
+  const prompt = [
+    SYSTEM_PROMPT,
+    "",
+    buildUserPrompt(input),
+    "",
+    "Photo references for context:",
+    summarizePhotosForTextModel(input.photos),
+    "",
+    "Return JSON only."
+  ].join("\n");
+
+  return generateTextWithHuggingFace({
+    token,
+    model,
+    prompt,
+    temperature: 0.2,
+    maxNewTokens: 1600
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const parsed = await validateJsonRequest(request, designAgentRequestSchema, {
@@ -179,38 +200,18 @@ export async function POST(request: Request) {
       return parsed.response;
     }
 
-    const apiKey = process.env.GEMINI_DESIGN_API_KEY ?? process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    const huggingFaceToken =
+      process.env.VISUALISATION_API_KEY ?? process.env.HUGGINGFACE_REFURB_DESIGN_KEY;
+
+    if (!huggingFaceToken) {
       return NextResponse.json(
-        { error: "GEMINI_DESIGN_API_KEY or GEMINI_API_KEY is not configured" },
+        { error: "VISUALISATION_API_KEY or HUGGINGFACE_REFURB_DESIGN_KEY is not configured" },
         { status: 500 }
       );
     }
 
     const input = parsed.data;
-    const client = new GoogleGenerativeAI(apiKey);
-    const model = client.getGenerativeModel({
-      model: "gemini-1.5-pro",
-      systemInstruction: SYSTEM_PROMPT
-    });
-
-    const result = await model.generateContent({
-      generationConfig: {
-        temperature: 0.3,
-        responseMimeType: "application/json"
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: buildUserPrompt(input) }, ...toGeminiPhotoParts(input.photos)]
-        }
-      ]
-    });
-
-    const rawText = result.response.text();
-    if (!rawText) {
-      throw new Error("Gemini returned an empty design response");
-    }
+    const rawText = await generateDesignWithHuggingFace(huggingFaceToken, input);
 
     const json = parseJson(rawText);
     const validated = designAgentResponseSchema.parse(json);
@@ -221,7 +222,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
-          error: "Gemini design response validation failed",
+          error: "Design response validation failed",
           details: error.issues.map((issue) => issue.message)
         },
         { status: 502 }

@@ -1,6 +1,6 @@
-import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
-import { NextResponse } from "next/server";
 import { z } from "zod";
+import { NextResponse } from "next/server";
+import { generateTextWithHuggingFace } from "@/lib/huggingface";
 import { validateJsonRequest } from "@/lib/validate";
 
 const pricingAgentRequestSchema = z.object({
@@ -52,7 +52,17 @@ function stripCodeFences(value: string): string {
 }
 
 function parseJson(text: string): unknown {
-  return JSON.parse(stripCodeFences(text));
+  const cleaned = stripCodeFences(text);
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+    }
+    throw new Error("AI pricing response did not contain valid JSON");
+  }
 }
 
 function clampTypical(low: number, typical: number, high: number): number {
@@ -87,39 +97,25 @@ function normalizePricingResponse(payload: PricingAgentResponse): PricingAgentRe
   };
 }
 
-function toGeminiPhotoParts(photos: string[] | undefined): Part[] {
+function summarizePhotosForTextModel(photos: string[] | undefined): string {
   if (!photos || photos.length === 0) {
-    return [];
+    return "No photos provided.";
   }
 
-  const photoParts: Part[] = [];
-
-  for (const [index, photo] of photos.entries()) {
-    const trimmed = photo.trim();
-    const dataUrlMatch = trimmed.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-
-    if (dataUrlMatch) {
-      const mimeType = dataUrlMatch[1];
-      const data = dataUrlMatch[2]?.replace(/\s/g, "");
-      if (data) {
-        photoParts.push({
-          inlineData: {
-            mimeType,
-            data
-          }
-        });
+  return photos
+    .map((photo, index) => {
+      const trimmed = photo.trim();
+      if (trimmed.startsWith("data:image/")) {
+        return `Photo ${index + 1}: inline image uploaded (binary omitted).`;
       }
-      continue;
-    }
 
-    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-      photoParts.push({
-        text: `Reference photo URL ${index + 1}: ${trimmed}`
-      });
-    }
-  }
+      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+        return `Photo ${index + 1}: ${trimmed}`;
+      }
 
-  return photoParts;
+      return `Photo ${index + 1}: unsupported image reference format.`;
+    })
+    .join("\n");
 }
 
 function buildUserPrompt(input: PricingAgentRequest): string {
@@ -143,6 +139,31 @@ function buildUserPrompt(input: PricingAgentRequest): string {
   ].join("\n");
 }
 
+async function generatePricingWithHuggingFace(
+  token: string,
+  input: PricingAgentRequest
+): Promise<string> {
+  const model = process.env.HUGGINGFACE_PRICING_MODEL ?? "mistralai/Mistral-7B-Instruct-v0.3";
+  const prompt = [
+    SYSTEM_PROMPT,
+    "",
+    buildUserPrompt(input),
+    "",
+    "Photo references for context:",
+    summarizePhotosForTextModel(input.photos),
+    "",
+    "Return JSON only."
+  ].join("\n");
+
+  return generateTextWithHuggingFace({
+    token,
+    model,
+    prompt,
+    temperature: 0.2,
+    maxNewTokens: 1600
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const parsed = await validateJsonRequest(request, pricingAgentRequestSchema, {
@@ -153,38 +174,17 @@ export async function POST(request: Request) {
       return parsed.response;
     }
 
-    const apiKey = process.env.GEMINI_PRICING_API_KEY ?? process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    const huggingFaceToken =
+      process.env.COST_ESTIMATION_API_KEY ?? process.env.HUGGINGFACE_REFURB_PRICING_KEY;
+    if (!huggingFaceToken) {
       return NextResponse.json(
-        { error: "GEMINI_PRICING_API_KEY or GEMINI_API_KEY is not configured" },
+        { error: "COST_ESTIMATION_API_KEY or HUGGINGFACE_REFURB_PRICING_KEY is not configured" },
         { status: 500 }
       );
     }
 
     const input = parsed.data;
-    const client = new GoogleGenerativeAI(apiKey);
-    const model = client.getGenerativeModel({
-      model: "gemini-1.5-pro",
-      systemInstruction: SYSTEM_PROMPT
-    });
-
-    const result = await model.generateContent({
-      generationConfig: {
-        temperature: 0.2,
-        responseMimeType: "application/json"
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: buildUserPrompt(input) }, ...toGeminiPhotoParts(input.photos)]
-        }
-      ]
-    });
-
-    const rawText = result.response.text();
-    if (!rawText) {
-      throw new Error("Gemini returned an empty pricing response");
-    }
+    const rawText = await generatePricingWithHuggingFace(huggingFaceToken, input);
 
     const json = parseJson(rawText);
     const validated = pricingAgentResponseSchema.parse(json);
@@ -195,7 +195,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
-          error: "Gemini pricing response validation failed",
+          error: "Pricing response validation failed",
           details: error.issues.map((issue) => issue.message)
         },
         { status: 502 }

@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import type {
   AdditionalFeature,
@@ -18,6 +17,7 @@ import {
 import { requireRole } from "@/lib/rbac";
 import { AuthError, handleAuthError } from "@/lib/supabase/auth-helpers";
 import { validateJsonRequest } from "@/lib/validate";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const REGION_VALUES: Region[] = [
   "London",
@@ -140,6 +140,8 @@ function parseListedBuilding(value: unknown): boolean | undefined {
 }
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     await requireRole(["TRADESPERSON", "ADMIN"]);
 
@@ -179,10 +181,7 @@ export async function POST(request: Request) {
 
     const additionalFeatures = parseAdditionalFeatures(body.additionalFeatures);
     if (Array.isArray(body.additionalFeatures) && additionalFeatures === null) {
-      return NextResponse.json(
-        { error: "Invalid additionalFeatures" },
-        { status: 400 }
-      );
+      return jsonError("Invalid additionalFeatures", requestId, 400);
     }
 
     const yearBuilt = parseYearBuilt(body.yearBuilt);
@@ -199,20 +198,21 @@ export async function POST(request: Request) {
       listedBuilding
     });
 
-    return NextResponse.json(
+    return jsonSuccess(
       {
         estimateInput,
         estimateResult
       },
-      { status: 200 }
+      requestId
     );
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("estimate/project", requestId, error);
     const message =
       error instanceof Error ? error.message : "Failed to estimate project";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return jsonError(message, requestId, 400);
   }
 }

@@ -1,8 +1,9 @@
 import { InferenceClient } from "@huggingface/inference";
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validateJsonRequest } from "@/lib/validate";
 import { getServerEnv } from "@/lib/env";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
+import { parseJson } from "@/lib/ai/utils";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -72,19 +73,6 @@ Rules:
 - Use realistic product/material costs for 2024-2025 UK pricing.
 - Keep nextSteps actionable and sequential.`;
 
-function stripCodeFences(value: string): string {
-  return value
-    .trim()
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/, "")
-    .trim();
-}
-
-function parseJson(text: string): unknown {
-  return JSON.parse(stripCodeFences(text));
-}
-
 function normalizeHex(value: string): string {
   const withHash = value.startsWith("#") ? value : `#${value}`;
   return withHash.toUpperCase();
@@ -152,6 +140,8 @@ function buildUserPrompt(input: DesignAgentRequest): string {
 }
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     const parsed = await validateJsonRequest(request, designAgentRequestSchema, {
       errorMessage: "Invalid design-agent payload"
@@ -185,19 +175,20 @@ export async function POST(request: Request) {
     const validated = designAgentResponseSchema.parse(json);
     const normalized = normalizeDesignResponse(validated);
 
-    return NextResponse.json(normalized, { status: 200 });
+    return jsonSuccess(normalized, requestId);
   } catch (error: unknown) {
+    logError("design-agent", requestId, error);
+
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "HuggingFace design response validation failed",
-          details: error.issues.map((issue) => issue.message)
-        },
-        { status: 502 }
+      return jsonError(
+        "HuggingFace design response validation failed",
+        requestId,
+        502,
+        { details: error.issues.map((issue) => issue.message) }
       );
     }
 
     const message = error instanceof Error ? error.message : "Design agent request failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }

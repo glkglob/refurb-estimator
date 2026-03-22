@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/rbac";
 import {
   AuthError,
   handleAuthError
 } from "@/lib/supabase/auth-helpers";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 const ALLOWED_AVATAR_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -28,25 +28,27 @@ function extensionFromMetadata(fileName: string, fileType: string): string {
 }
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     const user = await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
     const formData = await request.formData();
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+      return jsonError("No file provided", requestId, 400);
     }
 
     if (!ALLOWED_AVATAR_MIME_TYPES.has(file.type)) {
-      return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
+      return jsonError("File type not allowed", requestId, 400);
     }
 
     if (file.size <= 0) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+      return jsonError("No file provided", requestId, 400);
     }
 
     if (file.size > AVATAR_MAX_BYTES) {
-      return NextResponse.json({ error: "File exceeds size limit" }, { status: 400 });
+      return jsonError("File exceeds size limit", requestId, 400);
     }
 
     const extension = extensionFromMetadata(file.name, file.type);
@@ -64,20 +66,22 @@ export async function POST(request: Request) {
 
     const { data: publicData } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(filePath);
 
-    return NextResponse.json(
+    return jsonSuccess(
       {
         url: publicData.publicUrl,
         path: filePath,
         bucket: AVATAR_BUCKET
       },
-      { status: 201 }
+      requestId,
+      201
     );
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("upload POST", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to upload file";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }

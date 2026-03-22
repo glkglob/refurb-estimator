@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 import {
   AuthError,
   handleAuthError,
@@ -6,10 +6,11 @@ import {
 } from "@/lib/supabase/auth-helpers";
 import { getNotifications, getUnreadCount } from "@/lib/supabase/notifications-db";
 import { paginationSchema } from "@/lib/validation";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 function parseUnreadOnly(raw: string | null):
   | { ok: true; value: boolean | undefined }
-  | { ok: false; response: NextResponse } {
+  | { ok: false } {
   if (raw === null) {
     return { ok: true, value: undefined };
   }
@@ -22,16 +23,12 @@ function parseUnreadOnly(raw: string | null):
     return { ok: true, value: false };
   }
 
-  return {
-    ok: false,
-    response: NextResponse.json(
-      { error: "Invalid unreadOnly parameter. Use true or false." },
-      { status: 400 }
-    )
-  };
+  return { ok: false };
 }
 
 export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request);
+
   try {
     const user = await requireAuth();
 
@@ -41,12 +38,11 @@ export async function GET(request: NextRequest) {
     });
 
     if (!pagination.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid pagination parameters",
-          details: pagination.error.issues.map((issue) => issue.message)
-        },
-        { status: 400 }
+      return jsonError(
+        "Invalid pagination parameters",
+        requestId,
+        400,
+        { details: pagination.error.issues.map((issue) => issue.message) }
       );
     }
 
@@ -54,7 +50,11 @@ export async function GET(request: NextRequest) {
       request.nextUrl.searchParams.get("unreadOnly")
     );
     if (!unreadOnlyParsed.ok) {
-      return unreadOnlyParsed.response;
+      return jsonError(
+        "Invalid unreadOnly parameter. Use true or false.",
+        requestId,
+        400
+      );
     }
 
     const [notifications, unreadCount] = await Promise.all([
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       getUnreadCount(user.id)
     ]);
 
-    return NextResponse.json(
+    return jsonSuccess(
       {
         data: notifications.data,
         total: notifications.total,
@@ -74,15 +74,16 @@ export async function GET(request: NextRequest) {
         limit: pagination.data.limit,
         unreadCount
       },
-      { status: 200 }
+      requestId
     );
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("notifications GET", requestId, error);
     const message =
       error instanceof Error ? error.message : "Failed to fetch notifications";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }

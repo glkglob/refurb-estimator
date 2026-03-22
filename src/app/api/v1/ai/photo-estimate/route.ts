@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getServerEnv } from "@/lib/env";
 import type {
   Condition,
   EstimateInput,
@@ -351,14 +352,9 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: "Server is missing OPENAI_API_KEY configuration" },
-        { status: 500 }
-      );
-    }
+    const serverEnv = getServerEnv();
 
-    const openai = new OpenAI();
+    const openai = new OpenAI({ apiKey: serverEnv.OPENAI_API_KEY });
 
     const overrideRegion = isRegion(body.region) ? body.region : undefined;
     const bedroomsHint = normalizeBedrooms(body.bedrooms);

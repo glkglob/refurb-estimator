@@ -10,6 +10,27 @@ import type {
   DesignerStyleVariant
 } from "../../../shared/designerTypes";
 
+const backendEnvSchema = z.object({
+  OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
+  OPENAI_DESIGNER_MODEL: z.string().min(1).default("gpt-4.1")
+});
+
+function getBackendEnv() {
+  const result = backendEnvSchema.safeParse({
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENAI_DESIGNER_MODEL: process.env.OPENAI_DESIGNER_MODEL
+  });
+
+  if (!result.success) {
+    const messages = result.error.issues
+      .map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`)
+      .join("\n");
+    throw new Error(`Missing or invalid environment variables:\n${messages}`);
+  }
+
+  return result.data;
+}
+
 const materialsItemSchema = z.object({
   category: z.enum(["walls", "floor", "ceiling", "lighting", "furniture", "joinery", "other"]),
   description: z.string().trim().min(1),
@@ -167,16 +188,14 @@ function normalizeResponse(
 }
 
 export async function callDesignerAgent(input: DesignerAgentInput): Promise<DesignerAgentResponse> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not configured");
-  }
+  const env = getBackendEnv();
 
   if (input.imageUrls.length === 0) {
     throw new Error("At least one image URL is required");
   }
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const model = process.env.OPENAI_DESIGNER_MODEL ?? "gpt-4.1";
+  const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  const model = env.OPENAI_DESIGNER_MODEL;
 
   const userContent: Array<
     { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }

@@ -2,6 +2,7 @@ import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validateJsonRequest } from "@/lib/validate";
+import { getServerEnv } from "@/lib/env";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -179,13 +180,8 @@ export async function POST(request: Request) {
       return parsed.response;
     }
 
-    const apiKey = process.env.GEMINI_DESIGN_API_KEY ?? process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "GEMINI_DESIGN_API_KEY or GEMINI_API_KEY is not configured" },
-        { status: 500 }
-      );
-    }
+    const serverEnv = getServerEnv();
+    const apiKey = serverEnv.GEMINI_DESIGN_API_KEY ?? serverEnv.GEMINI_API_KEY;
 
     const input = parsed.data;
     const client = new GoogleGenerativeAI(apiKey);

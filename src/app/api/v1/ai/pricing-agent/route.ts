@@ -2,6 +2,7 @@ import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validateJsonRequest } from "@/lib/validate";
+import { getServerEnv } from "@/lib/env";
 
 const pricingAgentRequestSchema = z.object({
   propertyType: z.string().trim().min(2).max(120),
@@ -153,13 +154,8 @@ export async function POST(request: Request) {
       return parsed.response;
     }
 
-    const apiKey = process.env.GEMINI_PRICING_API_KEY ?? process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "GEMINI_PRICING_API_KEY or GEMINI_API_KEY is not configured" },
-        { status: 500 }
-      );
-    }
+    const serverEnv = getServerEnv();
+    const apiKey = serverEnv.GEMINI_PRICING_API_KEY ?? serverEnv.GEMINI_API_KEY;
 
     const input = parsed.data;
     const client = new GoogleGenerativeAI(apiKey);

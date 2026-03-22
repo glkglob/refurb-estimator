@@ -8,6 +8,7 @@ import {
 import { requireRole } from "@/lib/rbac";
 import { AuthError, handleAuthError } from "@/lib/supabase/auth-helpers";
 import { validateJsonRequest } from "@/lib/validate";
+import { getRequestId, jsonError, logError } from "@/lib/api-route";
 
 type PdfRequestBody = {
   input: QuotePdfInput;
@@ -79,6 +80,8 @@ const pdfRequestSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     await requireRole(["TRADESPERSON", "ADMIN"]);
 
@@ -99,7 +102,8 @@ export async function POST(request: Request) {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": 'attachment; filename="property-estimate.pdf"',
-        "Content-Length": String(pdfBytes.length)
+        "Content-Length": String(pdfBytes.length),
+        "x-request-id": requestId
       }
     });
   } catch (error) {
@@ -107,7 +111,8 @@ export async function POST(request: Request) {
       return handleAuthError(error);
     }
 
+    logError("estimate/pdf", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to generate PDF";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }

@@ -1,7 +1,9 @@
+import { InferenceClient } from "@huggingface/inference";
 import { z } from "zod";
-import { NextResponse } from "next/server";
-import { generateTextWithHuggingFace } from "@/lib/huggingface";
 import { validateJsonRequest } from "@/lib/validate";
+import { getServerEnv } from "@/lib/env";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
+import { parseJson } from "@/lib/ai/utils";
 
 const pricingAgentRequestSchema = z.object({
   propertyType: z.string().trim().min(2).max(120),
@@ -33,7 +35,6 @@ type PricingAgentRequest = z.infer<typeof pricingAgentRequestSchema>;
 type PricingAgentResponse = z.infer<typeof pricingAgentResponseSchema>;
 
 const SYSTEM_PROMPT = `You are an expert UK property refurbishment pricing consultant with 20 years experience. You provide detailed, accurate cost estimates for UK properties based on current 2024-2025 market rates. Always provide Low/Typical/High ranges. Break costs down by trade category. Consider regional price variations across UK. Be specific and professional.
-
 Rules:
 - Return valid JSON only, no markdown.
 - All money values are GBP numbers only (no currency symbols in values).
@@ -41,29 +42,6 @@ Rules:
 - Ensure totals equal the category sums.
 - low <= typical <= high for every category and for total values.
 - Be conservative and transparent in advice about unknowns/risk.`;
-
-function stripCodeFences(value: string): string {
-  return value
-    .trim()
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/, "")
-    .trim();
-}
-
-function parseJson(text: string): unknown {
-  const cleaned = stripCodeFences(text);
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
-    if (firstBrace >= 0 && lastBrace > firstBrace) {
-      return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
-    }
-    throw new Error("AI pricing response did not contain valid JSON");
-  }
-}
 
 function clampTypical(low: number, typical: number, high: number): number {
   return Math.min(high, Math.max(low, typical));
@@ -74,7 +52,6 @@ function normalizePricingResponse(payload: PricingAgentResponse): PricingAgentRe
     const low = Math.round(Math.min(category.low, category.typical, category.high));
     const high = Math.round(Math.max(category.low, category.typical, category.high));
     const typical = Math.round(clampTypical(low, category.typical, high));
-
     return {
       ...category,
       low,
@@ -82,11 +59,9 @@ function normalizePricingResponse(payload: PricingAgentResponse): PricingAgentRe
       high
     };
   });
-
   const totalLow = categories.reduce((sum, category) => sum + category.low, 0);
   const totalTypical = categories.reduce((sum, category) => sum + category.typical, 0);
   const totalHigh = categories.reduce((sum, category) => sum + category.high, 0);
-
   return {
     summary: payload.summary.trim(),
     advice: payload.advice.trim(),
@@ -97,112 +72,78 @@ function normalizePricingResponse(payload: PricingAgentResponse): PricingAgentRe
   };
 }
 
-function summarizePhotosForTextModel(photos: string[] | undefined): string {
-  if (!photos || photos.length === 0) {
-    return "No photos provided.";
-  }
-
-  return photos
-    .map((photo, index) => {
-      const trimmed = photo.trim();
-      if (trimmed.startsWith("data:image/")) {
-        return `Photo ${index + 1}: inline image uploaded (binary omitted).`;
-      }
-
-      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-        return `Photo ${index + 1}: ${trimmed}`;
-      }
-
-      return `Photo ${index + 1}: unsupported image reference format.`;
-    })
-    .join("\n");
-}
-
 function buildUserPrompt(input: PricingAgentRequest): string {
-  return [
+  const lines = [
     "Generate a UK refurbishment pricing estimate using the provided project inputs.",
     `Property type: ${input.propertyType}`,
     `Location/postcode: ${input.location}`,
     `Floor area (m²): ${input.floorAreaM2}`,
     `Current condition: ${input.condition}`,
     `Renovation scope: ${input.scope}`,
-    `Photos provided: ${input.photos?.length ?? 0}`,
+    `Photos provided: ${input.photos?.length ?? 0}`
+  ];
+  if (input.photos && input.photos.length > 0) {
+    for (const [index, photo] of input.photos.entries()) {
+      const trimmed = photo.trim();
+      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+        lines.push(`Reference photo URL ${index + 1}: ${trimmed}`);
+      }
+    }
+  }
+  lines.push(
     "Return JSON in the exact shape:",
     "{",
-    '  "summary": "string",',
-    '  "categories": [{ "name": "string", "low": number, "typical": number, "high": number, "notes": "string" }],',
-    '  "totalLow": number,',
-    '  "totalTypical": number,',
-    '  "totalHigh": number,',
-    '  "advice": "string"',
+    ' "summary": "string",',
+    ' "categories": [{ "name": "string", "low": number, "typical": number, "high": number, "notes": "string" }],',
+    ' "totalLow": number,',
+    ' "totalTypical": number,',
+    ' "totalHigh": number,',
+    ' "advice": "string"',
     "}"
-  ].join("\n");
-}
-
-async function generatePricingWithHuggingFace(
-  token: string,
-  input: PricingAgentRequest
-): Promise<string> {
-  const model = process.env.HUGGINGFACE_PRICING_MODEL ?? "mistralai/Mistral-7B-Instruct-v0.3";
-  const prompt = [
-    SYSTEM_PROMPT,
-    "",
-    buildUserPrompt(input),
-    "",
-    "Photo references for context:",
-    summarizePhotosForTextModel(input.photos),
-    "",
-    "Return JSON only."
-  ].join("\n");
-
-  return generateTextWithHuggingFace({
-    token,
-    model,
-    prompt,
-    temperature: 0.2,
-    maxNewTokens: 1600
-  });
+  );
+  return lines.join("\n");
 }
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
   try {
     const parsed = await validateJsonRequest(request, pricingAgentRequestSchema, {
       errorMessage: "Invalid pricing-agent payload"
     });
-
     if (!parsed.success) {
       return parsed.response;
     }
-
-    const huggingFaceToken =
-      process.env.COST_ESTIMATION_API_KEY ?? process.env.HUGGINGFACE_REFURB_PRICING_KEY;
-    if (!huggingFaceToken) {
-      return NextResponse.json(
-        { error: "COST_ESTIMATION_API_KEY or HUGGINGFACE_REFURB_PRICING_KEY is not configured" },
-        { status: 500 }
-      );
-    }
-
+    const serverEnv = getServerEnv();
+    const apiKey = serverEnv.HUGGINGFACE_PRICING_API_KEY;
     const input = parsed.data;
-    const rawText = await generatePricingWithHuggingFace(huggingFaceToken, input);
-
+    const client = new InferenceClient(apiKey);
+    const result = await client.chatCompletion({
+      model: "meta-llama/Llama-3.3-70B-Instruct",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: buildUserPrompt(input) }
+      ],
+      temperature: 0.2
+    });
+    const rawText = result.choices[0]?.message?.content ?? "";
+    if (!rawText) {
+      throw new Error("HuggingFace returned an empty pricing response");
+    }
     const json = parseJson(rawText);
     const validated = pricingAgentResponseSchema.parse(json);
     const normalized = normalizePricingResponse(validated);
-
-    return NextResponse.json(normalized, { status: 200 });
+    return jsonSuccess(normalized, requestId);
   } catch (error: unknown) {
+    logError("pricing-agent", requestId, error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "Pricing response validation failed",
-          details: error.issues.map((issue) => issue.message)
-        },
-        { status: 502 }
+      return jsonError(
+        "HuggingFace pricing response validation failed",
+        requestId,
+        502,
+        { details: error.issues.map((issue) => issue.message) }
       );
     }
-
     const message = error instanceof Error ? error.message : "Pricing agent request failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }

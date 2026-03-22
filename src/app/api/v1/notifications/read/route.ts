@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   AuthError,
@@ -7,6 +6,7 @@ import {
 } from "@/lib/supabase/auth-helpers";
 import { markAllAsRead, markAsRead } from "@/lib/supabase/notifications-db";
 import { validateWithSchema } from "@/lib/validate";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const markReadSchema = z.object({
   notificationId: z.string().trim().min(1).optional()
@@ -15,6 +15,8 @@ const markReadSchema = z.object({
 type MarkReadBody = z.infer<typeof markReadSchema>;
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     const user = await requireAuth();
 
@@ -39,14 +41,15 @@ export async function POST(request: Request) {
       await markAllAsRead(user.id);
     }
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    return jsonSuccess({ success: true }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("notifications/read POST", requestId, error);
     const message =
       error instanceof Error ? error.message : "Failed to update notifications";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }

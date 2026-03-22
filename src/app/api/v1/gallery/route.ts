@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 import { requireRole } from "@/lib/rbac";
 import {
   AuthError,
@@ -7,10 +7,11 @@ import {
 import { createGalleryItem, getPublicGallery } from "@/lib/supabase/gallery-db";
 import { validateJsonRequest } from "@/lib/validate";
 import { galleryItemCreateSchema, paginationSchema } from "@/lib/validation";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const galleryCreateSchema = galleryItemCreateSchema;
 
-function getPaginationFromRequest(request: NextRequest) {
+function getPaginationFromRequest(request: NextRequest, requestId: string) {
   const params = request.nextUrl.searchParams;
   const parsed = paginationSchema.safeParse({
     page: params.get("page") ?? undefined,
@@ -20,12 +21,11 @@ function getPaginationFromRequest(request: NextRequest) {
   if (!parsed.success) {
     return {
       ok: false as const,
-      response: NextResponse.json(
-        {
-          error: "Invalid pagination parameters",
-          details: parsed.error.issues.map((issue) => issue.message)
-        },
-        { status: 400 }
+      response: jsonError(
+        "Invalid pagination parameters",
+        requestId,
+        400,
+        { details: parsed.error.issues.map((issue) => issue.message) }
       )
     };
   }
@@ -34,10 +34,12 @@ function getPaginationFromRequest(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request);
+
   try {
     await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
 
-    const pagination = getPaginationFromRequest(request);
+    const pagination = getPaginationFromRequest(request, requestId);
     if (!pagination.ok) {
       return pagination.response;
     }
@@ -49,26 +51,29 @@ export async function GET(request: NextRequest) {
       projectType
     });
 
-    return NextResponse.json(
+    return jsonSuccess(
       {
         data: result.data,
         total: result.total,
         page: pagination.data.page,
         limit: pagination.data.limit
       },
-      { status: 200 }
+      requestId
     );
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("gallery GET", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to fetch gallery";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     const user = await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
 
@@ -80,13 +85,14 @@ export async function POST(request: Request) {
     }
 
     const created = await createGalleryItem(user.id, parsed.data);
-    return NextResponse.json(created, { status: 201 });
+    return jsonSuccess(created, requestId, 201);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("gallery POST", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to create gallery item";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }

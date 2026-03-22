@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getServerEnv } from "@/lib/env";
 import type {
   Condition,
   EstimateInput,
@@ -15,6 +15,7 @@ import {
   inferPropertyCategory
 } from "@/lib/enhancedEstimator";
 import { validateJsonRequest } from "@/lib/validate";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
@@ -274,6 +275,8 @@ function normalizePostcode(value: unknown): string | undefined {
 }
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     const now = Date.now();
     const clientIp = getClientIp(request);
@@ -281,17 +284,11 @@ export async function POST(request: Request) {
 
     if (!rateLimit.isAllowed) {
       const retryAfterSeconds = rateLimit.retryAfterSeconds ?? 60;
-      return NextResponse.json(
-        {
-          error: "Too many requests. Please try again later.",
-          retryAfter: retryAfterSeconds
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(retryAfterSeconds)
-          }
-        }
+      return jsonError(
+        "Too many requests. Please try again later.",
+        requestId,
+        429,
+        { retryAfter: retryAfterSeconds }
       );
     }
 
@@ -306,10 +303,7 @@ export async function POST(request: Request) {
       } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        return NextResponse.json(
-          { error: "Sign in to use AI photo estimates." },
-          { status: 401 }
-        );
+        return jsonError("Sign in to use AI photo estimates.", requestId, 401);
       }
     }
 
@@ -324,41 +318,31 @@ export async function POST(request: Request) {
 
     const images = normalizeImagePayload(body.image);
     if (images.length === 0) {
-      return NextResponse.json({ error: "Image is required" }, { status: 400 });
+      return jsonError("Image is required", requestId, 400);
     }
 
     if (images.length > 3) {
-      return NextResponse.json(
-        { error: "You can upload up to 3 images per estimate." },
-        { status: 400 }
-      );
+      return jsonError("You can upload up to 3 images per estimate.", requestId, 400);
     }
 
     for (const image of images) {
       const imageSizeBytes = getBase64ByteSize(image);
       if (imageSizeBytes > MAX_IMAGE_BYTES) {
-        return NextResponse.json(
-          { error: "Image is too large. Maximum size is 20MB" },
-          { status: 400 }
-        );
+        return jsonError("Image is too large. Maximum size is 20MB", requestId, 400);
       }
 
       if (!isValidDataUrlImage(image)) {
-        return NextResponse.json(
-          { error: "Invalid image format. Please upload a JPEG, PNG, or WebP image." },
-          { status: 400 }
+        return jsonError(
+          "Invalid image format. Please upload a JPEG, PNG, or WebP image.",
+          requestId,
+          400
         );
       }
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: "Server is missing OPENAI_API_KEY configuration" },
-        { status: 500 }
-      );
-    }
+    const serverEnv = getServerEnv();
 
-    const openai = new OpenAI();
+    const openai = new OpenAI({ apiKey: serverEnv.OPENAI_API_KEY });
 
     const overrideRegion = isRegion(body.region) ? body.region : undefined;
     const bedroomsHint = normalizeBedrooms(body.bedrooms);
@@ -400,15 +384,16 @@ export async function POST(request: Request) {
     const parsed = JSON.parse(content) as AiAnalysisResponse;
 
     if (parsed.error === "not_a_property") {
-      return NextResponse.json(
+      return jsonError(
+        "not_a_property",
+        requestId,
+        400,
         {
-          error: "not_a_property",
           message: asNonEmptyString(
             parsed.message,
             "Please upload a photo of a property"
           )
-        },
-        { status: 400 }
+        }
       );
     }
 
@@ -449,7 +434,7 @@ export async function POST(request: Request) {
       listedBuilding: false
     });
 
-    return NextResponse.json({
+    return jsonSuccess({
       aiAnalysis: {
         propertyType,
         totalAreaM2,
@@ -461,14 +446,12 @@ export async function POST(request: Request) {
       },
       estimateInput,
       estimateResult
-    });
+    }, requestId);
   } catch (error) {
+    logError("photo-estimate", requestId, error);
+
     const message =
       error instanceof Error ? error.message : "Failed to process photo estimate";
-
-    return NextResponse.json(
-      { error: "Failed to generate photo estimate", message },
-      { status: 500 }
-    );
+    return jsonError("Failed to generate photo estimate", requestId, 500, { message });
   }
 }

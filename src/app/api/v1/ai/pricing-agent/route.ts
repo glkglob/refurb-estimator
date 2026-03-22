@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
+import { InferenceClient } from "@huggingface/inference";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validateJsonRequest } from "@/lib/validate";
@@ -88,50 +88,27 @@ function normalizePricingResponse(payload: PricingAgentResponse): PricingAgentRe
   };
 }
 
-function toGeminiPhotoParts(photos: string[] | undefined): Part[] {
-  if (!photos || photos.length === 0) {
-    return [];
-  }
-
-  const photoParts: Part[] = [];
-
-  for (const [index, photo] of photos.entries()) {
-    const trimmed = photo.trim();
-    const dataUrlMatch = trimmed.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-
-    if (dataUrlMatch) {
-      const mimeType = dataUrlMatch[1];
-      const data = dataUrlMatch[2]?.replace(/\s/g, "");
-      if (data) {
-        photoParts.push({
-          inlineData: {
-            mimeType,
-            data
-          }
-        });
-      }
-      continue;
-    }
-
-    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-      photoParts.push({
-        text: `Reference photo URL ${index + 1}: ${trimmed}`
-      });
-    }
-  }
-
-  return photoParts;
-}
-
 function buildUserPrompt(input: PricingAgentRequest): string {
-  return [
+  const lines = [
     "Generate a UK refurbishment pricing estimate using the provided project inputs.",
     `Property type: ${input.propertyType}`,
     `Location/postcode: ${input.location}`,
     `Floor area (m²): ${input.floorAreaM2}`,
     `Current condition: ${input.condition}`,
     `Renovation scope: ${input.scope}`,
-    `Photos provided: ${input.photos?.length ?? 0}`,
+    `Photos provided: ${input.photos?.length ?? 0}`
+  ];
+
+  if (input.photos && input.photos.length > 0) {
+    for (const [index, photo] of input.photos.entries()) {
+      const trimmed = photo.trim();
+      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+        lines.push(`Reference photo URL ${index + 1}: ${trimmed}`);
+      }
+    }
+  }
+
+  lines.push(
     "Return JSON in the exact shape:",
     "{",
     '  "summary": "string",',
@@ -141,7 +118,9 @@ function buildUserPrompt(input: PricingAgentRequest): string {
     '  "totalHigh": number,',
     '  "advice": "string"',
     "}"
-  ].join("\n");
+  );
+
+  return lines.join("\n");
 }
 
 export async function POST(request: Request) {
@@ -155,31 +134,23 @@ export async function POST(request: Request) {
     }
 
     const serverEnv = getServerEnv();
-    const apiKey = serverEnv.GEMINI_PRICING_API_KEY ?? serverEnv.GEMINI_API_KEY;
+    const apiKey = serverEnv.HUGGINGFACE_PRICING_API_KEY;
 
     const input = parsed.data;
-    const client = new GoogleGenerativeAI(apiKey);
-    const model = client.getGenerativeModel({
-      model: "gemini-1.5-pro",
-      systemInstruction: SYSTEM_PROMPT
+    const client = new InferenceClient(apiKey);
+
+    const result = await client.chatCompletion({
+      model: "meta-llama/Llama-3.3-70B-Instruct",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: buildUserPrompt(input) }
+      ],
+      temperature: 0.2
     });
 
-    const result = await model.generateContent({
-      generationConfig: {
-        temperature: 0.2,
-        responseMimeType: "application/json"
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: buildUserPrompt(input) }, ...toGeminiPhotoParts(input.photos)]
-        }
-      ]
-    });
-
-    const rawText = result.response.text();
+    const rawText = result.choices[0]?.message?.content ?? "";
     if (!rawText) {
-      throw new Error("Gemini returned an empty pricing response");
+      throw new Error("HuggingFace returned an empty pricing response");
     }
 
     const json = parseJson(rawText);
@@ -191,7 +162,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
-          error: "Gemini pricing response validation failed",
+          error: "HuggingFace pricing response validation failed",
           details: error.issues.map((issue) => issue.message)
         },
         { status: 502 }

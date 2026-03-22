@@ -2,9 +2,8 @@ import { z } from "zod";
 
 const serverEnvSchema = z.object({
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
-  GEMINI_API_KEY: z.string().min(1, "GEMINI_API_KEY is required"),
-  GEMINI_PRICING_API_KEY: z.string().min(1).optional(),
-  GEMINI_DESIGN_API_KEY: z.string().min(1).optional(),
+  HUGGINGFACE_PRICING_API_KEY: z.string().min(1, "HUGGINGFACE_PRICING_API_KEY is required"),
+  HUGGINGFACE_REFURB_DESIGN_KEY: z.string().min(1, "HUGGINGFACE_REFURB_DESIGN_KEY is required"),
   OPENAI_DESIGNER_MODEL: z.string().min(1).default("gpt-4.1")
 });
 
@@ -32,9 +31,8 @@ export function getServerEnv(): ServerEnv {
 
   const result = serverEnvSchema.safeParse({
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-    GEMINI_PRICING_API_KEY: process.env.GEMINI_PRICING_API_KEY,
-    GEMINI_DESIGN_API_KEY: process.env.GEMINI_DESIGN_API_KEY,
+    HUGGINGFACE_PRICING_API_KEY: process.env.HUGGINGFACE_PRICING_API_KEY,
+    HUGGINGFACE_REFURB_DESIGN_KEY: process.env.HUGGINGFACE_REFURB_DESIGN_KEY,
     OPENAI_DESIGNER_MODEL: process.env.OPENAI_DESIGNER_MODEL
   });
 

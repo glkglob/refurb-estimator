@@ -12,6 +12,7 @@ import {
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { validateJsonRequest } from "@/lib/validate";
 import { galleryItemUpdateSchema } from "@/lib/validation";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 type RouteContext = {
   params: Promise<{
@@ -22,6 +23,8 @@ type RouteContext = {
 const galleryUpdateSchema = galleryItemUpdateSchema;
 
 export async function GET(_request: NextRequest, context: RouteContext) {
+  const requestId = getRequestId(_request);
+
   try {
     await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
 
@@ -38,22 +41,25 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     }
 
     if (!data) {
-      return NextResponse.json({ error: "Gallery item not found" }, { status: 404 });
+      return jsonError("Gallery item not found", requestId, 404);
     }
 
     const item = mapGalleryRow(data as Parameters<typeof mapGalleryRow>[0]);
-    return NextResponse.json(item, { status: 200 });
+    return jsonSuccess(item, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("gallery/[itemId] GET", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to fetch gallery item";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const requestId = getRequestId(request);
+
   try {
     await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
 
@@ -66,29 +72,36 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     const { itemId } = await context.params;
     const updated = await updateGalleryItem(itemId, parsed.data);
-    return NextResponse.json(updated, { status: 200 });
+    return jsonSuccess(updated, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("gallery/[itemId] PATCH", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to update gallery item";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
+  const requestId = getRequestId(_request);
+
   try {
     await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
     const { itemId } = await context.params;
     await deleteGalleryItem(itemId);
-    return new NextResponse(null, { status: 204 });
+    return new NextResponse(null, {
+      status: 204,
+      headers: { "x-request-id": requestId }
+    });
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("gallery/[itemId] DELETE", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to delete gallery item";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }

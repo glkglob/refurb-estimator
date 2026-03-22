@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 import { z } from "zod";
 import { validateJsonRequest } from "@/lib/validate";
 import { paginationSchema } from "@/lib/validation";
@@ -10,6 +10,7 @@ import {
   handleAuthError,
   type UserRole
 } from "@/lib/supabase/auth-helpers";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const roleSchema = z.enum(["customer", "tradesperson", "admin"]);
 
@@ -23,7 +24,7 @@ const updateUserSchema = z
     message: "Provide role or isVerified to update"
   });
 
-function getQueryParams(request: NextRequest) {
+function getQueryParams(request: NextRequest, requestId: string) {
   const params = request.nextUrl.searchParams;
   const pagination = paginationSchema.safeParse({
     page: params.get("page") ?? undefined,
@@ -33,12 +34,11 @@ function getQueryParams(request: NextRequest) {
   if (!pagination.success) {
     return {
       ok: false as const,
-      response: NextResponse.json(
-        {
-          error: "Invalid pagination parameters",
-          details: pagination.error.issues.map((issue) => issue.message)
-        },
-        { status: 400 }
+      response: jsonError(
+        "Invalid pagination parameters",
+        requestId,
+        400,
+        { details: pagination.error.issues.map((issue) => issue.message) }
       )
     };
   }
@@ -49,7 +49,7 @@ function getQueryParams(request: NextRequest) {
     if (!parsedRole.success) {
       return {
         ok: false as const,
-        response: NextResponse.json({ error: "Invalid role filter" }, { status: 400 })
+        response: jsonError("Invalid role filter", requestId, 400)
       };
     }
   }
@@ -68,10 +68,12 @@ function getQueryParams(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request);
+
   try {
     await requireRole("ADMIN");
 
-    const parsedQuery = getQueryParams(request);
+    const parsedQuery = getQueryParams(request, requestId);
     if (!parsedQuery.ok) {
       return parsedQuery.response;
     }
@@ -104,7 +106,7 @@ export async function GET(request: NextRequest) {
       customers: customers.count ?? 0
     };
 
-    return NextResponse.json(
+    return jsonSuccess(
       {
         data: profilesResult.data,
         total: profilesResult.total,
@@ -112,19 +114,22 @@ export async function GET(request: NextRequest) {
         limit: parsedQuery.data.limit,
         stats
       },
-      { status: 200 }
+      requestId
     );
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("admin/users GET", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to fetch users";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }
 
 export async function PATCH(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     await requireRole("ADMIN");
     const supabase = await createServerSupabaseClient();
@@ -157,18 +162,19 @@ export async function PATCH(request: Request) {
 
     if (error) {
       if (error.code === "PGRST116") {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
+        return jsonError("User not found", requestId, 404);
       }
       throw new Error(`Failed to update user: ${error.message}`);
     }
 
-    return NextResponse.json({ data: mapProfileRowToProfile(data) }, { status: 200 });
+    return jsonSuccess({ data: mapProfileRowToProfile(data) }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("admin/users PATCH", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to update user";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }

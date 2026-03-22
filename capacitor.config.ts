@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   webDir: "out",
   server: isDev
     ? {
-        url: "https://refurb-estimator.vercel.app",
+        url: process.env.CAPACITOR_SERVER_URL || "https://refurb-estimator.vercel.app",
         cleartext: false
       }
     : undefined

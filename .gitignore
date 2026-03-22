@@ -34,6 +34,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# MCP and Claude config (contain auth tokens)
+.mcp.json
+.claude/
+
 # local caches/build artifacts
 .npm-cache/
 .tmp-ui-check.mjs

@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/rbac";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { AuthError, handleAuthError } from "@/lib/supabase/auth-helpers";
 import { validateJsonRequest } from "@/lib/validate";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const tradeTypeSchema = z.enum([
   "plumber",
@@ -34,6 +34,8 @@ const tradeTypeLabelMap: Record<z.infer<typeof tradeTypeSchema>, string> = {
 };
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     const user = await requireRole("TRADESPERSON");
     const parsed = await validateJsonRequest(request, onboardingSchema, {
@@ -65,13 +67,14 @@ export async function POST(request: Request) {
       throw new Error(`Failed to complete onboarding: ${error.message}`);
     }
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    return jsonSuccess({ success: true }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("onboarding POST", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to complete onboarding";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }

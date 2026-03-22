@@ -1,8 +1,9 @@
 import { InferenceClient } from "@huggingface/inference";
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validateJsonRequest } from "@/lib/validate";
 import { getServerEnv } from "@/lib/env";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
+import { parseJson } from "@/lib/ai/utils";
 
 const pricingAgentRequestSchema = z.object({
   propertyType: z.string().trim().min(2).max(120),
@@ -42,19 +43,6 @@ Rules:
 - Ensure totals equal the category sums.
 - low <= typical <= high for every category and for total values.
 - Be conservative and transparent in advice about unknowns/risk.`;
-
-function stripCodeFences(value: string): string {
-  return value
-    .trim()
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/, "")
-    .trim();
-}
-
-function parseJson(text: string): unknown {
-  return JSON.parse(stripCodeFences(text));
-}
 
 function clampTypical(low: number, typical: number, high: number): number {
   return Math.min(high, Math.max(low, typical));
@@ -124,6 +112,8 @@ function buildUserPrompt(input: PricingAgentRequest): string {
 }
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     const parsed = await validateJsonRequest(request, pricingAgentRequestSchema, {
       errorMessage: "Invalid pricing-agent payload"
@@ -157,19 +147,20 @@ export async function POST(request: Request) {
     const validated = pricingAgentResponseSchema.parse(json);
     const normalized = normalizePricingResponse(validated);
 
-    return NextResponse.json(normalized, { status: 200 });
+    return jsonSuccess(normalized, requestId);
   } catch (error: unknown) {
+    logError("pricing-agent", requestId, error);
+
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "HuggingFace pricing response validation failed",
-          details: error.issues.map((issue) => issue.message)
-        },
-        { status: 502 }
+      return jsonError(
+        "HuggingFace pricing response validation failed",
+        requestId,
+        502,
+        { details: error.issues.map((issue) => issue.message) }
       );
     }
 
     const message = error instanceof Error ? error.message : "Pricing agent request failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }

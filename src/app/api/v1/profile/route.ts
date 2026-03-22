@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/rbac";
 import { profileUpdateSchema } from "@/lib/validation";
 import { validateJsonRequest } from "@/lib/validate";
@@ -7,31 +6,36 @@ import {
   handleAuthError
 } from "@/lib/supabase/auth-helpers";
 import { getProfileById, updateProfile } from "@/lib/supabase/profiles-db";
+import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const profilePatchSchema = profileUpdateSchema;
 
-export async function GET() {
+export async function GET(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     const user = await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
     const profile = await getProfileById(user.id);
 
     if (!profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+      return jsonError("Profile not found", requestId, 404);
     }
 
-    return NextResponse.json(profile, { status: 200 });
+    return jsonSuccess(profile, requestId);
   } catch (error) {
-    console.error("[profile GET] full error:", error);
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("profile GET", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to fetch profile";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }
 
 export async function PATCH(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     const user = await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
 
@@ -43,13 +47,14 @@ export async function PATCH(request: Request) {
     }
 
     const updated = await updateProfile(user.id, parsed.data);
-    return NextResponse.json(updated, { status: 200 });
+    return jsonSuccess(updated, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
+    logError("profile PATCH", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to update profile";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(message, requestId);
   }
 }

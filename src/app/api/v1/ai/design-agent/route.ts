@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
+import { InferenceClient } from "@huggingface/inference";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validateJsonRequest } from "@/lib/validate";
@@ -118,45 +118,24 @@ function normalizeDesignResponse(payload: DesignAgentResponse): DesignAgentRespo
   };
 }
 
-function toGeminiPhotoParts(photos: string[]): Part[] {
-  const photoParts: Part[] = [];
-
-  for (const [index, photo] of photos.entries()) {
-    const trimmed = photo.trim();
-    const dataUrlMatch = trimmed.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-
-    if (dataUrlMatch) {
-      const mimeType = dataUrlMatch[1];
-      const data = dataUrlMatch[2]?.replace(/\s/g, "");
-      if (data) {
-        photoParts.push({
-          inlineData: {
-            mimeType,
-            data
-          }
-        });
-      }
-      continue;
-    }
-
-    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-      photoParts.push({
-        text: `Reference room photo URL ${index + 1}: ${trimmed}`
-      });
-    }
-  }
-
-  return photoParts;
-}
-
 function buildUserPrompt(input: DesignAgentRequest): string {
-  return [
+  const lines = [
     "Create a detailed design concept from these room photos and project constraints.",
     `Room type: ${input.roomType}`,
     `Style preference: ${input.style}`,
     `Budget range: ${input.budget}`,
     `Specific requirements: ${input.requirements || "None provided"}`,
-    `Photos provided: ${input.photos.length}`,
+    `Photos provided: ${input.photos.length}`
+  ];
+
+  for (const [index, photo] of input.photos.entries()) {
+    const trimmed = photo.trim();
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      lines.push(`Reference room photo URL ${index + 1}: ${trimmed}`);
+    }
+  }
+
+  lines.push(
     "Return JSON in the exact shape:",
     "{",
     '  "currentAssessment": "string",',
@@ -167,7 +146,9 @@ function buildUserPrompt(input: DesignAgentRequest): string {
     '  "estimatedCost": { "low": number, "typical": number, "high": number },',
     '  "nextSteps": ["string"]',
     "}"
-  ].join("\n");
+  );
+
+  return lines.join("\n");
 }
 
 export async function POST(request: Request) {
@@ -181,31 +162,23 @@ export async function POST(request: Request) {
     }
 
     const serverEnv = getServerEnv();
-    const apiKey = serverEnv.GEMINI_DESIGN_API_KEY ?? serverEnv.GEMINI_API_KEY;
+    const apiKey = serverEnv.HUGGINGFACE_REFURB_DESIGN_KEY;
 
     const input = parsed.data;
-    const client = new GoogleGenerativeAI(apiKey);
-    const model = client.getGenerativeModel({
-      model: "gemini-1.5-pro",
-      systemInstruction: SYSTEM_PROMPT
+    const client = new InferenceClient(apiKey);
+
+    const result = await client.chatCompletion({
+      model: "meta-llama/Llama-3.3-70B-Instruct",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: buildUserPrompt(input) }
+      ],
+      temperature: 0.2
     });
 
-    const result = await model.generateContent({
-      generationConfig: {
-        temperature: 0.3,
-        responseMimeType: "application/json"
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: buildUserPrompt(input) }, ...toGeminiPhotoParts(input.photos)]
-        }
-      ]
-    });
-
-    const rawText = result.response.text();
+    const rawText = result.choices[0]?.message?.content ?? "";
     if (!rawText) {
-      throw new Error("Gemini returned an empty design response");
+      throw new Error("HuggingFace returned an empty design response");
     }
 
     const json = parseJson(rawText);
@@ -217,7 +190,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
-          error: "Gemini design response validation failed",
+          error: "HuggingFace design response validation failed",
           details: error.issues.map((issue) => issue.message)
         },
         { status: 502 }

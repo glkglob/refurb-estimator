@@ -14,22 +14,33 @@ afterAll(() => {
 describe("getServerEnv", () => {
   function setServerEnv(overrides: Record<string, string | undefined> = {}) {
     process.env.OPENAI_API_KEY = "sk-test-key";
-    process.env.GEMINI_API_KEY = "gemini-test-key";
+    process.env.HUGGINGFACE_PRICING_API_KEY = "hf-test-key";
+    process.env.HUGGINGFACE_REFURB_DESIGN_KEY = "hf-test-key";
     Object.assign(process.env, overrides);
   }
 
   test("throws when OPENAI_API_KEY is missing", () => {
-    process.env.GEMINI_API_KEY = "gemini-test-key";
+    process.env.HUGGINGFACE_PRICING_API_KEY = "hf-test-key";
+    process.env.HUGGINGFACE_REFURB_DESIGN_KEY = "hf-test-key";
     delete process.env.OPENAI_API_KEY;
 
     expect(() => getServerEnv()).toThrow("OPENAI_API_KEY");
   });
 
-  test("throws when GEMINI_API_KEY is missing", () => {
+  test("throws when HUGGINGFACE_PRICING_API_KEY is missing", () => {
     process.env.OPENAI_API_KEY = "sk-test-key";
-    delete process.env.GEMINI_API_KEY;
+    process.env.HUGGINGFACE_REFURB_DESIGN_KEY = "hf-test-key";
+    delete process.env.HUGGINGFACE_PRICING_API_KEY;
 
-    expect(() => getServerEnv()).toThrow("GEMINI_API_KEY");
+    expect(() => getServerEnv()).toThrow("HUGGINGFACE_PRICING_API_KEY");
+  });
+
+  test("throws when HUGGINGFACE_REFURB_DESIGN_KEY is missing", () => {
+    process.env.OPENAI_API_KEY = "sk-test-key";
+    process.env.HUGGINGFACE_PRICING_API_KEY = "hf-test-key";
+    delete process.env.HUGGINGFACE_REFURB_DESIGN_KEY;
+
+    expect(() => getServerEnv()).toThrow("HUGGINGFACE_REFURB_DESIGN_KEY");
   });
 
   test("returns validated env when all required vars are set", () => {
@@ -38,7 +49,8 @@ describe("getServerEnv", () => {
     const env = getServerEnv();
 
     expect(env.OPENAI_API_KEY).toBe("sk-test-key");
-    expect(env.GEMINI_API_KEY).toBe("gemini-test-key");
+    expect(env.HUGGINGFACE_PRICING_API_KEY).toBe("hf-test-key");
+    expect(env.HUGGINGFACE_REFURB_DESIGN_KEY).toBe("hf-test-key");
   });
 
   test("returns default for OPENAI_DESIGNER_MODEL when not set", () => {
@@ -56,22 +68,6 @@ describe("getServerEnv", () => {
     const env = getServerEnv();
 
     expect(env.OPENAI_DESIGNER_MODEL).toBe("gpt-4o");
-  });
-
-  test("optional GEMINI_PRICING_API_KEY is returned when set", () => {
-    setServerEnv({ GEMINI_PRICING_API_KEY: "pricing-key" });
-
-    const env = getServerEnv();
-
-    expect(env.GEMINI_PRICING_API_KEY).toBe("pricing-key");
-  });
-
-  test("optional GEMINI_PRICING_API_KEY is undefined when not set", () => {
-    setServerEnv();
-
-    const env = getServerEnv();
-
-    expect(env.GEMINI_PRICING_API_KEY).toBeUndefined();
   });
 });
 

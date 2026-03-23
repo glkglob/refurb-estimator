@@ -3,8 +3,7 @@ import {
   getRequestId,
   jsonError,
   jsonSuccess,
-  logApiError,
-  withRequestIdHeader
+  logError
 } from "@/lib/api-route";
 import { requireRole } from "@/lib/rbac";
 import {
@@ -64,7 +63,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch gallery item";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,
@@ -101,7 +100,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to update gallery item";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,
@@ -130,7 +129,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to delete gallery item";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,

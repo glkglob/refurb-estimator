@@ -3,8 +3,7 @@ import {
   getRequestId,
   jsonError,
   jsonSuccess,
-  logApiError,
-  withRequestIdHeader
+  logError
 } from "@/lib/api-route";
 import { requireRole } from "@/lib/rbac";
 import {
@@ -74,7 +73,7 @@ export async function GET(request: NextRequest) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch gallery";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,
@@ -110,7 +109,7 @@ export async function POST(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to create gallery item";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,

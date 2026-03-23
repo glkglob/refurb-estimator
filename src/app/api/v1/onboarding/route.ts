@@ -3,8 +3,7 @@ import {
   getRequestId,
   jsonError,
   jsonSuccess,
-  logApiError,
-  withRequestIdHeader
+  logError
 } from "@/lib/api-route";
 import { requireRole } from "@/lib/rbac";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -82,7 +81,7 @@ export async function POST(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to complete onboarding";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,

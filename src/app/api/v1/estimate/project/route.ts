@@ -3,8 +3,7 @@ import {
   getRequestId,
   jsonError,
   jsonSuccess,
-  logApiError,
-  withRequestIdHeader
+  logError
 } from "@/lib/api-route";
 import type {
   AdditionalFeature,
@@ -225,7 +224,7 @@ export async function POST(request: Request) {
 
     const message =
       error instanceof Error ? error.message : "Failed to estimate project";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,

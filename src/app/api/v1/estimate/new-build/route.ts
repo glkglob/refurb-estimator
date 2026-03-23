@@ -3,8 +3,7 @@ import {
   getRequestId,
   jsonError,
   jsonSuccess,
-  logApiError,
-  withRequestIdHeader
+  logError
 } from "@/lib/api-route";
 import { calculateNewBuild } from "@/lib/newBuildEstimator";
 import { requireRole } from "@/lib/rbac";
@@ -92,7 +91,7 @@ export async function POST(request: Request) {
 
     const message =
       error instanceof Error ? error.message : "Failed to calculate new build estimate";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,

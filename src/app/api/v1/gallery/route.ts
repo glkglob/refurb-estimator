@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     const pagination = getPaginationFromRequest(request);
     if (!pagination.ok) {
-      return withRequestIdHeader(pagination.response, requestId);
+      return pagination.response;
     }
 
     const projectType = request.nextUrl.searchParams.get("projectType") ?? undefined;
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch gallery";
@@ -98,14 +98,14 @@ export async function POST(request: Request) {
       errorMessage: "Invalid gallery item payload"
     });
     if (!parsed.success) {
-      return withRequestIdHeader(parsed.response, requestId);
+      return parsed.response;
     }
 
     const created = await createGalleryItem(user.id, parsed.data);
     return jsonSuccess(created, { status: 201, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to create gallery item";

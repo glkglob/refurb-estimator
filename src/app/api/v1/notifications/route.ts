@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       request.nextUrl.searchParams.get("unreadOnly")
     );
     if (!unreadOnlyParsed.ok) {
-      return withRequestIdHeader(unreadOnlyParsed.response, requestId);
+      return unreadOnlyParsed.response;
     }
 
     const [notifications, unreadCount] = await Promise.all([
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message =

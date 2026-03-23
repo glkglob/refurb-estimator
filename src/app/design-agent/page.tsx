@@ -1,7 +1,6 @@
 "use client";
 
-import NextImage from "next/image";
-import { Loader2, Upload, X } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -11,6 +10,8 @@ import {
   type DragEvent,
   type FormEvent
 } from "react";
+import ImagePreviewGrid from "@/components/ImagePreviewGrid";
+import StatusMessageCard from "@/components/StatusMessageCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -381,31 +382,14 @@ export default function DesignAgentPage() {
               <p className="mt-1 text-xs text-muted-foreground">JPEG, PNG, or WebP · Max 20MB each</p>
             </div>
 
-            {photos.length > 0 ? (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {previewUrls.map((url, index) => (
-                  <div key={url} className="rounded-md border border-border bg-muted/20 p-2">
-                    <div className="relative h-32 w-full overflow-hidden rounded">
-                      <NextImage
-                        src={url}
-                        alt={`Design photo ${index + 1}`}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                        sizes="(max-width: 640px) 100vw, 33vw"
-                      />
-                    </div>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <p className="truncate text-xs text-muted-foreground">{photos[index]?.name}</p>
-                      <Button type="button" variant="ghost" size="icon-sm" onClick={() => removePhoto(index)}>
-                        <X className="size-4" />
-                        <span className="sr-only">Remove photo {index + 1}</span>
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
+            <ImagePreviewGrid
+              previewUrls={previewUrls}
+              fileNames={photos.map((photo) => photo.name)}
+              altPrefix="Design photo"
+              onRemove={removePhoto}
+              cardClassName="bg-muted/20"
+              imageWrapperClassName="h-32"
+            />
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-1">
@@ -490,17 +474,9 @@ export default function DesignAgentPage() {
         </CardContent>
       </Card>
 
-      {errorMessage ? (
-        <Card className="border-destructive/40">
-          <CardContent className="pt-4 text-sm text-destructive">{errorMessage}</CardContent>
-        </Card>
-      ) : null}
+      {errorMessage ? <StatusMessageCard message={errorMessage} variant="error" /> : null}
 
-      {infoMessage ? (
-        <Card className="border-primary/40">
-          <CardContent className="pt-4 text-sm text-primary">{infoMessage}</CardContent>
-        </Card>
-      ) : null}
+      {infoMessage ? <StatusMessageCard message={infoMessage} variant="info" /> : null}
 
       {result ? (
         <div className="space-y-4">

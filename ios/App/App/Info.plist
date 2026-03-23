@@ -24,10 +24,18 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Allow camera access to capture room photos for refurbishment estimates.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow photo library access to upload room photos for refurbishment estimates.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Allow saving generated refurbishment images to your photo library.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>

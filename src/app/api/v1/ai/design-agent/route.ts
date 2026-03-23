@@ -1,7 +1,6 @@
-import { InferenceClient } from "@huggingface/inference";
+import { aiClient } from "@/lib/ai/client";
 import { z } from "zod";
 import { validateJsonRequest } from "@/lib/validate";
-import { getServerEnv } from "@/lib/env";
 import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 import { parseJson } from "@/lib/ai/utils";
 
@@ -143,12 +142,9 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return parsed.response;
     }
-    const serverEnv = getServerEnv();
-    const apiKey = serverEnv.HUGGINGFACE_REFURB_DESIGN_KEY;
     const input = parsed.data;
-    const client = new InferenceClient(apiKey);
-    const result = await client.chatCompletion({
-      model: "meta-llama/Llama-3.3-70B-Instruct",
+    const result = await aiClient.chat.completions.create({
+      model: process.env.LM_STUDIO_MODEL ?? "qwen/qwen3-4b",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: buildUserPrompt(input) }

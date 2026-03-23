@@ -1,5 +1,12 @@
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import {
+  getRequestId,
+  jsonError,
+  jsonSuccess,
+  logApiError,
+  withRequestIdHeader
+} from "@/lib/api-route";
 import { validateJsonRequest } from "@/lib/validate";
 import { paginationSchema } from "@/lib/validation";
 import { requireRole } from "@/lib/rbac";
@@ -10,9 +17,9 @@ import {
   handleAuthError,
   type UserRole
 } from "@/lib/supabase/auth-helpers";
-import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const roleSchema = z.enum(["customer", "tradesperson", "admin"]);
+const ROUTE_TAG = "api/v1/admin/users";
 
 const updateUserSchema = z
   .object({
@@ -24,7 +31,7 @@ const updateUserSchema = z
     message: "Provide role or isVerified to update"
   });
 
-function getQueryParams(request: NextRequest, requestId: string) {
+function getQueryParams(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const pagination = paginationSchema.safeParse({
     page: params.get("page") ?? undefined,
@@ -34,11 +41,12 @@ function getQueryParams(request: NextRequest, requestId: string) {
   if (!pagination.success) {
     return {
       ok: false as const,
-      response: jsonError(
-        "Invalid pagination parameters",
-        requestId,
-        400,
-        { details: pagination.error.issues.map((issue) => issue.message) }
+      response: NextResponse.json(
+        {
+          error: "Invalid pagination parameters",
+          details: pagination.error.issues.map((issue) => issue.message)
+        },
+        { status: 400 }
       )
     };
   }
@@ -49,7 +57,7 @@ function getQueryParams(request: NextRequest, requestId: string) {
     if (!parsedRole.success) {
       return {
         ok: false as const,
-        response: jsonError("Invalid role filter", requestId, 400)
+        response: NextResponse.json({ error: "Invalid role filter" }, { status: 400 })
       };
     }
   }
@@ -73,9 +81,9 @@ export async function GET(request: NextRequest) {
   try {
     await requireRole("ADMIN");
 
-    const parsedQuery = getQueryParams(request, requestId);
+    const parsedQuery = getQueryParams(request);
     if (!parsedQuery.ok) {
-      return parsedQuery.response;
+      return withRequestIdHeader(parsedQuery.response, requestId);
     }
 
     const [profilesResult, supabase] = await Promise.all([
@@ -114,16 +122,26 @@ export async function GET(request: NextRequest) {
         limit: parsedQuery.data.limit,
         stats
       },
-      requestId
+      { status: 200, requestId }
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("admin/users GET", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to fetch users";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "ADMIN_USERS_GET_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "ADMIN_USERS_GET_FAILED"
+    });
   }
 }
 
@@ -138,7 +156,7 @@ export async function PATCH(request: Request) {
       errorMessage: "Invalid update payload"
     });
     if (!parsed.success) {
-      return parsed.response;
+      return withRequestIdHeader(parsed.response, requestId);
     }
 
     const updates: Record<string, unknown> = {
@@ -162,19 +180,34 @@ export async function PATCH(request: Request) {
 
     if (error) {
       if (error.code === "PGRST116") {
-        return jsonError("User not found", requestId, 404);
+        return jsonError({
+          status: 404,
+          error: "User not found",
+          requestId,
+          code: "USER_NOT_FOUND"
+        });
       }
       throw new Error(`Failed to update user: ${error.message}`);
     }
 
-    return jsonSuccess({ data: mapProfileRowToProfile(data) }, requestId);
+    return jsonSuccess({ data: mapProfileRowToProfile(data) }, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("admin/users PATCH", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to update user";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "ADMIN_USERS_PATCH_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "ADMIN_USERS_PATCH_FAILED"
+    });
   }
 }

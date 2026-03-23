@@ -1,9 +1,15 @@
 import { z } from "zod";
+import {
+  getRequestId,
+  jsonError,
+  jsonSuccess,
+  logApiError,
+  withRequestIdHeader
+} from "@/lib/api-route";
 import { requireRole } from "@/lib/rbac";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { AuthError, handleAuthError } from "@/lib/supabase/auth-helpers";
 import { validateJsonRequest } from "@/lib/validate";
-import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const tradeTypeSchema = z.enum([
   "plumber",
@@ -33,6 +39,8 @@ const tradeTypeLabelMap: Record<z.infer<typeof tradeTypeSchema>, string> = {
   general: "General"
 };
 
+const ROUTE_TAG = "api/v1/onboarding";
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
@@ -43,7 +51,7 @@ export async function POST(request: Request) {
     });
 
     if (!parsed.success) {
-      return parsed.response;
+      return withRequestIdHeader(parsed.response, requestId);
     }
 
     const supabase = await createServerSupabaseClient();
@@ -67,14 +75,24 @@ export async function POST(request: Request) {
       throw new Error(`Failed to complete onboarding: ${error.message}`);
     }
 
-    return jsonSuccess({ success: true }, requestId);
+    return jsonSuccess({ success: true }, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("onboarding POST", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to complete onboarding";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "ONBOARDING_POST_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "ONBOARDING_POST_FAILED"
+    });
   }
 }

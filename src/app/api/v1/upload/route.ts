@@ -1,14 +1,21 @@
+import {
+  getRequestId,
+  jsonError,
+  jsonSuccess,
+  logApiError,
+  withRequestIdHeader
+} from "@/lib/api-route";
 import { requireRole } from "@/lib/rbac";
 import {
   AuthError,
   handleAuthError
 } from "@/lib/supabase/auth-helpers";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 const ALLOWED_AVATAR_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const AVATAR_BUCKET = "avatars";
+const ROUTE_TAG = "api/v1/upload";
 
 function extensionFromMetadata(fileName: string, fileType: string): string {
   const lowerName = fileName.toLowerCase().trim();
@@ -36,19 +43,39 @@ export async function POST(request: Request) {
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
-      return jsonError("No file provided", requestId, 400);
+      return jsonError({
+        status: 400,
+        error: "No file provided",
+        requestId,
+        code: "NO_FILE"
+      });
     }
 
     if (!ALLOWED_AVATAR_MIME_TYPES.has(file.type)) {
-      return jsonError("File type not allowed", requestId, 400);
+      return jsonError({
+        status: 400,
+        error: "File type not allowed",
+        requestId,
+        code: "INVALID_FILE_TYPE"
+      });
     }
 
     if (file.size <= 0) {
-      return jsonError("No file provided", requestId, 400);
+      return jsonError({
+        status: 400,
+        error: "No file provided",
+        requestId,
+        code: "EMPTY_FILE"
+      });
     }
 
     if (file.size > AVATAR_MAX_BYTES) {
-      return jsonError("File exceeds size limit", requestId, 400);
+      return jsonError({
+        status: 400,
+        error: "File exceeds size limit",
+        requestId,
+        code: "FILE_TOO_LARGE"
+      });
     }
 
     const extension = extensionFromMetadata(file.name, file.type);
@@ -72,16 +99,25 @@ export async function POST(request: Request) {
         path: filePath,
         bucket: AVATAR_BUCKET
       },
-      requestId,
-      201
+      { status: 201, requestId }
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("upload POST", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to upload file";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "UPLOAD_POST_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "UPLOAD_POST_FAILED"
+    });
   }
 }

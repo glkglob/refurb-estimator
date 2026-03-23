@@ -1,8 +1,9 @@
 "use client";
 
-import { Loader2, Upload, X } from "lucide-react";
-import NextImage from "next/image";
+import { Loader2, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import ImagePreviewGrid from "@/components/ImagePreviewGrid";
+import StatusMessageCard from "@/components/StatusMessageCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -366,31 +367,14 @@ export default function AiPricingPage() {
                 <span>Click to upload room photos</span>
               </button>
 
-              {photos.length > 0 ? (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {previewUrls.map((url, index) => (
-                    <div key={url} className="rounded-md border border-border bg-muted/10 p-2">
-                      <div className="relative h-28 w-full overflow-hidden rounded">
-                        <NextImage
-                          src={url}
-                          alt={`Pricing photo ${index + 1}`}
-                          fill
-                          unoptimized
-                          className="object-cover"
-                          sizes="(max-width: 640px) 100vw, 33vw"
-                        />
-                      </div>
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <p className="truncate text-xs text-muted-foreground">{photos[index]?.name}</p>
-                        <Button type="button" variant="ghost" size="icon-sm" onClick={() => removePhoto(index)}>
-                          <X className="size-4" />
-                          <span className="sr-only">Remove photo {index + 1}</span>
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+              <ImagePreviewGrid
+                previewUrls={previewUrls}
+                fileNames={photos.map((photo) => photo.name)}
+                altPrefix="Pricing photo"
+                onRemove={removePhoto}
+                cardClassName="bg-muted/10"
+                imageWrapperClassName="h-28"
+              />
             </div>
 
             <Button type="submit" disabled={!canSubmit} className="w-full md:w-auto">
@@ -407,11 +391,7 @@ export default function AiPricingPage() {
         </CardContent>
       </Card>
 
-      {errorMessage ? (
-        <Card className="border-destructive/40">
-          <CardContent className="pt-4 text-sm text-destructive">{errorMessage}</CardContent>
-        </Card>
-      ) : null}
+      {errorMessage ? <StatusMessageCard message={errorMessage} variant="error" /> : null}
 
       {result ? (
         <div className="space-y-4">

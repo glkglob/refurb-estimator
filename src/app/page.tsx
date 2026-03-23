@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import AuthBanner from "@/components/AuthBanner";
+import EstimateResultsFallback from "@/components/EstimateResultsFallback";
 import EstimateForm from "@/components/EstimateForm";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import {
 
 const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
   ssr: false,
-  loading: () => <div className="h-72 animate-pulse rounded-lg bg-muted" />
+  loading: () => <EstimateResultsFallback />
 });
 
 export default function HomePage() {
@@ -35,6 +36,10 @@ export default function HomePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    void import("@/components/EstimateResults");
+  }, []);
 
   useEffect(() => {
     if (!result) {

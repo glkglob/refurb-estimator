@@ -1,5 +1,5 @@
 import { GraphQLError } from "graphql";
-import { prisma } from "@/lib/prisma";
+import { supabaseRepository } from "@/lib/prisma";
 import { defaultCostLibrary } from "@/lib/costLibrary";
 import { estimateProject } from "@/lib/estimator";
 import type {
@@ -110,7 +110,7 @@ export const resolvers = {
       const user = requireGraphQLUser(context);
 
       try {
-        return await prisma.scenario.findMany({
+        return await supabaseRepository.scenario.findMany({
           where: { userId: user.id },
           orderBy: { createdAt: "desc" },
           take: args.limit
@@ -128,7 +128,7 @@ export const resolvers = {
       const user = requireGraphQLUser(context);
 
       try {
-        return await prisma.scenario.findUnique({
+        return await supabaseRepository.scenario.findUnique({
           where: { id: args.id, userId: user.id }
         });
       } catch (error) {
@@ -144,7 +144,7 @@ export const resolvers = {
       const user = requireGraphQLUser(context);
 
       try {
-        return await prisma.galleryItem.findMany({
+        return await supabaseRepository.galleryItem.findMany({
           where: { userId: user.id },
           orderBy: { createdAt: "desc" },
           take: args.limit
@@ -162,7 +162,7 @@ export const resolvers = {
       const user = requireGraphQLUser(context);
 
       try {
-        return await prisma.notification.findMany({
+        return await supabaseRepository.notification.findMany({
           where: {
             userId: user.id,
             isRead: args.unreadOnly ? false : undefined
@@ -211,7 +211,7 @@ export const resolvers = {
 
       try {
         const estimateResult = estimateProject(estimateInput, defaultCostLibrary);
-        return await prisma.scenario.create({
+        return await supabaseRepository.scenario.create({
           data: {
             userId: user.id,
             name: args.input.name?.trim() || `${propertyType} estimate`,
@@ -234,7 +234,7 @@ export const resolvers = {
       const user = requireGraphQLUser(context);
 
       try {
-        return await prisma.profile.update({
+        return await supabaseRepository.profile.update({
           where: { id: user.id },
           data: args.input
         });
@@ -251,7 +251,7 @@ export const resolvers = {
       const user = requireGraphQLUser(context);
 
       try {
-        await prisma.notification.update({
+        await supabaseRepository.notification.update({
           where: {
             id: args.id,
             userId: user.id

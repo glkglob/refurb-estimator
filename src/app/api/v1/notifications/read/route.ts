@@ -1,18 +1,25 @@
 import { z } from "zod";
 import {
+  getRequestId,
+  jsonError,
+  jsonSuccess,
+  logApiError,
+  withRequestIdHeader
+} from "@/lib/api-route";
+import {
   AuthError,
   handleAuthError,
   requireAuth
 } from "@/lib/supabase/auth-helpers";
 import { markAllAsRead, markAsRead } from "@/lib/supabase/notifications-db";
 import { validateWithSchema } from "@/lib/validate";
-import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const markReadSchema = z.object({
   notificationId: z.string().trim().min(1).optional()
 });
 
 type MarkReadBody = z.infer<typeof markReadSchema>;
+const ROUTE_TAG = "api/v1/notifications/read";
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -31,7 +38,7 @@ export async function POST(request: Request) {
       errorMessage: "Invalid notifications read payload"
     });
     if (!parsedBody.success) {
-      return parsedBody.response;
+      return withRequestIdHeader(parsedBody.response, requestId);
     }
     const validatedBody: MarkReadBody = parsedBody.data;
 
@@ -41,15 +48,25 @@ export async function POST(request: Request) {
       await markAllAsRead(user.id);
     }
 
-    return jsonSuccess({ success: true }, requestId);
+    return jsonSuccess({ success: true }, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("notifications/read POST", requestId, error);
     const message =
       error instanceof Error ? error.message : "Failed to update notifications";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "NOTIFICATIONS_READ_POST_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "NOTIFICATIONS_READ_POST_FAILED"
+    });
   }
 }

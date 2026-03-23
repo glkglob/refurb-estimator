@@ -45,3 +45,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local MCP/assistant config
+.mcp.json
+.claude/
+.env*
+frontend/.env*

@@ -1,10 +1,18 @@
 import { z } from "zod";
+import {
+  getRequestId,
+  jsonError,
+  jsonSuccess,
+  logApiError,
+  withRequestIdHeader
+} from "@/lib/api-route";
 import { calculateNewBuild } from "@/lib/newBuildEstimator";
 import { requireRole } from "@/lib/rbac";
 import { AuthError, handleAuthError } from "@/lib/supabase/auth-helpers";
 import type { NewBuildInput } from "@/lib/types";
 import { validateJsonRequest } from "@/lib/validate";
-import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
+
+const ROUTE_TAG = "api/v1/estimate/new-build";
 
 const newBuildSchema = z
   .object({
@@ -71,20 +79,30 @@ export async function POST(request: Request) {
       errorMessage: "Invalid new build estimate payload"
     });
     if (!parsed.success) {
-      return parsed.response;
+      return withRequestIdHeader(parsed.response, requestId);
     }
 
     const input = parsed.data as NewBuildInput;
     const result = calculateNewBuild(input);
-    return jsonSuccess({ input, result }, requestId);
+    return jsonSuccess({ input, result }, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("estimate/new-build", requestId, error);
     const message =
       error instanceof Error ? error.message : "Failed to calculate new build estimate";
-    return jsonError(message, requestId, 400);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "NEW_BUILD_ESTIMATE_FAILED"
+    });
+    return jsonError({
+      status: 400,
+      error: message,
+      requestId,
+      code: "NEW_BUILD_ESTIMATE_FAILED"
+    });
   }
 }

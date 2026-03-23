@@ -1,7 +1,6 @@
-import OpenAI from "openai";
+import { aiClient } from "@/lib/ai/client";
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getServerEnv } from "@/lib/env";
 import type {
   Condition,
   EstimateInput,
@@ -24,6 +23,8 @@ const DEFAULT_REGION: Region = "Midlands";
 const DEFAULT_CONDITION: Condition = "fair";
 const DEFAULT_FINISH_LEVEL: FinishLevel = "standard";
 const SUPPORTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const IS_LM_STUDIO = process.env.AI_PROVIDER === "lmstudio";
+const PHOTO_MODEL = IS_LM_STUDIO ? (process.env.LM_STUDIO_MODEL ?? "qwen/qwen3-4b") : "gpt-4o";
 
 const SYSTEM_PROMPT = `You are a UK property refurbishment expert and chartered surveyor. Analyse the provided property photo and return a JSON object with these exact fields:
 
@@ -292,9 +293,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const isSupabaseConfigured = Boolean(
-      process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    );
+    const isSupabaseConfigured = false; // disabled for local LM Studio testing
     if (isSupabaseConfigured) {
       const supabase = await createServerSupabaseClient();
       const {
@@ -317,7 +316,7 @@ export async function POST(request: Request) {
     const body = parsedBody.data as PhotoEstimateRequestBody;
 
     const images = normalizeImagePayload(body.image);
-    if (images.length === 0) {
+    if (images.length === 0 && IS_LM_STUDIO === false) {
       return jsonError("Image is required", requestId, 400);
     }
 
@@ -340,9 +339,6 @@ export async function POST(request: Request) {
       }
     }
 
-    const serverEnv = getServerEnv();
-
-    const openai = new OpenAI({ apiKey: serverEnv.OPENAI_API_KEY });
 
     const overrideRegion = isRegion(body.region) ? body.region : undefined;
     const bedroomsHint = normalizeBedrooms(body.bedrooms);
@@ -356,19 +352,18 @@ export async function POST(request: Request) {
       `Postcode hint: ${postcodeHint ?? "unknown"}`
     ];
 
+    const userText = `Analyse all provided property photos together.\n${hintLines.join("\n")}`;
     const userContent: Array<
       { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }
-    > = [
-      {
-        type: "text",
-        text: `Analyse all provided property photos together.\n${hintLines.join("\n")}`
-      },
-      ...images.map((image) => ({ type: "image_url" as const, image_url: { url: image } }))
-    ];
+    > = IS_LM_STUDIO
+      ? [{ type: "text", text: userText }]
+      : [
+          { type: "text", text: userText },
+          ...(IS_LM_STUDIO ? [] : images.map((image) => ({ type: "image_url" as const, image_url: { url: image } })))
+        ];
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      response_format: { type: "json_object" },
+    const completion = await aiClient.chat.completions.create({
+      model: PHOTO_MODEL,
       max_tokens: 1000,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },

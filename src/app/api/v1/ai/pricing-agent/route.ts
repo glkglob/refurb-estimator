@@ -1,9 +1,8 @@
-import { InferenceClient } from "@huggingface/inference";
 import { z } from "zod";
 import { validateJsonRequest } from "@/lib/validate";
-import { getServerEnv } from "@/lib/env";
 import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 import { parseJson } from "@/lib/ai/utils";
+import { aiClient, PRICING_MODEL } from "@/lib/ai/client";
 
 const pricingAgentRequestSchema = z.object({
   propertyType: z.string().trim().min(2).max(120),
@@ -52,24 +51,12 @@ function normalizePricingResponse(payload: PricingAgentResponse): PricingAgentRe
     const low = Math.round(Math.min(category.low, category.typical, category.high));
     const high = Math.round(Math.max(category.low, category.typical, category.high));
     const typical = Math.round(clampTypical(low, category.typical, high));
-    return {
-      ...category,
-      low,
-      typical,
-      high
-    };
+    return { ...category, low, typical, high };
   });
-  const totalLow = categories.reduce((sum, category) => sum + category.low, 0);
-  const totalTypical = categories.reduce((sum, category) => sum + category.typical, 0);
-  const totalHigh = categories.reduce((sum, category) => sum + category.high, 0);
-  return {
-    summary: payload.summary.trim(),
-    advice: payload.advice.trim(),
-    categories,
-    totalLow,
-    totalTypical,
-    totalHigh
-  };
+  const totalLow = categories.reduce((sum, c) => sum + c.low, 0);
+  const totalTypical = categories.reduce((sum, c) => sum + c.typical, 0);
+  const totalHigh = categories.reduce((sum, c) => sum + c.high, 0);
+  return { summary: payload.summary.trim(), advice: payload.advice.trim(), categories, totalLow, totalTypical, totalHigh };
 }
 
 function buildUserPrompt(input: PricingAgentRequest): string {
@@ -90,17 +77,7 @@ function buildUserPrompt(input: PricingAgentRequest): string {
       }
     }
   }
-  lines.push(
-    "Return JSON in the exact shape:",
-    "{",
-    ' "summary": "string",',
-    ' "categories": [{ "name": "string", "low": number, "typical": number, "high": number, "notes": "string" }],',
-    ' "totalLow": number,',
-    ' "totalTypical": number,',
-    ' "totalHigh": number,',
-    ' "advice": "string"',
-    "}"
-  );
+  lines.push("Return JSON in the exact shape:", "{", '  "summary": "string",', '  "categories": [{ "name": "string", "low": number, "typical": number, "high": number, "notes": "string" }],', '  "totalLow": number,', '  "totalTypical": number,', '  "totalHigh": number,', '  "advice": "string"', "}");
   return lines.join("\n");
 }
 
@@ -110,38 +87,32 @@ export async function POST(request: Request) {
     const parsed = await validateJsonRequest(request, pricingAgentRequestSchema, {
       errorMessage: "Invalid pricing-agent payload"
     });
-    if (!parsed.success) {
-      return parsed.response;
-    }
-    const serverEnv = getServerEnv();
-    const apiKey = serverEnv.HUGGINGFACE_PRICING_API_KEY;
+    if (!parsed.success) return parsed.response;
+
     const input = parsed.data;
-    const client = new InferenceClient(apiKey);
-    const result = await client.chatCompletion({
-      model: "meta-llama/Llama-3.3-70B-Instruct",
+
+    const result = await aiClient.chat.completions.create({
+      model: PRICING_MODEL,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: buildUserPrompt(input) }
       ],
-      temperature: 0.2
+      temperature: 0.2,
+      stream: false
     });
+
     const rawText = result.choices[0]?.message?.content ?? "";
-    if (!rawText) {
-      throw new Error("HuggingFace returned an empty pricing response");
-    }
+    if (!rawText) throw new Error("AI returned an empty pricing response");
+
     const json = parseJson(rawText);
     const validated = pricingAgentResponseSchema.parse(json);
     const normalized = normalizePricingResponse(validated);
     return jsonSuccess(normalized, requestId);
+
   } catch (error: unknown) {
     logError("pricing-agent", requestId, error);
     if (error instanceof z.ZodError) {
-      return jsonError(
-        "HuggingFace pricing response validation failed",
-        requestId,
-        502,
-        { details: error.issues.map((issue) => issue.message) }
-      );
+      return jsonError("Pricing response validation failed", requestId, 502, { details: error.issues.map((i) => i.message) });
     }
     const message = error instanceof Error ? error.message : "Pricing agent request failed";
     return jsonError(message, requestId);

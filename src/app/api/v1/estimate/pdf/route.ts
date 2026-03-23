@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  getRequestId,
+  jsonError,
+  logApiError,
+  withRequestIdHeader
+} from "@/lib/api-route";
+import {
   generateQuotePdf,
   type QuotePdfInput,
   type QuotePdfOptions
@@ -8,7 +14,8 @@ import {
 import { requireRole } from "@/lib/rbac";
 import { AuthError, handleAuthError } from "@/lib/supabase/auth-helpers";
 import { validateJsonRequest } from "@/lib/validate";
-import { getRequestId, jsonError, logError } from "@/lib/api-route";
+
+const ROUTE_TAG = "api/v1/estimate/pdf";
 
 type PdfRequestBody = {
   input: QuotePdfInput;
@@ -89,7 +96,7 @@ export async function POST(request: Request) {
       errorMessage: "Invalid PDF request payload"
     });
     if (!parsed.success) {
-      return parsed.response;
+      return withRequestIdHeader(parsed.response, requestId);
     }
     const body = parsed.data as PdfRequestBody;
 
@@ -108,11 +115,21 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("estimate/pdf", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to generate PDF";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "ESTIMATE_PDF_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "ESTIMATE_PDF_FAILED"
+    });
   }
 }

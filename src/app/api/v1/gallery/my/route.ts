@@ -1,4 +1,11 @@
 import { type NextRequest } from "next/server";
+import {
+  getRequestId,
+  jsonError,
+  jsonSuccess,
+  logApiError,
+  withRequestIdHeader
+} from "@/lib/api-route";
 import { requireRole } from "@/lib/rbac";
 import {
   AuthError,
@@ -6,7 +13,8 @@ import {
 } from "@/lib/supabase/auth-helpers";
 import { getGalleryItemsByUser } from "@/lib/supabase/gallery-db";
 import { paginationSchema } from "@/lib/validation";
-import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
+
+const ROUTE_TAG = "api/v1/gallery/my";
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
@@ -20,12 +28,13 @@ export async function GET(request: NextRequest) {
     });
 
     if (!parsed.success) {
-      return jsonError(
-        "Invalid pagination parameters",
+      return jsonError({
+        status: 400,
+        error: "Invalid pagination parameters",
+        details: parsed.error.issues.map((issue) => issue.message),
         requestId,
-        400,
-        { details: parsed.error.issues.map((issue) => issue.message) }
-      );
+        code: "INVALID_PAGINATION"
+      });
     }
 
     const result = await getGalleryItemsByUser(user.id, {
@@ -40,15 +49,25 @@ export async function GET(request: NextRequest) {
         page: parsed.data.page,
         limit: parsed.data.limit
       },
-      requestId
+      { status: 200, requestId }
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("gallery/my GET", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to fetch user gallery";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "GALLERY_MY_GET_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "GALLERY_MY_GET_FAILED"
+    });
   }
 }

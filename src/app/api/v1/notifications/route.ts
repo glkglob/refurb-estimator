@@ -1,4 +1,11 @@
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import {
+  getRequestId,
+  jsonError,
+  jsonSuccess,
+  logApiError,
+  withRequestIdHeader
+} from "@/lib/api-route";
 import {
   AuthError,
   handleAuthError,
@@ -6,11 +13,12 @@ import {
 } from "@/lib/supabase/auth-helpers";
 import { getNotifications, getUnreadCount } from "@/lib/supabase/notifications-db";
 import { paginationSchema } from "@/lib/validation";
-import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
+
+const ROUTE_TAG = "api/v1/notifications";
 
 function parseUnreadOnly(raw: string | null):
   | { ok: true; value: boolean | undefined }
-  | { ok: false } {
+  | { ok: false; response: NextResponse } {
   if (raw === null) {
     return { ok: true, value: undefined };
   }
@@ -23,7 +31,13 @@ function parseUnreadOnly(raw: string | null):
     return { ok: true, value: false };
   }
 
-  return { ok: false };
+  return {
+    ok: false,
+    response: NextResponse.json(
+      { error: "Invalid unreadOnly parameter. Use true or false." },
+      { status: 400 }
+    )
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -38,23 +52,20 @@ export async function GET(request: NextRequest) {
     });
 
     if (!pagination.success) {
-      return jsonError(
-        "Invalid pagination parameters",
+      return jsonError({
+        status: 400,
+        error: "Invalid pagination parameters",
+        details: pagination.error.issues.map((issue) => issue.message),
         requestId,
-        400,
-        { details: pagination.error.issues.map((issue) => issue.message) }
-      );
+        code: "INVALID_PAGINATION"
+      });
     }
 
     const unreadOnlyParsed = parseUnreadOnly(
       request.nextUrl.searchParams.get("unreadOnly")
     );
     if (!unreadOnlyParsed.ok) {
-      return jsonError(
-        "Invalid unreadOnly parameter. Use true or false.",
-        requestId,
-        400
-      );
+      return withRequestIdHeader(unreadOnlyParsed.response, requestId);
     }
 
     const [notifications, unreadCount] = await Promise.all([
@@ -74,16 +85,26 @@ export async function GET(request: NextRequest) {
         limit: pagination.data.limit,
         unreadCount
       },
-      requestId
+      { status: 200, requestId }
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("notifications GET", requestId, error);
     const message =
       error instanceof Error ? error.message : "Failed to fetch notifications";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "NOTIFICATIONS_GET_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "NOTIFICATIONS_GET_FAILED"
+    });
   }
 }

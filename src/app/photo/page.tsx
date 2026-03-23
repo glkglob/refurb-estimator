@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import EstimateResultsFallback from "@/components/EstimateResultsFallback";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -33,7 +34,7 @@ import type { EstimateInput, EstimateResult, Region } from "@/lib/types";
 
 const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
   ssr: false,
-  loading: () => <div className="h-72 animate-pulse rounded-lg bg-muted" />
+  loading: () => <EstimateResultsFallback />
 });
 
 type PhotoEstimateResponse = {
@@ -169,6 +170,10 @@ export default function PhotoPage() {
       previewUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [previewUrls]);
+
+  useEffect(() => {
+    void import("@/components/EstimateResults");
+  }, []);
 
   const refineHref = useMemo(() => {
     if (!result) {

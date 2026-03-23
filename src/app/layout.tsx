@@ -8,6 +8,7 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "@fontsource/ibm-plex-mono/600.css";
 import Layout from "@/components/Layout";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className="dark font-sans" style={{ colorScheme: "dark" }}>
       <body>
+        <ServiceWorkerRegistration />
         <TooltipProvider>
           <Layout>{children}</Layout>
           <Toaster position="top-right" richColors />

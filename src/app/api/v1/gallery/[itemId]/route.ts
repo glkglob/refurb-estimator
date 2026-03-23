@@ -1,4 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  getRequestId,
+  jsonError,
+  jsonSuccess,
+  logApiError,
+  withRequestIdHeader
+} from "@/lib/api-route";
 import { requireRole } from "@/lib/rbac";
 import {
   AuthError,
@@ -12,7 +19,6 @@ import {
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { validateJsonRequest } from "@/lib/validate";
 import { galleryItemUpdateSchema } from "@/lib/validation";
-import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 type RouteContext = {
   params: Promise<{
@@ -21,6 +27,7 @@ type RouteContext = {
 };
 
 const galleryUpdateSchema = galleryItemUpdateSchema;
+const ROUTE_TAG = "api/v1/gallery/[itemId]";
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   const requestId = getRequestId(_request);
@@ -41,19 +48,34 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     }
 
     if (!data) {
-      return jsonError("Gallery item not found", requestId, 404);
+      return jsonError({
+        status: 404,
+        error: "Gallery item not found",
+        requestId,
+        code: "GALLERY_ITEM_NOT_FOUND"
+      });
     }
 
     const item = mapGalleryRow(data as Parameters<typeof mapGalleryRow>[0]);
-    return jsonSuccess(item, requestId);
+    return jsonSuccess(item, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("gallery/[itemId] GET", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to fetch gallery item";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "GALLERY_ITEM_GET_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "GALLERY_ITEM_GET_FAILED"
+    });
   }
 }
 
@@ -67,20 +89,30 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       errorMessage: "Invalid gallery item update payload"
     });
     if (!parsed.success) {
-      return parsed.response;
+      return withRequestIdHeader(parsed.response, requestId);
     }
 
     const { itemId } = await context.params;
     const updated = await updateGalleryItem(itemId, parsed.data);
-    return jsonSuccess(updated, requestId);
+    return jsonSuccess(updated, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("gallery/[itemId] PATCH", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to update gallery item";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "GALLERY_ITEM_PATCH_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "GALLERY_ITEM_PATCH_FAILED"
+    });
   }
 }
 
@@ -91,17 +123,24 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
     const { itemId } = await context.params;
     await deleteGalleryItem(itemId);
-    return new NextResponse(null, {
-      status: 204,
-      headers: { "x-request-id": requestId }
-    });
+    return withRequestIdHeader(new NextResponse(null, { status: 204 }), requestId);
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("gallery/[itemId] DELETE", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to delete gallery item";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "GALLERY_ITEM_DELETE_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "GALLERY_ITEM_DELETE_FAILED"
+    });
   }
 }

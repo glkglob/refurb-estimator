@@ -198,7 +198,7 @@ function mapProfileUpdateInput(data: ProfileUpdateInput): Partial<ProfileRow> {
   return mapped;
 }
 
-export const prisma = {
+export const supabaseRepository = {
   scenario: {
     async findMany(options: {
       where: { userId: string };
@@ -403,4 +403,11 @@ export const prisma = {
   }
 };
 
-export type PrismaClient = typeof prisma;
+/**
+ * Backward-compatible alias retained for existing imports.
+ * Prefer using `supabaseRepository` in new code.
+ */
+export const prisma = supabaseRepository;
+
+export type SupabaseRepositoryClient = typeof supabaseRepository;
+export type PrismaClient = SupabaseRepositoryClient;

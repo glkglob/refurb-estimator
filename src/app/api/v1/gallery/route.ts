@@ -1,4 +1,11 @@
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import {
+  getRequestId,
+  jsonError,
+  jsonSuccess,
+  logApiError,
+  withRequestIdHeader
+} from "@/lib/api-route";
 import { requireRole } from "@/lib/rbac";
 import {
   AuthError,
@@ -7,11 +14,11 @@ import {
 import { createGalleryItem, getPublicGallery } from "@/lib/supabase/gallery-db";
 import { validateJsonRequest } from "@/lib/validate";
 import { galleryItemCreateSchema, paginationSchema } from "@/lib/validation";
-import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const galleryCreateSchema = galleryItemCreateSchema;
+const ROUTE_TAG = "api/v1/gallery";
 
-function getPaginationFromRequest(request: NextRequest, requestId: string) {
+function getPaginationFromRequest(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const parsed = paginationSchema.safeParse({
     page: params.get("page") ?? undefined,
@@ -21,11 +28,12 @@ function getPaginationFromRequest(request: NextRequest, requestId: string) {
   if (!parsed.success) {
     return {
       ok: false as const,
-      response: jsonError(
-        "Invalid pagination parameters",
-        requestId,
-        400,
-        { details: parsed.error.issues.map((issue) => issue.message) }
+      response: NextResponse.json(
+        {
+          error: "Invalid pagination parameters",
+          details: parsed.error.issues.map((issue) => issue.message)
+        },
+        { status: 400 }
       )
     };
   }
@@ -39,9 +47,9 @@ export async function GET(request: NextRequest) {
   try {
     await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
 
-    const pagination = getPaginationFromRequest(request, requestId);
+    const pagination = getPaginationFromRequest(request);
     if (!pagination.ok) {
-      return pagination.response;
+      return withRequestIdHeader(pagination.response, requestId);
     }
 
     const projectType = request.nextUrl.searchParams.get("projectType") ?? undefined;
@@ -58,16 +66,26 @@ export async function GET(request: NextRequest) {
         page: pagination.data.page,
         limit: pagination.data.limit
       },
-      requestId
+      { status: 200, requestId }
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("gallery GET", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to fetch gallery";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "GALLERY_GET_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "GALLERY_GET_FAILED"
+    });
   }
 }
 
@@ -81,18 +99,28 @@ export async function POST(request: Request) {
       errorMessage: "Invalid gallery item payload"
     });
     if (!parsed.success) {
-      return parsed.response;
+      return withRequestIdHeader(parsed.response, requestId);
     }
 
     const created = await createGalleryItem(user.id, parsed.data);
-    return jsonSuccess(created, requestId, 201);
+    return jsonSuccess(created, { status: 201, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("gallery POST", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to create gallery item";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "GALLERY_POST_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "GALLERY_POST_FAILED"
+    });
   }
 }

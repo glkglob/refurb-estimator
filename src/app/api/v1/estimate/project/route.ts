@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  getRequestId,
+  jsonError,
+  jsonSuccess,
+  logApiError,
+  withRequestIdHeader
+} from "@/lib/api-route";
 import type {
   AdditionalFeature,
   Condition,
@@ -17,7 +24,8 @@ import {
 import { requireRole } from "@/lib/rbac";
 import { AuthError, handleAuthError } from "@/lib/supabase/auth-helpers";
 import { validateJsonRequest } from "@/lib/validate";
-import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
+
+const ROUTE_TAG = "api/v1/estimate/project";
 
 const REGION_VALUES: Region[] = [
   "London",
@@ -149,7 +157,7 @@ export async function POST(request: Request) {
       errorMessage: "Invalid project estimate payload"
     });
     if (!parsedBody.success) {
-      return parsedBody.response;
+      return withRequestIdHeader(parsedBody.response, requestId);
     }
     const body = parsedBody.data as EstimateProjectRequestBody;
 
@@ -181,7 +189,12 @@ export async function POST(request: Request) {
 
     const additionalFeatures = parseAdditionalFeatures(body.additionalFeatures);
     if (Array.isArray(body.additionalFeatures) && additionalFeatures === null) {
-      return jsonError("Invalid additionalFeatures", requestId, 400);
+      return jsonError({
+        status: 400,
+        error: "Invalid additionalFeatures",
+        requestId,
+        code: "INVALID_ADDITIONAL_FEATURES"
+      });
     }
 
     const yearBuilt = parseYearBuilt(body.yearBuilt);
@@ -203,16 +216,26 @@ export async function POST(request: Request) {
         estimateInput,
         estimateResult
       },
-      requestId
+      { status: 200, requestId }
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("estimate/project", requestId, error);
     const message =
       error instanceof Error ? error.message : "Failed to estimate project";
-    return jsonError(message, requestId, 400);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "PROJECT_ESTIMATE_FAILED"
+    });
+    return jsonError({
+      status: 400,
+      error: message,
+      requestId,
+      code: "PROJECT_ESTIMATE_FAILED"
+    });
   }
 }

@@ -1,3 +1,10 @@
+import {
+  getRequestId,
+  jsonError,
+  jsonSuccess,
+  logApiError,
+  withRequestIdHeader
+} from "@/lib/api-route";
 import { requireRole } from "@/lib/rbac";
 import { profileUpdateSchema } from "@/lib/validation";
 import { validateJsonRequest } from "@/lib/validate";
@@ -6,9 +13,9 @@ import {
   handleAuthError
 } from "@/lib/supabase/auth-helpers";
 import { getProfileById, updateProfile } from "@/lib/supabase/profiles-db";
-import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
 const profilePatchSchema = profileUpdateSchema;
+const ROUTE_TAG = "api/v1/profile";
 
 export async function GET(request: Request) {
   const requestId = getRequestId(request);
@@ -18,18 +25,33 @@ export async function GET(request: Request) {
     const profile = await getProfileById(user.id);
 
     if (!profile) {
-      return jsonError("Profile not found", requestId, 404);
+      return jsonError({
+        status: 404,
+        error: "Profile not found",
+        requestId,
+        code: "PROFILE_NOT_FOUND"
+      });
     }
 
-    return jsonSuccess(profile, requestId);
+    return jsonSuccess(profile, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("profile GET", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to fetch profile";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "PROFILE_GET_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "PROFILE_GET_FAILED"
+    });
   }
 }
 
@@ -43,18 +65,28 @@ export async function PATCH(request: Request) {
       errorMessage: "Invalid profile update payload"
     });
     if (!parsed.success) {
-      return parsed.response;
+      return withRequestIdHeader(parsed.response, requestId);
     }
 
     const updated = await updateProfile(user.id, parsed.data);
-    return jsonSuccess(updated, requestId);
+    return jsonSuccess(updated, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return handleAuthError(error);
+      return withRequestIdHeader(handleAuthError(error), requestId);
     }
 
-    logError("profile PATCH", requestId, error);
     const message = error instanceof Error ? error.message : "Failed to update profile";
-    return jsonError(message, requestId);
+    logApiError({
+      route: ROUTE_TAG,
+      requestId,
+      error,
+      code: "PROFILE_PATCH_FAILED"
+    });
+    return jsonError({
+      status: 500,
+      error: message,
+      requestId,
+      code: "PROFILE_PATCH_FAILED"
+    });
   }
 }

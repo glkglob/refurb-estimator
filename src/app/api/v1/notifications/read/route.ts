@@ -3,8 +3,7 @@ import {
   getRequestId,
   jsonError,
   jsonSuccess,
-  logApiError,
-  withRequestIdHeader
+  logError
 } from "@/lib/api-route";
 import {
   AuthError,
@@ -56,7 +55,7 @@ export async function POST(request: Request) {
 
     const message =
       error instanceof Error ? error.message : "Failed to update notifications";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,

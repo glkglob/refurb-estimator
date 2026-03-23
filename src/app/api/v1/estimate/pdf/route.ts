@@ -3,8 +3,7 @@ import { z } from "zod";
 import {
   getRequestId,
   jsonError,
-  logApiError,
-  withRequestIdHeader
+  logError
 } from "@/lib/api-route";
 import {
   generateQuotePdf,
@@ -119,7 +118,7 @@ export async function POST(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to generate PDF";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,

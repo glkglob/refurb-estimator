@@ -3,8 +3,7 @@ import {
   getRequestId,
   jsonError,
   jsonSuccess,
-  logApiError,
-  withRequestIdHeader
+  logError
 } from "@/lib/api-route";
 import {
   AuthError,
@@ -94,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     const message =
       error instanceof Error ? error.message : "Failed to fetch notifications";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,

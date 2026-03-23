@@ -2,8 +2,7 @@ import {
   getRequestId,
   jsonError,
   jsonSuccess,
-  logApiError,
-  withRequestIdHeader
+  logError
 } from "@/lib/api-route";
 import { requireRole } from "@/lib/rbac";
 import { profileUpdateSchema } from "@/lib/validation";
@@ -40,7 +39,7 @@ export async function GET(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch profile";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,
@@ -76,7 +75,7 @@ export async function PATCH(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to update profile";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,

@@ -4,8 +4,7 @@ import {
   getRequestId,
   jsonError,
   jsonSuccess,
-  logApiError,
-  withRequestIdHeader
+  logError
 } from "@/lib/api-route";
 import { validateJsonRequest } from "@/lib/validate";
 import { paginationSchema } from "@/lib/validation";
@@ -130,7 +129,7 @@ export async function GET(request: NextRequest) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch users";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,
@@ -197,7 +196,7 @@ export async function PATCH(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to update user";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,

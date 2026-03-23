@@ -2,8 +2,7 @@ import {
   getRequestId,
   jsonError,
   jsonSuccess,
-  logApiError,
-  withRequestIdHeader
+  logError
 } from "@/lib/api-route";
 import {
   AuthError,
@@ -28,7 +27,7 @@ export async function GET(request: Request) {
 
     const message =
       error instanceof Error ? error.message : "Failed to fetch unread count";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,

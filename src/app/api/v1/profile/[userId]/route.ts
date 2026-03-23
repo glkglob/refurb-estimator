@@ -3,8 +3,7 @@ import {
   getRequestId,
   jsonError,
   jsonSuccess,
-  logApiError,
-  withRequestIdHeader
+  logError
 } from "@/lib/api-route";
 import { requireRole } from "@/lib/rbac";
 import { AuthError, handleAuthError } from "@/lib/supabase/auth-helpers";
@@ -43,7 +42,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch public profile";
-    logApiError({
+    logError({
       route: ROUTE_TAG,
       requestId,
       error,

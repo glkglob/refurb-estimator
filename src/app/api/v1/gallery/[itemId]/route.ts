@@ -97,7 +97,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
     const { itemId } = await context.params;
     await deleteGalleryItem(itemId);
-    return new NextResponse(null, { status: 204 }, requestId);
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);

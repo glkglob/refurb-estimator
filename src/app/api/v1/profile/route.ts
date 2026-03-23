@@ -32,7 +32,7 @@ export async function GET(request: Request) {
       });
     }
 
-    return jsonSuccess(profile, { status: 200, requestId });
+    return jsonSuccess(profile, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
@@ -68,7 +68,7 @@ export async function PATCH(request: Request) {
     }
 
     const updated = await updateProfile(user.id, parsed.data);
-    return jsonSuccess(updated, { status: 200, requestId });
+    return jsonSuccess(updated, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);

@@ -189,7 +189,7 @@ export async function PATCH(request: Request) {
       throw new Error(`Failed to update user: ${error.message}`);
     }
 
-    return jsonSuccess({ data: mapProfileRowToProfile(data) }, { status: 200, requestId });
+    return jsonSuccess({ data: mapProfileRowToProfile(data) }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);

@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       throw new Error(`Failed to complete onboarding: ${error.message}`);
     }
 
-    return jsonSuccess({ success: true }, { status: 200, requestId });
+    return jsonSuccess({ success: true }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);

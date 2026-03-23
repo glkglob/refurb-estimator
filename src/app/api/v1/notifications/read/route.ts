@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       await markAllAsRead(user.id);
     }
 
-    return jsonSuccess({ success: true }, { status: 200, requestId });
+    return jsonSuccess({ success: true }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);

@@ -35,7 +35,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       });
     }
 
-    return jsonSuccess(profile, { status: 200, requestId });
+    return jsonSuccess(profile, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);

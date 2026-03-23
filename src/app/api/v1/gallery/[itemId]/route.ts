@@ -56,7 +56,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     }
 
     const item = mapGalleryRow(data as Parameters<typeof mapGalleryRow>[0]);
-    return jsonSuccess(item, { status: 200, requestId });
+    return jsonSuccess(item, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
@@ -93,7 +93,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     const { itemId } = await context.params;
     const updated = await updateGalleryItem(itemId, parsed.data);
-    return jsonSuccess(updated, { status: 200, requestId });
+    return jsonSuccess(updated, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);

@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     }
 
     const created = await createGalleryItem(user.id, parsed.data);
-    return jsonSuccess(created, { status: 201, requestId });
+    return jsonSuccess(created, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);

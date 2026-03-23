@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   try {
     const user = await requireAuth();
     const unreadCount = await getUnreadCount(user.id);
-    return jsonSuccess({ unreadCount }, { status: 200, requestId });
+    return jsonSuccess({ unreadCount }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);

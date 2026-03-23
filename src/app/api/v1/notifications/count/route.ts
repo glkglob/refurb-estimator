@@ -27,17 +27,7 @@ export async function GET(request: Request) {
 
     const message =
       error instanceof Error ? error.message : "Failed to fetch unread count";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "NOTIFICATIONS_COUNT_GET_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "NOTIFICATIONS_COUNT_GET_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }

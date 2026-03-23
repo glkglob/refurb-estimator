@@ -51,13 +51,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!pagination.success) {
-      return jsonError({
-        status: 400,
-        error: "Invalid pagination parameters",
-        details: pagination.error.issues.map((issue) => issue.message),
-        requestId,
-        code: "INVALID_PAGINATION"
-      });
+      return jsonError("Invalid pagination parameters", requestId, 400);
     }
 
     const unreadOnlyParsed = parseUnreadOnly(
@@ -83,9 +77,7 @@ export async function GET(request: NextRequest) {
         page: pagination.data.page,
         limit: pagination.data.limit,
         unreadCount
-      },
-      { status: 200, requestId }
-    );
+      }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
@@ -93,17 +85,7 @@ export async function GET(request: NextRequest) {
 
     const message =
       error instanceof Error ? error.message : "Failed to fetch notifications";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "NOTIFICATIONS_GET_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "NOTIFICATIONS_GET_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }

@@ -42,39 +42,19 @@ export async function POST(request: Request) {
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
-      return jsonError({
-        status: 400,
-        error: "No file provided",
-        requestId,
-        code: "NO_FILE"
-      });
+      return jsonError("No file provided", requestId, 400);
     }
 
     if (!ALLOWED_AVATAR_MIME_TYPES.has(file.type)) {
-      return jsonError({
-        status: 400,
-        error: "File type not allowed",
-        requestId,
-        code: "INVALID_FILE_TYPE"
-      });
+      return jsonError("File type not allowed", requestId, 400);
     }
 
     if (file.size <= 0) {
-      return jsonError({
-        status: 400,
-        error: "No file provided",
-        requestId,
-        code: "EMPTY_FILE"
-      });
+      return jsonError("No file provided", requestId, 400);
     }
 
     if (file.size > AVATAR_MAX_BYTES) {
-      return jsonError({
-        status: 400,
-        error: "File exceeds size limit",
-        requestId,
-        code: "FILE_TOO_LARGE"
-      });
+      return jsonError("File exceeds size limit", requestId, 400);
     }
 
     const extension = extensionFromMetadata(file.name, file.type);
@@ -97,26 +77,14 @@ export async function POST(request: Request) {
         url: publicData.publicUrl,
         path: filePath,
         bucket: AVATAR_BUCKET
-      },
-      { status: 201, requestId }
-    );
+      }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to upload file";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "UPLOAD_POST_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "UPLOAD_POST_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }

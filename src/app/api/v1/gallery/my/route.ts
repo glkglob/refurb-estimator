@@ -27,13 +27,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!parsed.success) {
-      return jsonError({
-        status: 400,
-        error: "Invalid pagination parameters",
-        details: parsed.error.issues.map((issue) => issue.message),
-        requestId,
-        code: "INVALID_PAGINATION"
-      });
+      return jsonError("Invalid pagination parameters", requestId, 400);
     }
 
     const result = await getGalleryItemsByUser(user.id, {
@@ -47,26 +41,14 @@ export async function GET(request: NextRequest) {
         total: result.total,
         page: parsed.data.page,
         limit: parsed.data.limit
-      },
-      { status: 200, requestId }
-    );
+      }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch user gallery";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "GALLERY_MY_GET_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "GALLERY_MY_GET_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }

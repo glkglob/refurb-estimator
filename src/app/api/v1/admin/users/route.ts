@@ -120,27 +120,15 @@ export async function GET(request: NextRequest) {
         page: parsedQuery.data.page,
         limit: parsedQuery.data.limit,
         stats
-      },
-      { status: 200, requestId }
-    );
+      }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch users";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "ADMIN_USERS_GET_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "ADMIN_USERS_GET_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }
 
@@ -179,12 +167,7 @@ export async function PATCH(request: Request) {
 
     if (error) {
       if (error.code === "PGRST116") {
-        return jsonError({
-          status: 404,
-          error: "User not found",
-          requestId,
-          code: "USER_NOT_FOUND"
-        });
+        return jsonError("User not found", requestId, 404);
       }
       throw new Error(`Failed to update user: ${error.message}`);
     }
@@ -196,17 +179,7 @@ export async function PATCH(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to update user";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "ADMIN_USERS_PATCH_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "ADMIN_USERS_PATCH_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }

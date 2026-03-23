@@ -83,7 +83,7 @@ export async function POST(request: Request) {
 
     const input = parsed.data as NewBuildInput;
     const result = calculateNewBuild(input);
-    return jsonSuccess({ input, result }, { status: 200, requestId });
+    return jsonSuccess({ input, result }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
@@ -91,17 +91,7 @@ export async function POST(request: Request) {
 
     const message =
       error instanceof Error ? error.message : "Failed to calculate new build estimate";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "NEW_BUILD_ESTIMATE_FAILED"
-    });
-    return jsonError({
-      status: 400,
-      error: message,
-      requestId,
-      code: "NEW_BUILD_ESTIMATE_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 400);
   }
 }

@@ -27,12 +27,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     const profile = await getPublicProfile(userId);
 
     if (!profile) {
-      return jsonError({
-        status: 404,
-        error: "Profile not found",
-        requestId,
-        code: "PUBLIC_PROFILE_NOT_FOUND"
-      });
+      return jsonError("Profile not found", requestId, 404);
     }
 
     return jsonSuccess(profile, requestId);
@@ -42,17 +37,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch public profile";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "PUBLIC_PROFILE_GET_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "PUBLIC_PROFILE_GET_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }

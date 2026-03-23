@@ -81,17 +81,7 @@ export async function POST(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to complete onboarding";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "ONBOARDING_POST_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "ONBOARDING_POST_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }

@@ -47,12 +47,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     }
 
     if (!data) {
-      return jsonError({
-        status: 404,
-        error: "Gallery item not found",
-        requestId,
-        code: "GALLERY_ITEM_NOT_FOUND"
-      });
+      return jsonError("Gallery item not found", requestId, 404);
     }
 
     const item = mapGalleryRow(data as Parameters<typeof mapGalleryRow>[0]);
@@ -63,18 +58,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch gallery item";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "GALLERY_ITEM_GET_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "GALLERY_ITEM_GET_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }
 
@@ -100,18 +85,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to update gallery item";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "GALLERY_ITEM_PATCH_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "GALLERY_ITEM_PATCH_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }
 
@@ -129,17 +104,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to delete gallery item";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "GALLERY_ITEM_DELETE_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "GALLERY_ITEM_DELETE_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }

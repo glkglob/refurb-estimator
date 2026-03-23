@@ -24,12 +24,7 @@ export async function GET(request: Request) {
     const profile = await getProfileById(user.id);
 
     if (!profile) {
-      return jsonError({
-        status: 404,
-        error: "Profile not found",
-        requestId,
-        code: "PROFILE_NOT_FOUND"
-      });
+      return jsonError("Profile not found", requestId, 404);
     }
 
     return jsonSuccess(profile, requestId);
@@ -39,18 +34,8 @@ export async function GET(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch profile";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "PROFILE_GET_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "PROFILE_GET_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }
 
@@ -75,17 +60,7 @@ export async function PATCH(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to update profile";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "PROFILE_PATCH_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "PROFILE_PATCH_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }

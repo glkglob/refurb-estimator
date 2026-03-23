@@ -64,27 +64,15 @@ export async function GET(request: NextRequest) {
         total: result.total,
         page: pagination.data.page,
         limit: pagination.data.limit
-      },
-      { status: 200, requestId }
-    );
+      }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch gallery";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "GALLERY_GET_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "GALLERY_GET_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }
 
@@ -109,17 +97,7 @@ export async function POST(request: Request) {
     }
 
     const message = error instanceof Error ? error.message : "Failed to create gallery item";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "GALLERY_POST_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "GALLERY_POST_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }

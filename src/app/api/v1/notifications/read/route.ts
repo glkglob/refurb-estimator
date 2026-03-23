@@ -55,17 +55,7 @@ export async function POST(request: Request) {
 
     const message =
       error instanceof Error ? error.message : "Failed to update notifications";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "NOTIFICATIONS_READ_POST_FAILED"
-    });
-    return jsonError({
-      status: 500,
-      error: message,
-      requestId,
-      code: "NOTIFICATIONS_READ_POST_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 500);
   }
 }

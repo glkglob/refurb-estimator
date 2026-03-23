@@ -188,12 +188,7 @@ export async function POST(request: Request) {
 
     const additionalFeatures = parseAdditionalFeatures(body.additionalFeatures);
     if (Array.isArray(body.additionalFeatures) && additionalFeatures === null) {
-      return jsonError({
-        status: 400,
-        error: "Invalid additionalFeatures",
-        requestId,
-        code: "INVALID_ADDITIONAL_FEATURES"
-      });
+      return jsonError("Invalid additionalFeatures", requestId, 400);
     }
 
     const yearBuilt = parseYearBuilt(body.yearBuilt);
@@ -214,9 +209,7 @@ export async function POST(request: Request) {
       {
         estimateInput,
         estimateResult
-      },
-      { status: 200, requestId }
-    );
+      }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
@@ -224,17 +217,7 @@ export async function POST(request: Request) {
 
     const message =
       error instanceof Error ? error.message : "Failed to estimate project";
-    logError({
-      route: ROUTE_TAG,
-      requestId,
-      error,
-      code: "PROJECT_ESTIMATE_FAILED"
-    });
-    return jsonError({
-      status: 400,
-      error: message,
-      requestId,
-      code: "PROJECT_ESTIMATE_FAILED"
-    });
+    logError(ROUTE_TAG, requestId, error);
+    return jsonError(message, requestId, 400);
   }
 }

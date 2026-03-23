@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       errorMessage: "Invalid notifications read payload"
     });
     if (!parsedBody.success) {
-      return withRequestIdHeader(parsedBody.response, requestId);
+      return parsedBody.response;
     }
     const validatedBody: MarkReadBody = parsedBody.data;
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     return jsonSuccess({ success: true }, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message =

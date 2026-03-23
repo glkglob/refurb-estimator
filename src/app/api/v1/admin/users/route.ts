@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     const parsedQuery = getQueryParams(request);
     if (!parsedQuery.ok) {
-      return withRequestIdHeader(parsedQuery.response, requestId);
+      return parsedQuery.response;
     }
 
     const [profilesResult, supabase] = await Promise.all([
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch users";
@@ -155,7 +155,7 @@ export async function PATCH(request: Request) {
       errorMessage: "Invalid update payload"
     });
     if (!parsed.success) {
-      return withRequestIdHeader(parsed.response, requestId);
+      return parsed.response;
     }
 
     const updates: Record<string, unknown> = {
@@ -192,7 +192,7 @@ export async function PATCH(request: Request) {
     return jsonSuccess({ data: mapProfileRowToProfile(data) }, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to update user";

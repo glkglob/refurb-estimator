@@ -156,7 +156,7 @@ export async function POST(request: Request) {
       errorMessage: "Invalid project estimate payload"
     });
     if (!parsedBody.success) {
-      return withRequestIdHeader(parsedBody.response, requestId);
+      return parsedBody.response;
     }
     const body = parsedBody.data as EstimateProjectRequestBody;
 
@@ -219,7 +219,7 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message =

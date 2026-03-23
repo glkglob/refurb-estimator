@@ -95,7 +95,7 @@ export async function POST(request: Request) {
       errorMessage: "Invalid PDF request payload"
     });
     if (!parsed.success) {
-      return withRequestIdHeader(parsed.response, requestId);
+      return parsed.response;
     }
     const body = parsed.data as PdfRequestBody;
 
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to generate PDF";

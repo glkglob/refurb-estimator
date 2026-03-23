@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     return jsonSuccess(profile, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch profile";
@@ -64,14 +64,14 @@ export async function PATCH(request: Request) {
       errorMessage: "Invalid profile update payload"
     });
     if (!parsed.success) {
-      return withRequestIdHeader(parsed.response, requestId);
+      return parsed.response;
     }
 
     const updated = await updateProfile(user.id, parsed.data);
     return jsonSuccess(updated, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to update profile";

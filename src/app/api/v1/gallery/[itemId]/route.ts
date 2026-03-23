@@ -59,7 +59,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return jsonSuccess(item, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch gallery item";
@@ -88,7 +88,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       errorMessage: "Invalid gallery item update payload"
     });
     if (!parsed.success) {
-      return withRequestIdHeader(parsed.response, requestId);
+      return parsed.response;
     }
 
     const { itemId } = await context.params;
@@ -96,7 +96,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return jsonSuccess(updated, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to update gallery item";
@@ -122,10 +122,10 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
     const { itemId } = await context.params;
     await deleteGalleryItem(itemId);
-    return withRequestIdHeader(new NextResponse(null, { status: 204 }), requestId);
+    return new NextResponse(null, { status: 204 }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to delete gallery item";

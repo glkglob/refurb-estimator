@@ -38,7 +38,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return jsonSuccess(profile, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message = error instanceof Error ? error.message : "Failed to fetch public profile";

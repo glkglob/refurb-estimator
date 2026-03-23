@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       errorMessage: "Invalid new build estimate payload"
     });
     if (!parsed.success) {
-      return withRequestIdHeader(parsed.response, requestId);
+      return parsed.response;
     }
 
     const input = parsed.data as NewBuildInput;
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     return jsonSuccess({ input, result }, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message =

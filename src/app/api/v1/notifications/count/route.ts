@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     return jsonSuccess({ unreadCount }, { status: 200, requestId });
   } catch (error) {
     if (error instanceof AuthError) {
-      return withRequestIdHeader(handleAuthError(error), requestId);
+      return handleAuthError(error);
     }
 
     const message =

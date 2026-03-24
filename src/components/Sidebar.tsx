@@ -24,7 +24,8 @@ import { useEffect, useMemo, useState } from "react";
 import { apiFetch, isApiFetchError } from "@/lib/apiClient";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { VisuallyHidden } from "radix-ui";
 
 const navItems = [
   { href: "/", label: "Quick Estimate", icon: "Calculator" },
@@ -339,6 +340,10 @@ export default function Sidebar() {
             side="left"
             className="w-[85vw] max-w-[240px] border-r border-[var(--border)] bg-[#0A1420] p-0"
           >
+            <VisuallyHidden.Root>
+              <SheetTitle>Navigation menu</SheetTitle>
+              <SheetDescription>Site navigation and user account options</SheetDescription>
+            </VisuallyHidden.Root>
             <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-4">
               <span className="font-mono text-sm font-semibold text-sidebar-foreground">
                 Refurb Estimator

@@ -293,8 +293,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const isSupabaseConfigured = false; // disabled for local LM Studio testing
-    if (isSupabaseConfigured) {
+    const skipAuth = process.env.SKIP_AUTH === "true";
+    if (!skipAuth) {
       const supabase = await createServerSupabaseClient();
       const {
         data: { user },

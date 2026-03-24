@@ -105,6 +105,11 @@
   --sidebar-accent-foreground: 213 31% 91%;
   --sidebar-border: 224 25% 22%;
   --sidebar-ring: 217 91% 60%;
+
+  /* Legacy variables */
+  --primary-hover: #00A896;
+  --text-primary: #F0F4F8;
+  --text-secondary: #8899AA;
 }
 
 /* Blueprint grid dot pattern overlay */
@@ -169,11 +174,7 @@ html {
   font-family: var(--font-sans);
 }
 
-:root {
-  --primary-hover: #00A896;
-  --text-primary: #F0F4F8;
-  --text-secondary: #8899AA;
-}
+/* Legacy variables consolidated into main :root block above */
 
 h1, h2, h3, h4, h5, h6 {
   font-weight: 700;

@@ -20,6 +20,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
   themeColor: "#0f1117",
   colorScheme: "dark"
 };
@@ -30,7 +33,7 @@ type RootLayoutProps = {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" className="dark font-sans" style={{ colorScheme: "dark" }}>
+    <html lang="en" className="dark font-sans bg-background" style={{ colorScheme: "dark" }}>
       <body>
         <ServiceWorkerRegistration />
         <TooltipProvider>

@@ -19,7 +19,7 @@ import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route"
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
-const DEFAULT_REGION: Region = "Midlands";
+const DEFAULT_REGION: Region = "WestMidlands";
 const DEFAULT_CONDITION: Condition = "fair";
 const DEFAULT_FINISH_LEVEL: FinishLevel = "standard";
 const SUPPORTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -68,10 +68,16 @@ Rules:
 const REGION_VALUES: Region[] = [
   "London",
   "SouthEast",
-  "Midlands",
-  "North",
+  "EastOfEngland",
+  "EastMidlands",
+  "WestMidlands",
+  "SouthWest",
+  "Northwest",
+  "NorthEast"
+  "YorkshireAndTheHumber",
   "Scotland",
-  "Wales"
+  "Wales",
+  "NorthIreland"
 ];
 const CONDITION_VALUES: Condition[] = ["poor", "fair", "good"];
 const FINISH_LEVEL_VALUES: FinishLevel[] = ["budget", "standard", "premium"];

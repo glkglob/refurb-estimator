@@ -1,51 +1,122 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 export type QuotePdfInput = {
-  propertyDescription: string; // e.g. "75m² terraced house in London, fair condition, standard finish"
+  // Display fields
+  propertyDescription: string; // kept for backwards compatibility (used as address if nothing else is provided)
+
+  // Cost line items
   categories: Array<{
     category: string;
     low: number;
     typical: number;
     high: number;
-  }>;
+  }>;  
+
+  // Totals
   totalLow: number;
   totalTypical: number;
   totalHigh: number;
+
+  // Other summary inputs
   costPerM2: { low: number; typical: number; high: number };
   contingencyPercent?: number;
   feesPercent?: number;
-  adjustments?: Array<{ label: string; amount: number; reason: string }>;
-  additionalFeatures?: Array<{ label: string; low: number; typical: number; high: number }>;
+
+  adjustments?: Array<{ label: string; amount: number; reason: string }>;  
+  additionalFeatures?: Array<{ label: string; low: number; typical: number; high: number }>;  
+
   metadata?: {
     postcodeDistrict?: string;
-    renovationScope?: string;
-    qualityTier?: string;
+    renovationScope?: string; // project type
+    qualityTier?: string; // finish level
     yearBuilt?: number;
     listedBuilding?: boolean;
+
+    // Optional fields for the new PDF header
+    propertyAddress?: string;
+    postcode?: string;
+    regionName?: string; // e.g. "London" / "South East" etc.
   };
 };
 
 export type QuotePdfOptions = {
-  companyName?: string; // default: "UK Property Refurb Estimator"
+  // New defaults
+  companyName?: string; // default: "Refurb Estimator"
   logoUrl?: string; // optional URL to a logo image (PNG or JPEG)
-  disclaimer?: string; // default disclaimer text
+
+  // Footer / disclaimer text (the PDF also prints some fixed lines)
+  disclaimer?: string;
   generatedAt?: Date; // default: new Date()
+
+  // Deterministic estimate reference (if not provided one will be generated)
+  estimateReference?: string; // e.g. "RE-123456"
 };
+
+function formatCurrencyGBP(value: number): string {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 0
+  }).format(value);
+}
+
+function formatDateGB(date: Date): string {
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric"
+  });
+}
+
+function isFiniteNumber(n: unknown): n is number {
+  return typeof n === "number" && Number.isFinite(n);
+}
+
+function wrapText(text: string, size: number, font: any, maxWidth: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const width = font.widthOfTextAtSize(testLine, size);
+    if (width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
+function makeEstimateReference(input: QuotePdfInput, generatedAt: Date): string {
+  // Stable-ish, non-cryptographic reference. Avoid pulling in additional deps.
+  // Format required: RE-XXXXXX
+  const seed = `${generatedAt.toISOString()}|${input.totalTypical}|${input.metadata?.postcodeDistrict ?? ""}|${
+    input.metadata?.postcode ?? ""
+  }|${input.metadata?.propertyAddress ?? input.propertyDescription ?? ""}`;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  const six = (hash % 1_000_000).toString().padStart(6, "0");
+  return `RE-${six}`;
+}
 
 export async function generateQuotePdf(
   input: QuotePdfInput,
   options?: QuotePdfOptions
 ): Promise<Uint8Array> {
   // Page setup: A4 portrait (595.28 × 841.89 points).
-  // Use 40pt margins on all sides.
   const pdfDoc = await PDFDocument.create();
   const pageWidth = 595.28;
   const pageHeight = 841.89;
   const margin = 40;
   const contentWidth = pageWidth - margin * 2;
 
-  const page = pdfDoc.addPage([pageWidth, pageHeight]);
-  let currentPage = page;
+  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
   let cursorY = pageHeight - margin;
 
   // Fonts
@@ -53,12 +124,11 @@ export async function generateQuotePdf(
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   // Font sizes
-  const companyNameSize = 18;
+  const wordmarkSize = 18;
   const sectionHeadingSize = 13;
-  const propertyDescriptionSize = 11;
+  const bodySize = 10.5;
+  const smallSize = 8.5;
   const tableTextSize = 9;
-  const disclaimerSize = 7.5;
-  const dateSize = 8;
 
   // Colors
   const teal = rgb(0.05, 0.58, 0.53);
@@ -67,34 +137,30 @@ export async function generateQuotePdf(
   const lightGrey = rgb(0.95, 0.95, 0.95);
   const white = rgb(1, 1, 1);
 
-  const companyName = options?.companyName ?? "UK Property Refurb Estimator";
-  const disclaimerText =
-    options?.disclaimer ??
-    "This estimate is for guidance only and does not constitute a formal quotation. Actual costs may vary based on site conditions, specifications, and market rates. We recommend obtaining at least three contractor quotes before proceeding.";
+  const companyName = options?.companyName ?? "Refurb Estimator";
   const generatedAt = options?.generatedAt ?? new Date();
+  const estimateReference = options?.estimateReference ?? makeEstimateReference(input, generatedAt);
+
+  const defaultDisclaimer =
+    "This estimate is for guidance only and does not constitute a formal quotation. Actual costs may vary based on site conditions, specifications, and market rates. We recommend obtaining contractor quotations before proceeding.";
+  const disclaimerText = options?.disclaimer ?? defaultDisclaimer;
 
   pdfDoc.setTitle(companyName);
   pdfDoc.setSubject(disclaimerText);
 
   async function maybeEmbedLogo() {
-    if (!options?.logoUrl || typeof fetch !== "function") {
-      return;
-    }
+    if (!options?.logoUrl || typeof fetch !== "function") return;
     try {
       const response = await fetch(options.logoUrl);
       if (!response.ok) return;
       const contentType = response.headers.get("Content-Type") ?? "";
       const bytes = new Uint8Array(await response.arrayBuffer());
       let image;
-      if (contentType.includes("png")) {
-        image = await pdfDoc.embedPng(bytes);
-      } else if (contentType.includes("jpeg") || contentType.includes("jpg")) {
-        image = await pdfDoc.embedJpg(bytes);
-      } else {
-        return;
-      }
+      if (contentType.includes("png")) image = await pdfDoc.embedPng(bytes);
+      else if (contentType.includes("jpeg") || contentType.includes("jpg")) image = await pdfDoc.embedJpg(bytes);
+      else return;
 
-      const maxLogoSize = 60;
+      const maxLogoSize = 42;
       const { width, height } = image.scale(1);
       const scale = Math.min(1, maxLogoSize / width, maxLogoSize / height);
       const scaledWidth = width * scale;
@@ -107,235 +173,153 @@ export async function generateQuotePdf(
         height: scaledHeight
       });
 
-      return scaledHeight;
+      return { scaledWidth, scaledHeight };
     } catch {
-      // Silently skip logo if fetch fails
       return;
     }
   }
 
   function ensureSpace(requiredHeight: number) {
-    // Leave 80pt at the bottom for footer on the last page
-    if (cursorY - requiredHeight < 80) {
+    // Leave 90pt at the bottom for footer on the last page
+    if (cursorY - requiredHeight < 90) {
       currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
       cursorY = pageHeight - margin;
     }
   }
 
-  function drawTextBlock(params: {
+  function drawText(params: {
     text: string;
     size: number;
-    font: typeof fontRegular;
+    font: any;
     color: ReturnType<typeof rgb>;
     x: number;
     y: number;
+    maxWidth?: number;
+    lineHeight?: number;
   }) {
-    const { text, size, font, color, x, y } = params;
+    const { text, size, font, color, x, y, maxWidth, lineHeight } = params;
     currentPage.drawText(text, {
       x,
       y,
       size,
       font,
-      color
+      color,
+      ...(typeof maxWidth === "number" ? { maxWidth } : null),
+      ...(typeof lineHeight === "number" ? { lineHeight } : null)
     });
   }
 
-  function wrapText(text: string, size: number, font: typeof fontRegular, maxWidth: number): string[] {
-    const words = text.split(/\s+/);
-    const lines: string[] = [];
-    let currentLine = "";
-
-    for (const word of words) {
-      const testLine = currentLine ? `${currentLine} ${word}` : word;
-      const width = font.widthOfTextAtSize(testLine, size);
-      if (width > maxWidth && currentLine) {
-        lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = testLine;
-      }
-    }
-    if (currentLine) {
-      lines.push(currentLine);
-    }
-    return lines;
+  function drawSectionHeading(title: string) {
+    ensureSpace(sectionHeadingSize + 12);
+    drawText({
+      text: title,
+      size: sectionHeadingSize,
+      font: fontBold,
+      color: teal,
+      x: margin,
+      y: cursorY
+    });
+    cursorY -= sectionHeadingSize + 8;
   }
 
-  function formatCurrency(value: number): string {
-    return new Intl.NumberFormat("en-GB", {
-      style: "currency",
-      currency: "GBP",
-      maximumFractionDigits: 0
-    }).format(value);
-  }
+  // -----------------------------
+  // Header
+  // -----------------------------
 
-  // Header section
-  const logoHeight = await maybeEmbedLogo();
-
-  const headerRightX = margin + (logoHeight ? 70 : 0);
+  const logoInfo = await maybeEmbedLogo();
+  const headerLeftX = margin + (logoInfo ? logoInfo.scaledWidth + 10 : 0);
   const headerTopY = cursorY;
 
-  drawTextBlock({
+  // Wordmark
+  drawText({
     text: companyName,
-    size: companyNameSize,
+    size: wordmarkSize,
     font: fontBold,
     color: teal,
-    x: headerRightX,
-    y: headerTopY - companyNameSize
+    x: headerLeftX,
+    y: headerTopY - wordmarkSize
   });
 
-  drawTextBlock({
-    text: "Property Renovation Estimate",
-    size: 11,
+  const addressText =
+    input.metadata?.propertyAddress || input.metadata?.postcode
+      ? [input.metadata?.propertyAddress, input.metadata?.postcode].filter(Boolean).join(", ")
+      : input.propertyDescription;
+
+  // Address / postcode (if provided)
+  const addrLines = wrapText(addressText, bodySize, fontRegular, pageWidth - headerLeftX - margin);
+  let addrY = headerTopY - wordmarkSize - 18;
+  for (const line of addrLines.slice(0, 2)) {
+    drawText({ text: line, size: bodySize, font: fontRegular, color: darkText, x: headerLeftX, y: addrY });
+    addrY -= bodySize + 3;
+  }
+
+  // Date generated + estimate ref
+  const dateStr = formatDateGB(generatedAt);
+  drawText({
+    text: `Date generated: ${dateStr}`,
+    size: smallSize,
     font: fontRegular,
     color: mediumGrey,
-    x: headerRightX,
-    y: headerTopY - companyNameSize - 16
+    x: headerLeftX,
+    y: addrY - 4
+  });
+  drawText({
+    text: `Estimate reference: ${estimateReference}`,
+    size: smallSize,
+    font: fontRegular,
+    color: mediumGrey,
+    x: headerLeftX,
+    y: addrY - 4 - (smallSize + 3)
   });
 
-  cursorY = headerTopY - (logoHeight ?? companyNameSize + 20) - 16;
+  cursorY = (logoInfo ? headerTopY - Math.max(logoInfo.scaledHeight, 76) : headerTopY - 76) - 12;
 
-  // Horizontal teal line
+  // Divider
   currentPage.drawLine({
     start: { x: margin, y: cursorY },
     end: { x: pageWidth - margin, y: cursorY },
     thickness: 1,
     color: teal
   });
+  cursorY -= 20;
 
-  cursorY -= 24;
+  // -----------------------------
+  // Project Summary
+  // -----------------------------
 
-  // Property details section
-  ensureSpace(80);
-  drawTextBlock({
-    text: "Property Details",
-    size: sectionHeadingSize,
+  drawSectionHeading("Project Summary");
+
+  const projectType = input.metadata?.renovationScope ?? "—";
+  const finishLevel = input.metadata?.qualityTier ?? "—";
+  const postcodeRegion = input.metadata?.postcodeDistrict ?? input.metadata?.postcode ?? "—";
+
+  const summaryLine = `Project type: ${projectType}   |   Finish level: ${finishLevel}   |   Postcode region: ${postcodeRegion}`;
+  const summaryLines = wrapText(summaryLine, bodySize, fontRegular, contentWidth);
+  for (const line of summaryLines) {
+    ensureSpace(bodySize + 2);
+    drawText({ text: line, size: bodySize, font: fontRegular, color: darkText, x: margin, y: cursorY });
+    cursorY -= bodySize + 4;
+  }
+
+  cursorY -= 6;
+  ensureSpace(bodySize + 8);
+  drawText({
+    text: `Total: Low ${formatCurrencyGBP(input.totalLow)}   |   Typical ${formatCurrencyGBP(
+      input.totalTypical
+    )}   |   High ${formatCurrencyGBP(input.totalHigh)}`,
+    size: bodySize,
     font: fontBold,
     color: teal,
     x: margin,
     y: cursorY
   });
-  cursorY -= sectionHeadingSize + 8;
+  cursorY -= bodySize + 14;
 
-  const descriptionLines = wrapText(
-    input.propertyDescription,
-    propertyDescriptionSize,
-    fontRegular,
-    contentWidth
-  );
-  for (const line of descriptionLines) {
-    ensureSpace(propertyDescriptionSize + 2);
-    drawTextBlock({
-      text: line,
-      size: propertyDescriptionSize,
-      font: fontRegular,
-      color: darkText,
-      x: margin,
-      y: cursorY
-    });
-    cursorY -= propertyDescriptionSize + 4;
-  }
+  // -----------------------------
+  // Cost Breakdown Table
+  // -----------------------------
 
-  if (input.metadata) {
-    cursorY -= 8;
-    ensureSpace(60);
-    const leftX = margin;
-    const rightX = margin + contentWidth / 2;
-
-    const metaLinesLeft: string[] = [];
-    const metaLinesRight: string[] = [];
-
-    if (input.metadata.postcodeDistrict) {
-      metaLinesLeft.push(`Postcode district: ${input.metadata.postcodeDistrict}`);
-    }
-    if (input.metadata.renovationScope) {
-      metaLinesLeft.push(`Renovation scope: ${input.metadata.renovationScope}`);
-    }
-    if (input.metadata.qualityTier) {
-      metaLinesLeft.push(`Quality tier: ${input.metadata.qualityTier}`);
-    }
-    if (typeof input.metadata.yearBuilt === "number") {
-      metaLinesRight.push(`Year built: ${input.metadata.yearBuilt}`);
-    }
-    if (typeof input.metadata.listedBuilding === "boolean") {
-      metaLinesRight.push(`Listed building: ${input.metadata.listedBuilding ? "Yes" : "No"}`);
-    }
-
-    const lineHeight = propertyDescriptionSize + 4;
-
-    metaLinesLeft.forEach((text, index) => {
-      ensureSpace(lineHeight);
-      drawTextBlock({
-        text,
-        size: propertyDescriptionSize,
-        font: fontRegular,
-        color: darkText,
-        x: leftX,
-        y: cursorY - index * lineHeight
-      });
-    });
-
-    metaLinesRight.forEach((text, index) => {
-      ensureSpace(lineHeight);
-      drawTextBlock({
-        text,
-        size: propertyDescriptionSize,
-        font: fontRegular,
-        color: darkText,
-        x: rightX,
-        y: cursorY - index * lineHeight
-      });
-    });
-
-    const linesCount = Math.max(metaLinesLeft.length, metaLinesRight.length);
-    cursorY -= linesCount * lineHeight + 8;
-  }
-
-  if (input.adjustments && input.adjustments.length > 0) {
-    ensureSpace(40);
-    drawTextBlock({
-      text: "Adjustments:",
-      size: propertyDescriptionSize,
-      font: fontBold,
-      color: darkText,
-      x: margin,
-      y: cursorY
-    });
-    cursorY -= propertyDescriptionSize + 4;
-
-    for (const adjustment of input.adjustments) {
-      const line = `${adjustment.label}: ${adjustment.amount >= 0 ? "+" : ""}${formatCurrency(
-        adjustment.amount
-      )} — ${adjustment.reason}`;
-      const lines = wrapText(line, propertyDescriptionSize, fontRegular, contentWidth);
-      for (const l of lines) {
-        ensureSpace(propertyDescriptionSize + 2);
-        drawTextBlock({
-          text: l,
-          size: propertyDescriptionSize,
-          font: fontRegular,
-          color: darkText,
-          x: margin,
-          y: cursorY
-        });
-        cursorY -= propertyDescriptionSize + 2;
-      }
-    }
-
-    cursorY -= 8;
-  }
-
-  // Cost breakdown table
-  ensureSpace(80);
-  drawTextBlock({
-    text: "Cost Breakdown",
-    size: sectionHeadingSize,
-    font: fontBold,
-    color: teal,
-    x: margin,
-    y: cursorY
-  });
-  cursorY -= sectionHeadingSize + 8;
+  drawSectionHeading("Cost Breakdown");
 
   const colCategoryWidth = contentWidth * 0.4;
   const colValueWidth = (contentWidth * 0.6) / 3;
@@ -353,47 +337,19 @@ export async function generateQuotePdf(
 
   const headerY = cursorY - headerHeight + 4;
 
-  drawTextBlock({
-    text: "Category",
-    size: tableTextSize,
-    font: fontBold,
-    color: white,
-    x: margin + 4,
-    y: headerY
-  });
-  drawTextBlock({
-    text: "Low",
-    size: tableTextSize,
-    font: fontBold,
-    color: white,
-    x: margin + colCategoryWidth + 4,
-    y: headerY
-  });
-  drawTextBlock({
-    text: "Typical",
-    size: tableTextSize,
-    font: fontBold,
-    color: white,
-    x: margin + colCategoryWidth + colValueWidth + 4,
-    y: headerY
-  });
-  drawTextBlock({
-    text: "High",
-    size: tableTextSize,
-    font: fontBold,
-    color: white,
-    x: margin + colCategoryWidth + colValueWidth * 2 + 4,
-    y: headerY
-  });
+  const headerCells = [
+    { text: "Category", x: margin + 4 },
+    { text: "Low", x: margin + colCategoryWidth + 4 },
+    { text: "Typical", x: margin + colCategoryWidth + colValueWidth + 4 },
+    { text: "High", x: margin + colCategoryWidth + colValueWidth * 2 + 4 }
+  ];
+  for (const cell of headerCells) {
+    drawText({ text: cell.text, size: tableTextSize, font: fontBold, color: white, x: cell.x, y: headerY });
+  }
 
   cursorY -= headerHeight + 4;
 
-  type Row = {
-    category: string;
-    low: number;
-    typical: number;
-    high: number;
-  };
+  type Row = { category: string; low: number; typical: number; high: number };
 
   const rows: Row[] = [
     ...input.categories.map((c) => ({
@@ -427,32 +383,25 @@ export async function generateQuotePdf(
 
     const rowY = cursorY - rowHeight + 3;
 
-    drawTextBlock({
-      text: row.category,
-      size: tableTextSize,
-      font: fontRegular,
-      color: darkText,
-      x: margin + 4,
-      y: rowY
-    });
-    drawTextBlock({
-      text: formatCurrency(row.low),
+    drawText({ text: row.category, size: tableTextSize, font: fontRegular, color: darkText, x: margin + 4, y: rowY });
+    drawText({
+      text: formatCurrencyGBP(row.low),
       size: tableTextSize,
       font: fontRegular,
       color: darkText,
       x: margin + colCategoryWidth + 4,
       y: rowY
     });
-    drawTextBlock({
-      text: formatCurrency(row.typical),
+    drawText({
+      text: formatCurrencyGBP(row.typical),
       size: tableTextSize,
       font: fontRegular,
       color: darkText,
       x: margin + colCategoryWidth + colValueWidth + 4,
       y: rowY
     });
-    drawTextBlock({
-      text: formatCurrency(row.high),
+    drawText({
+      text: formatCurrencyGBP(row.high),
       size: tableTextSize,
       font: fontRegular,
       color: darkText,
@@ -463,116 +412,89 @@ export async function generateQuotePdf(
     cursorY -= rowHeight + 2;
   });
 
-  // Separator line before totals
-  ensureSpace(10);
-  currentPage.drawLine({
-    start: { x: margin, y: cursorY },
-    end: { x: pageWidth - margin, y: cursorY },
-    thickness: 1,
-    color: teal
-  });
-  cursorY -= 10;
+  // -----------------------------
+  // Additional Costs
+  // -----------------------------
 
-  // Totals row
-  const totalsHeight = 18;
-  ensureSpace(totalsHeight + 4);
+  cursorY -= 6;
+  drawSectionHeading("Additional Costs");
 
-  const totalsY = cursorY - totalsHeight + 3;
+  // Architect fees (estimate): £X–£Y
+  // Planning: £258
+  // Building control: £500–£1,200
+  // Contingency (10%): £X
 
-  drawTextBlock({
-    text: "TOTAL",
-    size: tableTextSize,
-    font: fontBold,
-    color: teal,
-    x: margin + 4,
-    y: totalsY
-  });
-  drawTextBlock({
-    text: formatCurrency(input.totalLow),
-    size: tableTextSize,
-    font: fontBold,
-    color: teal,
-    x: margin + colCategoryWidth + 4,
-    y: totalsY
-  });
-  drawTextBlock({
-    text: formatCurrency(input.totalTypical),
-    size: tableTextSize,
-    font: fontBold,
-    color: teal,
-    x: margin + colCategoryWidth + colValueWidth + 4,
-    y: totalsY
-  });
-  drawTextBlock({
-    text: formatCurrency(input.totalHigh),
-    size: tableTextSize,
-    font: fontBold,
-    color: teal,
-    x: margin + colCategoryWidth + colValueWidth * 2 + 4,
-    y: totalsY
-  });
+  const planningFee = 258;
+  const buildingControlLow = 500;
+  const buildingControlHigh = 1200;
 
-  cursorY -= totalsHeight + 8;
-
-  // Summary section
-  ensureSpace(60);
-
-  const summaryLines: string[] = [];
-
-  summaryLines.push(
-    `Cost per m²: ${formatCurrency(input.costPerM2.low)} (low) · ${formatCurrency(
-      input.costPerM2.typical
-    )} (typical) · ${formatCurrency(input.costPerM2.high)} (high)`
-  );
-
-  if (typeof input.contingencyPercent === "number") {
-    summaryLines.push(`Includes ${input.contingencyPercent}% contingency`);
-  }
-  if (typeof input.feesPercent === "number") {
-    summaryLines.push(`Includes ${input.feesPercent}% professional fees`);
+  // Use feesPercent if provided (assume % of total typical), otherwise show a small default range.
+  let architectLow: number | undefined;
+  let architectHigh: number | undefined;
+  if (isFiniteNumber(input.feesPercent)) {
+    const pct = input.feesPercent / 100;
+    // Provide a small range around the configured percent.
+    architectLow = Math.round(input.totalTypical * Math.max(0, pct - 0.01));
+    architectHigh = Math.round(input.totalTypical * (pct + 0.01));
+  } else {
+    architectLow = Math.round(input.totalTypical * 0.06);
+    architectHigh = Math.round(input.totalTypical * 0.10);
   }
 
-  summaryLines.forEach((line) => {
-    const lines = wrapText(line, propertyDescriptionSize, fontRegular, contentWidth);
+  const contingencyPct = isFiniteNumber(input.contingencyPercent) ? input.contingencyPercent : 10;
+  const contingencyValue = Math.round(input.totalTypical * (contingencyPct / 100));
+
+  const additionalLines = [
+    `Architect fees (estimate): ${formatCurrencyGBP(architectLow)}–${formatCurrencyGBP(architectHigh)}`,
+    `Planning: ${formatCurrencyGBP(planningFee)}`,
+    `Building control: ${formatCurrencyGBP(buildingControlLow)}–${formatCurrencyGBP(buildingControlHigh)}`,
+    `Contingency (${contingencyPct}%): ${formatCurrencyGBP(contingencyValue)}`
+  ];
+
+  for (const line of additionalLines) {
+    const lines = wrapText(line, bodySize, fontRegular, contentWidth);
     for (const l of lines) {
-      ensureSpace(propertyDescriptionSize + 2);
-      drawTextBlock({
-        text: l,
-        size: propertyDescriptionSize,
-        font: fontRegular,
-        color: mediumGrey,
-        x: margin,
-        y: cursorY
-      });
-      cursorY -= propertyDescriptionSize + 4;
+      ensureSpace(bodySize + 2);
+      drawText({ text: `• ${l}`, size: bodySize, font: fontRegular, color: darkText, x: margin, y: cursorY });
+      cursorY -= bodySize + 4;
     }
-  });
+  }
+
+  cursorY -= 8;
+
+  // -----------------------------
+  // Assumptions & Disclaimers
+  // -----------------------------
+
+  drawSectionHeading("Assumptions & Disclaimers");
+
+  const regionName = input.metadata?.regionName ?? input.metadata?.postcodeDistrict ?? "your area";
+
+  const fixedLines = [
+    disclaimerText,
+    "This estimate was generated by Refurb Estimator (refurb-estimator.vercel.app)",
+    `Prices based on UK regional averages for ${regionName}. Actual costs may vary.`
+  ];
+
+  for (const line of fixedLines) {
+    const lines = wrapText(line, bodySize, fontRegular, contentWidth);
+    for (const l of lines) {
+      ensureSpace(bodySize + 2);
+      drawText({ text: l, size: bodySize, font: fontRegular, color: mediumGrey, x: margin, y: cursorY });
+      cursorY -= bodySize + 4;
+    }
+    cursorY -= 2;
+  }
 
   // Footer on last page only
   const pages = pdfDoc.getPages();
   const lastPage = pages[pages.length - 1];
 
   const footerY = margin;
-  const dateString = generatedAt.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric"
-  });
-
-  lastPage.drawText(disclaimerText, {
-    x: margin,
-    y: footerY + 14,
-    size: disclaimerSize,
-    font: fontRegular,
-    color: mediumGrey,
-    maxWidth: contentWidth,
-    lineHeight: disclaimerSize + 2
-  });
-
-  lastPage.drawText(`Generated on ${dateString}`, {
+  lastPage.drawText(`Generated on ${dateStr} • ${estimateReference}`, {
     x: margin,
     y: footerY,
-    size: dateSize,
+    size: smallSize,
     font: fontRegular,
     color: mediumGrey
   });

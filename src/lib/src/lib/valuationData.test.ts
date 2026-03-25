@@ -5,7 +5,7 @@ describe("calculateUplift", () => {
     const result = calculateUplift({
       currentValue: 200_000,
       refurbCost: 20_000,
-      refurbType: "light",
+      refurbType: "medium",
     });
 
     expect(result.upliftMin).toBeCloseTo(20_000);
@@ -20,13 +20,13 @@ describe("calculateUplift", () => {
     const lowerCostResult = calculateUplift({
       currentValue: 250_000,
       refurbCost: 25_000,
-      refurbType: "full",
+      refurbType: "heavy",
     });
 
     const higherCostResult = calculateUplift({
       currentValue: 250_000,
       refurbCost: 50_000,
-      refurbType: "full",
+      refurbType: "heavy",
     });
 
     expect(lowerCostResult.upliftMin).toBeCloseTo(higherCostResult.upliftMin);
@@ -39,12 +39,25 @@ describe("calculateUplift", () => {
     expect(higherCostResult.roiMax).toBeCloseTo(1.25);
   });
 
+  test("returns roi 0 when refurbCost is 0", () => {
+    const result = calculateUplift({
+      currentValue: 200_000,
+      refurbCost: 0,
+      refurbType: "medium",
+    });
+
+    expect(result.upliftMin).toBeCloseTo(20_000);
+    expect(result.upliftMax).toBeCloseTo(30_000);
+    expect(result.roiMin).toBe(0);
+    expect(result.roiMax).toBe(0);
+  });
+
   test("throws when currentValue is 0", () => {
     expect(() =>
       calculateUplift({
         currentValue: 0,
         refurbCost: 10_000,
-        refurbType: "cosmetic",
+        refurbType: "light",
       }),
     ).toThrow("currentValue must be a finite number greater than 0");
   });

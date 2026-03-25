@@ -136,9 +136,9 @@ export default function SharedEstimatePage({
       </div>
 
       {snapshot.kind === "rooms" ? (
-        <EstimateResults result={snapshot.result as any} />
+        <EstimateResults result={snapshot.result} />
       ) : (
-        <NewBuildResults result={snapshot.result as any} />
+        <NewBuildResults result={snapshot.result} />
       )}
     </section>
   );

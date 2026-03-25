@@ -1,8 +1,6 @@
 import {
   getServerAiEnv,
   getServerCoreEnv,
-  getClientEnv,
-  _resetEnvCache,
 } from "./env";
 
 describe("getServerAiEnv", () => {

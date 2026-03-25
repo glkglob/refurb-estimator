@@ -247,6 +247,9 @@ export type NewBuildResult = {
   };
 };
 
+export type LoftConversionType = "rooflight" | "dormer" | "hip_to_gable" | "mansard";
+export type LoftFinishLevel = "basic" | "standard" | "premium";
+
 export type Scenario = {
   id: string;
   name: string;

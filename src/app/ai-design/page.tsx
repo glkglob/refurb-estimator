@@ -98,15 +98,14 @@ export default function AiDesignPage() {
               <Input placeholder="https://example.com/room.jpg" value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} />
               <p className="text-xs text-muted-foreground">Paste a public URL to a room photo for better results</p>
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
               {isSubmitting ? <><Loader2 className="mr-2 size-4 animate-spin" />Generating...</> : "Generate Design"}
             </Button>
           </form>
         </CardContent>
       </Card>
-      {result && (
-        <div className="space-y-4">
+      {result ? <div className="space-y-4">
           <Card>
             <CardHeader><CardTitle>Design Concept</CardTitle></CardHeader>
             <CardContent className="space-y-2">
@@ -161,8 +160,7 @@ export default function AiDesignPage() {
               </ol>
             </CardContent>
           </Card>
-        </div>
-      )}
+        </div> : null}
     </section>
   );
 }

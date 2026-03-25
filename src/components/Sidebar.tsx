@@ -16,24 +16,16 @@ import {
   Sparkles,
   UserCircle,
   Wallet,
-  X,
+  X
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { VisuallyHidden } from "radix-ui";
-
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { apiFetch, isApiFetchError } from "@/lib/apiClient";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { VisuallyHidden } from "radix-ui";
 
 const navItems = [
   { href: "/", label: "Quick Estimate", icon: "Calculator" },
@@ -41,16 +33,16 @@ const navItems = [
   { href: "/ai-pricing", label: "AI Pricing", icon: "Sparkles" },
   { href: "/design-agent", label: "AI Design", icon: "Palette" },
   { href: "/new-build", label: "New Build", icon: "Building2" },
-  { href: "/extension", label: "Extension", icon: "Building2" },
+  { href: "/loft", label: "Loft", icon: "Calculator" },
   { href: "/rooms", label: "Detailed Rooms", icon: "LayoutGrid" },
   { href: "/scenarios", label: "Scenario Comparison", icon: "GitCompare" },
-  { href: "/budget", label: "Budget Tracker", icon: "Wallet" },
+  { href: "/budget", label: "Budget Tracker", icon: "Wallet" }
 ] as const;
 
 const dashboardItems = [
   { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { href: "/dashboard/profile", label: "My Profile", icon: "UserCircle" },
-  { href: "/dashboard/gallery", label: "My Gallery", icon: "Images" },
+  { href: "/dashboard/gallery", label: "My Gallery", icon: "Images" }
 ] as const;
 
 const iconMap = {
@@ -64,17 +56,7 @@ const iconMap = {
   UserCircle,
   Images,
   Sparkles,
-  Palette,
-};
-
-type SidebarContentProps = {
-  pathname: string;
-  authLoading: boolean;
-  user: User | null;
-  unreadCount: number;
-  onSignOut: () => Promise<void>;
-  onNavigate?: () => void;
-  useSheetClose?: boolean;
+  Palette
 };
 
 function SidebarContent({
@@ -84,11 +66,19 @@ function SidebarContent({
   unreadCount,
   onSignOut,
   onNavigate,
-  useSheetClose = false,
-}: SidebarContentProps) {
+  useSheetClose = false
+}: {
+  pathname: string;
+  authLoading: boolean;
+  user: User | null;
+  unreadCount: number;
+  onSignOut: () => Promise<void>;
+  onNavigate?: () => void;
+  useSheetClose?: boolean;
+}) {
   function renderNavLink(
     item: { href: string; label: string; icon: keyof typeof iconMap },
-    requiresAuth = false,
+    requiresAuth = false
   ) {
     if (requiresAuth && !user) {
       return null;
@@ -96,18 +86,11 @@ function SidebarContent({
 
     const Icon = iconMap[item.icon];
     const isActive = pathname === item.href;
-
     const linkClassName = isActive
       ? "flex items-center gap-2 rounded-r-md border-l-4 border-[var(--primary)] bg-sidebar-accent px-3 py-2 text-sm font-medium text-sidebar-primary"
       : "flex items-center gap-2 rounded-r-md border-l-4 border-l-transparent px-3 py-2 text-sm text-sidebar-foreground hover:bg-[#1A2533] hover:text-[var(--primary)]";
-
     const linkNode = (
-      <Link
-        key={item.href}
-        href={item.href}
-        onClick={onNavigate}
-        className={linkClassName}
-      >
+      <Link key={item.href} href={item.href} onClick={onNavigate} className={linkClassName}>
         <Icon className="size-4" />
         <span>{item.label}</span>
       </Link>
@@ -149,7 +132,6 @@ function SidebarContent({
         ) : user ? (
           <div className="space-y-2">
             <p className="truncate text-sm text-muted-foreground">{user.email}</p>
-
             <div className="space-y-2">
               {useSheetClose ? (
                 <SheetClose asChild>
@@ -182,7 +164,6 @@ function SidebarContent({
                   </Link>
                 </Button>
               )}
-
               <Button
                 variant="destructive"
                 className="w-full justify-start"
@@ -193,8 +174,20 @@ function SidebarContent({
               </Button>
             </div>
           </div>
-        ) : useSheetClose ? (
-          <SheetClose asChild>
+        ) : (
+          useSheetClose ? (
+            <SheetClose asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-start border-[var(--border)] text-primary hover:bg-primary/10"
+                asChild
+              >
+                <Link href="/auth/login" onClick={onNavigate}>
+                  Sign in
+                </Link>
+              </Button>
+            </SheetClose>
+          ) : (
             <Button
               variant="outline"
               className="w-full justify-start border-[var(--border)] text-primary hover:bg-primary/10"
@@ -204,17 +197,7 @@ function SidebarContent({
                 Sign in
               </Link>
             </Button>
-          </SheetClose>
-        ) : (
-          <Button
-            variant="outline"
-            className="w-full justify-start border-[var(--border)] text-primary hover:bg-primary/10"
-            asChild
-          >
-            <Link href="/auth/login" onClick={onNavigate}>
-              Sign in
-            </Link>
-          </Button>
+          )
         )}
       </div>
     </div>
@@ -225,33 +208,27 @@ export default function Sidebar() {
   const [user, setUser] = useState<User | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-
   const isSupabaseConfigured = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
-
   const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
-
   const router = useRouter();
   const pathname = usePathname();
-
   const supabase = useMemo(
     () => (isSupabaseConfigured ? createClient() : null),
-    [isSupabaseConfigured],
+    [isSupabaseConfigured]
   );
 
   useEffect(() => {
     if (!supabase) {
       return;
     }
-
     const supabaseClient = supabase;
     let isActive = true;
 
     async function loadUser() {
       const {
-        data: { user: currentUser },
+        data: { user: currentUser }
       } = await supabaseClient.auth.getUser();
 
       if (isActive) {
@@ -264,14 +241,12 @@ export default function Sidebar() {
     void loadUser();
 
     const {
-      data: { subscription },
+      data: { subscription }
     } = supabaseClient.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-
       if (!session?.user) {
         setUnreadCount(0);
       }
-
       setAuthLoading(false);
     });
 
@@ -292,11 +267,8 @@ export default function Sidebar() {
       try {
         const response = await apiFetch("/api/v1/notifications/count");
         const payload = (await response.json()) as { unreadCount?: number };
-
         if (isActive) {
-          setUnreadCount(
-            typeof payload.unreadCount === "number" ? payload.unreadCount : 0,
-          );
+          setUnreadCount(typeof payload.unreadCount === "number" ? payload.unreadCount : 0);
         }
       } catch (error) {
         if (isApiFetchError(error) && error.status === 401) {
@@ -305,7 +277,6 @@ export default function Sidebar() {
           }
           return;
         }
-
         if (isActive) {
           setUnreadCount(0);
         }
@@ -366,30 +337,24 @@ export default function Sidebar() {
               <Menu className="size-4" />
             </Button>
           </SheetTrigger>
-
           <SheetContent
             side="left"
             className="w-[85vw] max-w-[240px] border-r border-[var(--border)] bg-[#0A1420] p-0"
           >
             <VisuallyHidden.Root>
               <SheetTitle>Navigation menu</SheetTitle>
-              <SheetDescription>
-                Site navigation and user account options
-              </SheetDescription>
+              <SheetDescription>Site navigation and user account options</SheetDescription>
             </VisuallyHidden.Root>
-
             <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-4">
               <span className="font-mono text-sm font-semibold text-sidebar-foreground">
                 Refurb Estimator
               </span>
-
               <SheetClose asChild>
                 <Button variant="ghost" size="icon" aria-label="Close sidebar navigation">
                   <X className="size-4" />
                 </Button>
               </SheetClose>
             </div>
-
             <SidebarContent
               pathname={pathname}
               authLoading={authLoading}

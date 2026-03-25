@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import {
+  parseSharedEstimateSnapshot,
+  sharedEstimateSnapshotSchema,
+  type SharedEstimateSnapshot,
+} from "@/lib/share";
+import { z } from "zod";
 
-type CreateShareRequestBody = {
-  estimateData: unknown;
-};
+const createShareRequestSchema = z.object({
+  estimateData: sharedEstimateSnapshotSchema,
+});
 
 type SharedEstimateRow = {
   token: string;
   expires_at: string;
-  estimate_data: unknown;
+  estimate_data: SharedEstimateSnapshot;
   created_at: string;
   view_count: number | null;
 };
@@ -21,15 +27,13 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Internal server error";
 }
 
-function isValidCreateShareRequestBody(body: unknown): body is CreateShareRequestBody {
-  return !!body && typeof body === "object" && "estimateData" in body && body.estimateData != null;
-}
-
 export async function POST(request: Request) {
   try {
     const body: unknown = await request.json();
 
-    if (!isValidCreateShareRequestBody(body)) {
+    const parsedBody = createShareRequestSchema.safeParse(body);
+
+    if (!parsedBody.success) {
       return jsonError("estimateData is required", 400);
     }
 
@@ -38,7 +42,7 @@ export async function POST(request: Request) {
     const { data, error } = await supabaseAdmin
       .from("shared_estimates")
       .insert({
-        estimate_data: body.estimateData,
+        estimate_data: parsedBody.data.estimateData,
         user_id: null,
       })
       .select("token, expires_at")
@@ -78,6 +82,12 @@ export async function GET(request: Request) {
       return jsonError("Not found", 404);
     }
 
+    const parsedEstimate = parseSharedEstimateSnapshot(data.estimate_data);
+
+    if (!parsedEstimate) {
+      return jsonError("Invalid shared estimate data", 500);
+    }
+
     const expiresAt = new Date(data.expires_at);
     if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) {
       return jsonError("Link expired", 410);
@@ -98,7 +108,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({
-      estimateData: data.estimate_data,
+      estimateData: parsedEstimate,
       createdAt: data.created_at,
       expiresAt: data.expires_at,
       viewCount: currentViewCount,

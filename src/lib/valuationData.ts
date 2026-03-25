@@ -36,6 +36,18 @@ export interface CalculateUpliftResult {
   roiMax: number;
 }
 
+export type ValuationInput = {
+  currentValue: number;
+  refurbCost: number;
+  expectedValue: number;
+};
+
+export type ValuationResult = {
+  grossUplift: number;
+  netUplift: number;
+  roiPercent: number;
+};
+
 function assertFinitePositive(value: number, name: string): void {
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error(`${name} must be a finite number greater than 0`);
@@ -78,5 +90,26 @@ export function calculateUplift({
     newValueMax,
     roiMin,
     roiMax,
+  };
+}
+
+export function calculateValuation({
+  currentValue,
+  refurbCost,
+  expectedValue,
+}: ValuationInput): ValuationResult {
+  assertFinitePositive(currentValue, "currentValue");
+  assertFiniteNonNegative(refurbCost, "refurbCost");
+  assertFinitePositive(expectedValue, "expectedValue");
+
+  const grossUplift = expectedValue - currentValue;
+  const netUplift = grossUplift - refurbCost;
+
+  const roiPercent = refurbCost === 0 ? 0 : (netUplift / refurbCost) * 100;
+
+  return {
+    grossUplift,
+    netUplift,
+    roiPercent: Number(roiPercent.toFixed(1)),
   };
 }

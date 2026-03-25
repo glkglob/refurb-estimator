@@ -3,31 +3,28 @@ import { estimateProject, estimateRooms } from "./estimator";
 import type { EstimateInput, RoomInput } from "./types";
 
 describe("estimateProject", () => {
-  test("Budget North flat: 50m² gives typical ≈ £56,070", () => {
+  test("Budget NorthWest flat: 50m² gives typical ≈ £57,960", () => {
     const input: EstimateInput = {
-      region: "North",
+      region: "NorthWest",
       projectType: "refurb",
       propertyType: "flat",
       totalAreaM2: 50,
       condition: "fair",
       finishLevel: "budget"
     };
-
     const result = estimateProject(input, defaultCostLibrary);
-
-    expect(result.totalTypical).toBeCloseTo(56070, 2);
+    expect(result.totalTypical).toBeCloseTo(57960, 2);
   });
 
-  test("Premium London terrace totals are significantly higher than budget North case", () => {
-    const budgetNorth: EstimateInput = {
-      region: "North",
+  test("Premium London terrace totals are significantly higher than budget NorthWest case", () => {
+    const budgetNorthWest: EstimateInput = {
+      region: "NorthWest",
       projectType: "refurb",
       propertyType: "flat",
       totalAreaM2: 50,
       condition: "fair",
       finishLevel: "budget"
     };
-
     const premiumLondon: EstimateInput = {
       region: "London",
       projectType: "refurb",
@@ -36,42 +33,37 @@ describe("estimateProject", () => {
       condition: "poor",
       finishLevel: "premium"
     };
-
-    const budgetResult = estimateProject(budgetNorth, defaultCostLibrary);
+    const budgetResult = estimateProject(budgetNorthWest, defaultCostLibrary);
     const premiumResult = estimateProject(premiumLondon, defaultCostLibrary);
-
     expect(premiumResult.totalTypical).toBeCloseTo(489645, 2);
     expect(premiumResult.totalTypical).toBeGreaterThan(budgetResult.totalTypical * 5);
     expect(premiumResult.totalLow).toBeGreaterThan(budgetResult.totalLow * 5);
     expect(premiumResult.totalHigh).toBeGreaterThan(budgetResult.totalHigh * 5);
   });
 
-  test("Standard Midlands baseline: 75m² gives typical £135,000 with no multiplier distortion", () => {
+  test("Standard WestMidlands baseline: 75m² gives typical £135,000 with no multiplier distortion", () => {
     const input: EstimateInput = {
-      region: "Midlands",
+      region: "WestMidlands",
       projectType: "refurb",
       propertyType: "semi",
       totalAreaM2: 75,
       condition: "fair",
       finishLevel: "standard"
     };
-
     const result = estimateProject(input, defaultCostLibrary);
-
     expect(result.totalTypical).toBeCloseTo(135000, 2);
     expect(result.costPerM2.typical).toBeCloseTo(1800, 2);
   });
 
   test("Zero area throws 'Area must be greater than zero'", () => {
     const input: EstimateInput = {
-      region: "Midlands",
+      region: "WestMidlands",
       projectType: "refurb",
       propertyType: "flat",
       totalAreaM2: 0,
       condition: "fair",
       finishLevel: "standard"
     };
-
     expect(() => estimateProject(input, defaultCostLibrary)).toThrow(
       "Area must be greater than zero"
     );
@@ -79,14 +71,13 @@ describe("estimateProject", () => {
 
   test("Negative area throws 'Area must be greater than zero'", () => {
     const input: EstimateInput = {
-      region: "Midlands",
+      region: "WestMidlands",
       projectType: "refurb",
       propertyType: "flat",
       totalAreaM2: -10,
       condition: "fair",
       finishLevel: "standard"
     };
-
     expect(() => estimateProject(input, defaultCostLibrary)).toThrow(
       "Area must be greater than zero"
     );
@@ -101,13 +92,11 @@ describe("estimateProject", () => {
       condition: "fair",
       finishLevel: "standard"
     };
-
     const result = estimateProject(input, defaultCostLibrary);
     const categoriesTypicalSum = result.categories.reduce(
       (sum, category) => sum + category.typical,
       0
     );
-
     expect(Math.abs(categoriesTypicalSum - result.totalTypical)).toBeLessThanOrEqual(1);
   });
 
@@ -120,10 +109,8 @@ describe("estimateProject", () => {
       condition: "good",
       finishLevel: "standard"
     };
-
     const result = estimateProject(input, defaultCostLibrary);
     const expectedTypicalCostPerM2 = result.totalTypical / input.totalAreaM2;
-
     expect(Math.abs(result.costPerM2.typical - expectedTypicalCostPerM2)).toBeLessThanOrEqual(
       1
     );
@@ -135,11 +122,10 @@ describe("estimateRooms", () => {
     region: "London" as const,
     condition: "fair" as const
   };
-  const midlandsFair = {
-    region: "Midlands" as const,
+  const westMidlandsFair = {
+    region: "WestMidlands" as const,
     condition: "fair" as const
   };
-
   const fullRooms: RoomInput[] = [
     {
       id: "room-kitchen",
@@ -159,7 +145,6 @@ describe("estimateRooms", () => {
 
   test("Kitchen + bathroom full intensity returns plausible positive totals", () => {
     const result = estimateRooms(fullRooms, londonFair, defaultCostLibrary);
-
     expect(result.totalLow).toBeCloseTo(12150, 6);
     expect(result.totalTypical).toBeCloseTo(22612.5, 6);
     expect(result.totalHigh).toBeCloseTo(45225, 6);
@@ -170,10 +155,8 @@ describe("estimateRooms", () => {
 
   test("Light intensity rooms are exactly 60% of full intensity totals", () => {
     const lightRooms = fullRooms.map((room) => ({ ...room, intensity: "light" as const }));
-
     const fullResult = estimateRooms(fullRooms, londonFair, defaultCostLibrary);
     const lightResult = estimateRooms(lightRooms, londonFair, defaultCostLibrary);
-
     expect(lightResult.totalLow).toBeCloseTo(fullResult.totalLow * 0.6, 10);
     expect(lightResult.totalTypical).toBeCloseTo(fullResult.totalTypical * 0.6, 10);
     expect(lightResult.totalHigh).toBeCloseTo(fullResult.totalHigh * 0.6, 10);
@@ -195,7 +178,6 @@ describe("estimateRooms", () => {
         finishLevel: "standard"
       }
     ];
-
     expect(() => estimateRooms(invalidRooms, londonFair, defaultCostLibrary)).toThrow(
       "Area must be greater than zero"
     );
@@ -225,7 +207,6 @@ describe("estimateRooms", () => {
         finishLevel: "budget"
       }
     ];
-
     const combined = estimateRooms(rooms, londonFair, defaultCostLibrary);
     const summed = rooms
       .map((room) => estimateRooms([room], londonFair, defaultCostLibrary))
@@ -237,13 +218,12 @@ describe("estimateRooms", () => {
         }),
         { low: 0, typical: 0, high: 0 }
       );
-
     expect(combined.totalLow).toBeCloseTo(summed.low, 10);
     expect(combined.totalTypical).toBeCloseTo(summed.typical, 10);
     expect(combined.totalHigh).toBeCloseTo(summed.high, 10);
   });
 
-  test("Kitchen 10m² in Midlands/fair/full/standard gives typical ≈ £6,500", () => {
+  test("Kitchen 10m² in WestMidlands/fair/full/standard gives typical ≈ £6,500", () => {
     const rooms: RoomInput[] = [
       {
         id: "room-kitchen",
@@ -253,9 +233,7 @@ describe("estimateRooms", () => {
         finishLevel: "standard"
       }
     ];
-
-    const result = estimateRooms(rooms, midlandsFair, defaultCostLibrary);
-
+    const result = estimateRooms(rooms, westMidlandsFair, defaultCostLibrary);
     expect(result.totalTypical).toBeCloseTo(6500, 6);
   });
 
@@ -269,10 +247,8 @@ describe("estimateRooms", () => {
         finishLevel: "standard"
       }
     ];
-
-    const result = estimateRooms(rooms, midlandsFair, defaultCostLibrary);
+    const result = estimateRooms(rooms, westMidlandsFair, defaultCostLibrary);
     const populatedCategories = result.categories.filter((category) => category.typical > 0);
-
     expect(populatedCategories.length).toBeGreaterThanOrEqual(5);
   });
 
@@ -286,8 +262,7 @@ describe("estimateRooms", () => {
         finishLevel: "standard"
       }
     ];
-
-    expect(() => estimateRooms(rooms, midlandsFair, defaultCostLibrary)).toThrow(
+    expect(() => estimateRooms(rooms, westMidlandsFair, defaultCostLibrary)).toThrow(
       "Room area cannot exceed 500m²"
     );
   });

@@ -24,6 +24,8 @@ import type {
   NewBuildSpec
 } from "@/lib/types";
 import type { QuotePdfInput } from "@/lib/generateQuotePdf";
+import ShareEstimateModal from "@/components/ShareEstimateModal";
+import type { SharedEstimateSnapshot } from "@/lib/share";
 
 type CommercialType = "office" | "retail" | "warehouse" | "restaurant";
 type FitOutLevel = "shell_only" | "cat_a" | "cat_b";

@@ -83,8 +83,7 @@ export default function AdditionalCostsPanel({ buildCost }: AdditionalCostsPanel
         </CardTitle>
       </CardHeader>
 
-      {isOpen && (
-        <CardContent
+      {isOpen ? <CardContent
           id="additional-costs-content"
           className="space-y-3 pt-0"
         >
@@ -115,8 +114,7 @@ export default function AdditionalCostsPanel({ buildCost }: AdditionalCostsPanel
             These costs are not included in the estimate above. Figures are typical UK ranges for
             guidance only. Always obtain professional quotes before committing to a project.
           </p>
-        </CardContent>
-      )}
+        </CardContent> : null}
     </Card>
   );
 }

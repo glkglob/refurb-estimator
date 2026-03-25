@@ -444,8 +444,14 @@ export default function RoomsPage() {
       ) : null}
 
       {calculation.result ? (
-        <div id="results" className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+  <div id="results" className="space-y-4">
+    <div className="flex flex-wrap gap-2">
+      ...
+    </div>
+
+    <EstimateResults result={calculation.result} />
+  </div>
+) : null}
             <Button
               type="button"
               variant="default"

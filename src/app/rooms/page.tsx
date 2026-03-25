@@ -450,6 +450,7 @@ export default function RoomsPage() {
     </div>
 
     <EstimateResults result={calculation.result} />
+    <ValueUpliftCard ... />
   </div>
 ) : null}
             <Button

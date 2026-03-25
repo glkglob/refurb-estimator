@@ -8,6 +8,7 @@ import AuthBanner from "@/components/AuthBanner";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import ShareEstimateModal from "@/components/ShareEstimateModal";
 import TermTooltip from "@/components/TermTooltip";
+import { ValueUpliftCard } from "@/components/ValueUpliftCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -444,15 +445,8 @@ export default function RoomsPage() {
       ) : null}
 
       {calculation.result ? (
-  <div id="results" className="space-y-4">
-    <div className="flex flex-wrap gap-2">
-      ...
-    </div>
-
-    <EstimateResults result={calculation.result} />
-    <ValueUpliftCard ... />
-  </div>
-) : null}
+        <div id="results" className="space-y-4">
+          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="default"
@@ -471,6 +465,8 @@ export default function RoomsPage() {
           </div>
 
           <EstimateResults result={calculation.result} />
+
+          <ValueUpliftCard refurbCost={calculation.result.totalTypical} />
         </div>
       ) : null}
 

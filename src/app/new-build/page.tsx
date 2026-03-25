@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
 
 import NewBuildResults from "@/components/NewBuildResults";
+import ShareEstimateModal from "@/components/ShareEstimateModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,8 +18,9 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiClient";
-import { calculateNewBuild } from "@/lib/newBuildEstimator";
 import type { QuotePdfInput } from "@/lib/generateQuotePdf";
+import { calculateNewBuild } from "@/lib/newBuildEstimator";
+import type { SharedEstimateSnapshot } from "@/lib/share";
 import type {
   NewBuildInput,
   NewBuildPropertyType,
@@ -153,6 +155,7 @@ export default function NewBuildPage() {
   const [lastInput, setLastInput] = useState<NewBuildInput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const isBlockOfFlats = propertyType === "block_of_flats";
   const isHmo = propertyType === "hmo";
@@ -166,7 +169,8 @@ export default function NewBuildPage() {
   );
 
   const fitOutHelper = useMemo(
-    () => FIT_OUT_LEVELS.find((option) => option.value === fitOutLevel)?.helper ?? "",
+    () =>
+      FIT_OUT_LEVELS.find((option) => option.value === fitOutLevel)?.helper ?? "",
     [fitOutLevel],
   );
 
@@ -293,6 +297,18 @@ export default function NewBuildPage() {
     return input;
   }
 
+  const shareSnapshot = useMemo<SharedEstimateSnapshot | null>(() => {
+    if (!result || !lastInput) {
+      return null;
+    }
+
+    return {
+      kind: "new_build",
+      input: lastInput,
+      result,
+    };
+  }, [lastInput, result]);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -347,6 +363,7 @@ export default function NewBuildPage() {
     setResult(null);
     setLastInput(null);
     setError(null);
+    setIsShareModalOpen(false);
   }
 
   async function handleDownloadPdf() {
@@ -477,7 +494,7 @@ export default function NewBuildPage() {
                 />
               </div>
 
-              {!isCommercial && (
+              {!isCommercial ? (
                 <div className="space-y-2">
                   <Label htmlFor="new-build-bedrooms">Bedrooms</Label>
                   <Input
@@ -491,9 +508,9 @@ export default function NewBuildPage() {
                     onChange={(event) => setBedrooms(event.target.value)}
                   />
                 </div>
-              )}
+              ) : null}
 
-              {!isBlockOfFlats && (
+              {!isBlockOfFlats ? (
                 <div className="space-y-2">
                   <Label htmlFor="new-build-storeys">Storeys</Label>
                   <Input
@@ -507,7 +524,7 @@ export default function NewBuildPage() {
                     onChange={(event) => setStoreys(event.target.value)}
                   />
                 </div>
-              )}
+              ) : null}
 
               <div className="space-y-2">
                 <Label htmlFor="new-build-postcode">Postcode district</Label>
@@ -527,7 +544,7 @@ export default function NewBuildPage() {
               </div>
             </div>
 
-            {isBlockOfFlats && (
+            {isBlockOfFlats ? (
               <Card className="border border-border/60">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">
@@ -593,9 +610,9 @@ export default function NewBuildPage() {
                   </label>
                 </CardContent>
               </Card>
-            )}
+            ) : null}
 
-            {isHmo && (
+            {isHmo ? (
               <Card className="border border-border/60">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">
@@ -673,9 +690,9 @@ export default function NewBuildPage() {
                   </label>
                 </CardContent>
               </Card>
-            )}
+            ) : null}
 
-            {isCommercial && (
+            {isCommercial ? (
               <Card className="border border-border/60">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">
@@ -745,7 +762,7 @@ export default function NewBuildPage() {
                     </span>
                   </label>
 
-                  {commercialType === "restaurant" && (
+                  {commercialType === "restaurant" ? (
                     <label className="flex items-start gap-2 text-sm">
                       <input
                         type="checkbox"
@@ -762,7 +779,7 @@ export default function NewBuildPage() {
                         </span>
                       </span>
                     </label>
-                  )}
+                  ) : null}
 
                   <div className="space-y-2">
                     <Label htmlFor="new-build-parking">Parking spaces</Label>
@@ -779,7 +796,7 @@ export default function NewBuildPage() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            ) : null}
 
             <div className="space-y-3">
               <Button
@@ -796,9 +813,9 @@ export default function NewBuildPage() {
                 Additional options
               </Button>
 
-              {showOptions && (
+              {showOptions ? (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {!isFlat && (
+                  {!isFlat ? (
                     <label className="flex items-start gap-2 text-sm">
                       <input
                         type="checkbox"
@@ -808,7 +825,7 @@ export default function NewBuildPage() {
                       />
                       <span>Garage</span>
                     </label>
-                  )}
+                  ) : null}
 
                   <label className="flex items-start gap-2 text-sm">
                     <input
@@ -822,7 +839,7 @@ export default function NewBuildPage() {
                     <span>Renewable energy (solar/ASHP)</span>
                   </label>
 
-                  {!isFlat && (
+                  {!isFlat ? (
                     <label className="flex items-start gap-2 text-sm">
                       <input
                         type="checkbox"
@@ -834,17 +851,17 @@ export default function NewBuildPage() {
                       />
                       <span>Basement</span>
                     </label>
-                  )}
+                  ) : null}
                 </div>
-              )}
+              ) : null}
             </div>
 
-            {error && (
+            {error ? (
               <div className="bp-warning flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
                 <p className="font-medium text-destructive">{error}</p>
               </div>
-            )}
+            ) : null}
 
             <div className="flex flex-wrap gap-2">
               <Button type="submit" variant="default">
@@ -858,7 +875,7 @@ export default function NewBuildPage() {
         </CardContent>
       </Card>
 
-      {result && (
+      {result ? (
         <div id="results" className="space-y-6">
           <div className="flex flex-wrap gap-2">
             <Button
@@ -867,8 +884,16 @@ export default function NewBuildPage() {
               onClick={handleDownloadPdf}
               disabled={isGeneratingPdf}
             >
-              {isGeneratingPdf && <Loader2 className="size-4 animate-spin" />}
+              {isGeneratingPdf ? <Loader2 className="size-4 animate-spin" /> : null}
               Download PDF
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsShareModalOpen(true)}
+            >
+              Share estimate
             </Button>
 
             <Button type="button" variant="outline" onClick={handleReset}>
@@ -878,7 +903,15 @@ export default function NewBuildPage() {
 
           <NewBuildResults result={result} />
         </div>
-      )}
+      ) : null}
+
+      {shareSnapshot ? (
+        <ShareEstimateModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          snapshot={shareSnapshot}
+        />
+      ) : null}
     </section>
   );
 }

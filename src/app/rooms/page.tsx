@@ -180,6 +180,7 @@ export default function RoomsPage() {
       purchasePrice,
       gdv
     };
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
     try {
       await saveScenario(scenario);

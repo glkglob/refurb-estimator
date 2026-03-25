@@ -1,62 +1,94 @@
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument, PDFFont, PDFImage, rgb, StandardFonts } from "pdf-lib";
 
 export type QuotePdfInput = {
-  // Display fields
-  propertyDescription: string; // kept for backwards compatibility (used as address if nothing else is provided)
+  propertyDescription: string;
 
-  // Cost line items
   categories: Array<{
     category: string;
     low: number;
     typical: number;
     high: number;
-  }>;  
+  }>;
 
-  // Totals
   totalLow: number;
   totalTypical: number;
   totalHigh: number;
 
-  // Other summary inputs
-  costPerM2: { low: number; typical: number; high: number };
+  costPerM2: {
+    low: number;
+    typical: number;
+    high: number;
+  };
+
   contingencyPercent?: number;
   feesPercent?: number;
 
-  adjustments?: Array<{ label: string; amount: number; reason: string }>;  
-  additionalFeatures?: Array<{ label: string; low: number; typical: number; high: number }>;  
+  adjustments?: Array<{
+    label: string;
+    amount: number;
+    reason: string;
+  }>;
+
+  additionalFeatures?: Array<{
+    label: string;
+    low: number;
+    typical: number;
+    high: number;
+  }>;
 
   metadata?: {
     postcodeDistrict?: string;
-    renovationScope?: string; // project type
-    qualityTier?: string; // finish level
+    renovationScope?: string;
+    qualityTier?: string;
     yearBuilt?: number;
     listedBuilding?: boolean;
-
-    // Optional fields for the new PDF header
     propertyAddress?: string;
     postcode?: string;
-    regionName?: string; // e.g. "London" / "South East" etc.
+    regionName?: string;
   };
 };
 
 export type QuotePdfOptions = {
-  // New defaults
-  companyName?: string; // default: "Refurb Estimator"
-  logoUrl?: string; // optional URL to a logo image (PNG or JPEG)
-
-  // Footer / disclaimer text (the PDF also prints some fixed lines)
+  companyName?: string;
+  logoUrl?: string;
   disclaimer?: string;
-  generatedAt?: Date; // default: new Date()
+  generatedAt?: Date;
+  estimateReference?: string;
+};
 
-  // Deterministic estimate reference (if not provided one will be generated)
-  estimateReference?: string; // e.g. "RE-123456"
+type CurrencyRow = {
+  label: string;
+  low: number;
+  typical: number;
+  high: number;
+};
+
+const PAGE_WIDTH = 595.28;
+const PAGE_HEIGHT = 841.89;
+const MARGIN = 40;
+const FOOTER_RESERVED_HEIGHT = 90;
+
+const COLORS = {
+  teal: rgb(0.05, 0.58, 0.53),
+  darkText: rgb(0.1, 0.1, 0.1),
+  mediumGrey: rgb(0.4, 0.4, 0.4),
+  lightGrey: rgb(0.95, 0.95, 0.95),
+  white: rgb(1, 1, 1),
+};
+
+const FONT_SIZES = {
+  wordmark: 18,
+  sectionHeading: 13,
+  body: 10.5,
+  small: 8.5,
+  table: 9,
 };
 
 function formatCurrencyGBP(value: number): string {
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: "GBP",
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   }).format(value);
 }
 
@@ -64,446 +96,659 @@ function formatDateGB(date: Date): string {
   return date.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "long",
-    year: "numeric"
+    year: "numeric",
   });
 }
 
-function isFiniteNumber(n: unknown): n is number {
-  return typeof n === "number" && Number.isFinite(n);
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
-function wrapText(text: string, size: number, font: any, maxWidth: number): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
+function assertFiniteNonNegative(value: number, name: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${name} must be a finite non-negative number`);
+  }
+}
+
+function normaliseSingleLineText(value: string | undefined, fallback = "—"): string {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed.replace(/\s+/g, " ") : fallback;
+}
+
+function titleCase(value: string): string {
+  const normalized = value.replace(/[_-]+/g, " ").trim();
+  if (!normalized) return "—";
+  return normalized
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function wrapText(text: string, size: number, font: PDFFont, maxWidth: number): string[] {
+  const normalized = text.trim();
+  if (!normalized) return [];
+
+  const words = normalized.split(/\s+/);
   const lines: string[] = [];
   let currentLine = "";
 
   for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    const width = font.widthOfTextAtSize(testLine, size);
-    if (width > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
+    const candidate = currentLine ? `${currentLine} ${word}` : word;
+    const width = font.widthOfTextAtSize(candidate, size);
+
+    if (width <= maxWidth) {
+      currentLine = candidate;
+      continue;
     }
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    if (font.widthOfTextAtSize(word, size) <= maxWidth) {
+      currentLine = word;
+      continue;
+    }
+
+    let chunk = "";
+    for (const char of word) {
+      const nextChunk = `${chunk}${char}`;
+      if (font.widthOfTextAtSize(nextChunk, size) <= maxWidth) {
+        chunk = nextChunk;
+      } else {
+        if (chunk) lines.push(chunk);
+        chunk = char;
+      }
+    }
+    currentLine = chunk;
   }
+
   if (currentLine) lines.push(currentLine);
   return lines;
 }
 
+function truncateText(text: string, size: number, font: PDFFont, maxWidth: number): string {
+  if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
+
+  let result = text;
+  while (result.length > 0 && font.widthOfTextAtSize(`${result}…`, size) > maxWidth) {
+    result = result.slice(0, -1);
+  }
+  return result ? `${result}…` : "…";
+}
+
 function makeEstimateReference(input: QuotePdfInput, generatedAt: Date): string {
-  // Stable-ish, non-cryptographic reference. Avoid pulling in additional deps.
-  // Format required: RE-XXXXXX
-  const seed = `${generatedAt.toISOString()}|${input.totalTypical}|${input.metadata?.postcodeDistrict ?? ""}|${
-    input.metadata?.postcode ?? ""
-  }|${input.metadata?.propertyAddress ?? input.propertyDescription ?? ""}`;
+  const seed = [
+    generatedAt.toISOString(),
+    input.totalTypical,
+    input.metadata?.postcodeDistrict ?? "",
+    input.metadata?.postcode ?? "",
+    input.metadata?.propertyAddress ?? input.propertyDescription ?? "",
+  ].join("|");
+
   let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
+  for (let i = 0; i < seed.length; i += 1) {
     hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
   }
-  const six = (hash % 1_000_000).toString().padStart(6, "0");
-  return `RE-${six}`;
+
+  const sixDigits = (hash % 1_000_000).toString().padStart(6, "0");
+  return `RE-${sixDigits}`;
+}
+
+function validateInput(input: QuotePdfInput): void {
+  if (!input.propertyDescription?.trim() && !input.metadata?.propertyAddress?.trim()) {
+    throw new Error("Either propertyDescription or metadata.propertyAddress is required");
+  }
+
+  if (!Array.isArray(input.categories)) {
+    throw new Error("categories must be an array");
+  }
+
+  for (const [index, category] of input.categories.entries()) {
+    if (!category.category?.trim()) {
+      throw new Error(`categories[${index}].category is required`);
+    }
+    assertFiniteNonNegative(category.low, `categories[${index}].low`);
+    assertFiniteNonNegative(category.typical, `categories[${index}].typical`);
+    assertFiniteNonNegative(category.high, `categories[${index}].high`);
+  }
+
+  for (const [index, feature] of (input.additionalFeatures ?? []).entries()) {
+    if (!feature.label?.trim()) {
+      throw new Error(`additionalFeatures[${index}].label is required`);
+    }
+    assertFiniteNonNegative(feature.low, `additionalFeatures[${index}].low`);
+    assertFiniteNonNegative(feature.typical, `additionalFeatures[${index}].typical`);
+    assertFiniteNonNegative(feature.high, `additionalFeatures[${index}].high`);
+  }
+
+  for (const [index, adjustment] of (input.adjustments ?? []).entries()) {
+    if (!adjustment.label?.trim()) {
+      throw new Error(`adjustments[${index}].label is required`);
+    }
+    if (!adjustment.reason?.trim()) {
+      throw new Error(`adjustments[${index}].reason is required`);
+    }
+    if (!Number.isFinite(adjustment.amount)) {
+      throw new Error(`adjustments[${index}].amount must be finite`);
+    }
+  }
+
+  assertFiniteNonNegative(input.totalLow, "totalLow");
+  assertFiniteNonNegative(input.totalTypical, "totalTypical");
+  assertFiniteNonNegative(input.totalHigh, "totalHigh");
+
+  assertFiniteNonNegative(input.costPerM2.low, "costPerM2.low");
+  assertFiniteNonNegative(input.costPerM2.typical, "costPerM2.typical");
+  assertFiniteNonNegative(input.costPerM2.high, "costPerM2.high");
+
+  if (isFiniteNumber(input.contingencyPercent) && input.contingencyPercent < 0) {
+    throw new Error("contingencyPercent must be non-negative");
+  }
+
+  if (isFiniteNumber(input.feesPercent) && input.feesPercent < 0) {
+    throw new Error("feesPercent must be non-negative");
+  }
+}
+
+async function embedLogoIfAvailable(
+  pdfDoc: PDFDocument,
+  logoUrl: string | undefined,
+): Promise<PDFImage | undefined> {
+  if (!logoUrl || typeof fetch !== "function") return undefined;
+
+  try {
+    const response = await fetch(logoUrl);
+    if (!response.ok) return undefined;
+
+    const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+    const bytes = new Uint8Array(await response.arrayBuffer());
+
+    if (contentType.includes("png")) {
+      return await pdfDoc.embedPng(bytes);
+    }
+
+    if (contentType.includes("jpeg") || contentType.includes("jpg")) {
+      return await pdfDoc.embedJpg(bytes);
+    }
+
+    return undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function generateQuotePdf(
   input: QuotePdfInput,
-  options?: QuotePdfOptions
+  options?: QuotePdfOptions,
 ): Promise<Uint8Array> {
-  // Page setup: A4 portrait (595.28 × 841.89 points).
+  validateInput(input);
+
   const pdfDoc = await PDFDocument.create();
-  const pageWidth = 595.28;
-  const pageHeight = 841.89;
-  const margin = 40;
-  const contentWidth = pageWidth - margin * 2;
+  let currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  let cursorY = PAGE_HEIGHT - MARGIN;
+  const contentWidth = PAGE_WIDTH - MARGIN * 2;
 
-  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-  let cursorY = pageHeight - margin;
-
-  // Fonts
   const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // Font sizes
-  const wordmarkSize = 18;
-  const sectionHeadingSize = 13;
-  const bodySize = 10.5;
-  const smallSize = 8.5;
-  const tableTextSize = 9;
-
-  // Colors
-  const teal = rgb(0.05, 0.58, 0.53);
-  const darkText = rgb(0.1, 0.1, 0.1);
-  const mediumGrey = rgb(0.4, 0.4, 0.4);
-  const lightGrey = rgb(0.95, 0.95, 0.95);
-  const white = rgb(1, 1, 1);
-
-  const companyName = options?.companyName ?? "Refurb Estimator";
+  const companyName = normaliseSingleLineText(
+    options?.companyName,
+    "UK Property Refurb Estimator",
+  );
   const generatedAt = options?.generatedAt ?? new Date();
-  const estimateReference = options?.estimateReference ?? makeEstimateReference(input, generatedAt);
+  const estimateReference =
+    options?.estimateReference ?? makeEstimateReference(input, generatedAt);
 
   const defaultDisclaimer =
     "This estimate is for guidance only and does not constitute a formal quotation. Actual costs may vary based on site conditions, specifications, and market rates. We recommend obtaining contractor quotations before proceeding.";
-  const disclaimerText = options?.disclaimer ?? defaultDisclaimer;
+  const disclaimerText = normaliseSingleLineText(
+    options?.disclaimer,
+    defaultDisclaimer,
+  );
 
   pdfDoc.setTitle(companyName);
-  pdfDoc.setSubject(disclaimerText);
+  pdfDoc.setAuthor(companyName);
+  pdfDoc.setProducer(companyName);
+  pdfDoc.setCreator(companyName);
+  pdfDoc.setSubject("Property refurbishment estimate");
+  pdfDoc.setKeywords([
+    "property refurbishment",
+    "renovation estimate",
+    "UK estimate",
+    estimateReference,
+  ]);
 
-  async function maybeEmbedLogo() {
-    if (!options?.logoUrl || typeof fetch !== "function") return;
-    try {
-      const response = await fetch(options.logoUrl);
-      if (!response.ok) return;
-      const contentType = response.headers.get("Content-Type") ?? "";
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      let image;
-      if (contentType.includes("png")) image = await pdfDoc.embedPng(bytes);
-      else if (contentType.includes("jpeg") || contentType.includes("jpg")) image = await pdfDoc.embedJpg(bytes);
-      else return;
-
-      const maxLogoSize = 42;
-      const { width, height } = image.scale(1);
-      const scale = Math.min(1, maxLogoSize / width, maxLogoSize / height);
-      const scaledWidth = width * scale;
-      const scaledHeight = height * scale;
-
-      currentPage.drawImage(image, {
-        x: margin,
-        y: cursorY - scaledHeight,
-        width: scaledWidth,
-        height: scaledHeight
-      });
-
-      return { scaledWidth, scaledHeight };
-    } catch {
-      return;
-    }
-  }
-
-  function ensureSpace(requiredHeight: number) {
-    // Leave 90pt at the bottom for footer on the last page
-    if (cursorY - requiredHeight < 90) {
-      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-      cursorY = pageHeight - margin;
+  function ensureSpace(requiredHeight: number): void {
+    if (cursorY - requiredHeight < FOOTER_RESERVED_HEIGHT) {
+      currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      cursorY = PAGE_HEIGHT - MARGIN;
     }
   }
 
   function drawText(params: {
     text: string;
     size: number;
-    font: any;
+    font: PDFFont;
     color: ReturnType<typeof rgb>;
     x: number;
     y: number;
     maxWidth?: number;
     lineHeight?: number;
-  }) {
+  }): void {
     const { text, size, font, color, x, y, maxWidth, lineHeight } = params;
+
     currentPage.drawText(text, {
       x,
       y,
       size,
       font,
       color,
-      ...(typeof maxWidth === "number" ? { maxWidth } : null),
-      ...(typeof lineHeight === "number" ? { lineHeight } : null)
+      ...(typeof maxWidth === "number" ? { maxWidth } : {}),
+      ...(typeof lineHeight === "number" ? { lineHeight } : {}),
     });
   }
 
-  function drawSectionHeading(title: string) {
-    ensureSpace(sectionHeadingSize + 12);
+  function drawSectionHeading(title: string): void {
+    ensureSpace(FONT_SIZES.sectionHeading + 12);
     drawText({
       text: title,
-      size: sectionHeadingSize,
+      size: FONT_SIZES.sectionHeading,
       font: fontBold,
-      color: teal,
-      x: margin,
-      y: cursorY
+      color: COLORS.teal,
+      x: MARGIN,
+      y: cursorY,
     });
-    cursorY -= sectionHeadingSize + 8;
+    cursorY -= FONT_SIZES.sectionHeading + 8;
   }
 
-  // -----------------------------
-  // Header
-  // -----------------------------
+  function drawBodyLines(
+    lines: string[],
+    font: PDFFont,
+    color: ReturnType<typeof rgb>,
+    size = FONT_SIZES.body,
+    bullet = false,
+  ): void {
+    for (const line of lines) {
+      ensureSpace(size + 4);
+      drawText({
+        text: bullet ? `• ${line}` : line,
+        size,
+        font,
+        color,
+        x: MARGIN,
+        y: cursorY,
+      });
+      cursorY -= size + 4;
+    }
+  }
 
-  const logoInfo = await maybeEmbedLogo();
-  const headerLeftX = margin + (logoInfo ? logoInfo.scaledWidth + 10 : 0);
+  const logo = await embedLogoIfAvailable(pdfDoc, options?.logoUrl);
+  let logoWidth = 0;
+  let logoHeight = 0;
+
+  if (logo) {
+    const maxLogoSize = 42;
+    const scaled = logo.scale(1);
+    const scale = Math.min(1, maxLogoSize / scaled.width, maxLogoSize / scaled.height);
+    logoWidth = scaled.width * scale;
+    logoHeight = scaled.height * scale;
+
+    currentPage.drawImage(logo, {
+      x: MARGIN,
+      y: cursorY - logoHeight,
+      width: logoWidth,
+      height: logoHeight,
+    });
+  }
+
+  const headerLeftX = MARGIN + (logo ? logoWidth + 10 : 0);
   const headerTopY = cursorY;
 
-  // Wordmark
   drawText({
     text: companyName,
-    size: wordmarkSize,
+    size: FONT_SIZES.wordmark,
     font: fontBold,
-    color: teal,
+    color: COLORS.teal,
     x: headerLeftX,
-    y: headerTopY - wordmarkSize
+    y: headerTopY - FONT_SIZES.wordmark,
   });
 
   const addressText =
     input.metadata?.propertyAddress || input.metadata?.postcode
-      ? [input.metadata?.propertyAddress, input.metadata?.postcode].filter(Boolean).join(", ")
-      : input.propertyDescription;
+      ? [input.metadata?.propertyAddress, input.metadata?.postcode]
+          .filter(Boolean)
+          .join(", ")
+      : normaliseSingleLineText(input.propertyDescription, "Property address not provided");
 
-  // Address / postcode (if provided)
-  const addrLines = wrapText(addressText, bodySize, fontRegular, pageWidth - headerLeftX - margin);
-  let addrY = headerTopY - wordmarkSize - 18;
-  for (const line of addrLines.slice(0, 2)) {
-    drawText({ text: line, size: bodySize, font: fontRegular, color: darkText, x: headerLeftX, y: addrY });
-    addrY -= bodySize + 3;
+  const headerRightLimit = PAGE_WIDTH - MARGIN - headerLeftX;
+  const addressLines = wrapText(addressText, FONT_SIZES.body, fontRegular, headerRightLimit);
+
+  let headerMetaY = headerTopY - FONT_SIZES.wordmark - 18;
+  for (const line of addressLines.slice(0, 2)) {
+    drawText({
+      text: line,
+      size: FONT_SIZES.body,
+      font: fontRegular,
+      color: COLORS.darkText,
+      x: headerLeftX,
+      y: headerMetaY,
+    });
+    headerMetaY -= FONT_SIZES.body + 3;
   }
 
-  // Date generated + estimate ref
   const dateStr = formatDateGB(generatedAt);
+
   drawText({
     text: `Date generated: ${dateStr}`,
-    size: smallSize,
+    size: FONT_SIZES.small,
     font: fontRegular,
-    color: mediumGrey,
+    color: COLORS.mediumGrey,
     x: headerLeftX,
-    y: addrY - 4
+    y: headerMetaY - 4,
   });
+
   drawText({
     text: `Estimate reference: ${estimateReference}`,
-    size: smallSize,
+    size: FONT_SIZES.small,
     font: fontRegular,
-    color: mediumGrey,
+    color: COLORS.mediumGrey,
     x: headerLeftX,
-    y: addrY - 4 - (smallSize + 3)
+    y: headerMetaY - 4 - (FONT_SIZES.small + 3),
   });
 
-  cursorY = (logoInfo ? headerTopY - Math.max(logoInfo.scaledHeight, 76) : headerTopY - 76) - 12;
+  cursorY = (logo ? headerTopY - Math.max(logoHeight, 76) : headerTopY - 76) - 12;
 
-  // Divider
   currentPage.drawLine({
-    start: { x: margin, y: cursorY },
-    end: { x: pageWidth - margin, y: cursorY },
+    start: { x: MARGIN, y: cursorY },
+    end: { x: PAGE_WIDTH - MARGIN, y: cursorY },
     thickness: 1,
-    color: teal
+    color: COLORS.teal,
   });
   cursorY -= 20;
 
-  // -----------------------------
-  // Project Summary
-  // -----------------------------
-
   drawSectionHeading("Project Summary");
 
-  const projectType = input.metadata?.renovationScope ?? "—";
-  const finishLevel = input.metadata?.qualityTier ?? "—";
-  const postcodeRegion = input.metadata?.postcodeDistrict ?? input.metadata?.postcode ?? "—";
+  const projectType = titleCase(input.metadata?.renovationScope ?? "—");
+  const finishLevel = titleCase(input.metadata?.qualityTier ?? "—");
+  const regionText = normaliseSingleLineText(
+    input.metadata?.regionName ??
+      input.metadata?.postcodeDistrict ??
+      input.metadata?.postcode,
+    "—",
+  );
 
-  const summaryLine = `Project type: ${projectType}   |   Finish level: ${finishLevel}   |   Postcode region: ${postcodeRegion}`;
-  const summaryLines = wrapText(summaryLine, bodySize, fontRegular, contentWidth);
-  for (const line of summaryLines) {
-    ensureSpace(bodySize + 2);
-    drawText({ text: line, size: bodySize, font: fontRegular, color: darkText, x: margin, y: cursorY });
-    cursorY -= bodySize + 4;
+  const summaryLine = `Project type: ${projectType}   |   Finish level: ${finishLevel}   |   Region: ${regionText}`;
+  drawBodyLines(
+    wrapText(summaryLine, FONT_SIZES.body, fontRegular, contentWidth),
+    fontRegular,
+    COLORS.darkText,
+  );
+
+  const propertyFacts: string[] = [];
+
+  if (input.metadata?.postcodeDistrict?.trim()) {
+    propertyFacts.push(`Postcode district: ${input.metadata.postcodeDistrict.trim()}`);
   }
 
-  cursorY -= 6;
-  ensureSpace(bodySize + 8);
+  if (typeof input.metadata?.yearBuilt === "number") {
+    propertyFacts.push(`Year built: ${input.metadata.yearBuilt}`);
+  }
+
+  if (typeof input.metadata?.listedBuilding === "boolean") {
+    propertyFacts.push(`Listed building: ${input.metadata.listedBuilding ? "Yes" : "No"}`);
+  }
+
+  if (propertyFacts.length > 0) {
+    drawBodyLines(
+      wrapText(propertyFacts.join("   |   "), FONT_SIZES.body, fontRegular, contentWidth),
+      fontRegular,
+      COLORS.darkText,
+    );
+  }
+
+  cursorY -= 4;
+  ensureSpace(FONT_SIZES.body + 10);
+
   drawText({
     text: `Total: Low ${formatCurrencyGBP(input.totalLow)}   |   Typical ${formatCurrencyGBP(
-      input.totalTypical
+      input.totalTypical,
     )}   |   High ${formatCurrencyGBP(input.totalHigh)}`,
-    size: bodySize,
+    size: FONT_SIZES.body,
     font: fontBold,
-    color: teal,
-    x: margin,
-    y: cursorY
+    color: COLORS.teal,
+    x: MARGIN,
+    y: cursorY,
   });
-  cursorY -= bodySize + 14;
+  cursorY -= FONT_SIZES.body + 8;
 
-  // -----------------------------
-  // Cost Breakdown Table
-  // -----------------------------
+  drawText({
+    text: `Cost per m²: Low ${formatCurrencyGBP(input.costPerM2.low)}   |   Typical ${formatCurrencyGBP(
+      input.costPerM2.typical,
+    )}   |   High ${formatCurrencyGBP(input.costPerM2.high)}`,
+    size: FONT_SIZES.body,
+    font: fontRegular,
+    color: COLORS.darkText,
+    x: MARGIN,
+    y: cursorY,
+  });
+  cursorY -= FONT_SIZES.body + 14;
 
   drawSectionHeading("Cost Breakdown");
 
-  const colCategoryWidth = contentWidth * 0.4;
-  const colValueWidth = (contentWidth * 0.6) / 3;
+  const tableCategoryWidth = contentWidth * 0.4;
+  const tableValueWidth = (contentWidth - tableCategoryWidth) / 3;
+  const tableHeaderHeight = 18;
 
-  const headerHeight = 18;
-  ensureSpace(headerHeight + 8);
+  ensureSpace(tableHeaderHeight + 8);
 
   currentPage.drawRectangle({
-    x: margin,
-    y: cursorY - headerHeight,
+    x: MARGIN,
+    y: cursorY - tableHeaderHeight,
     width: contentWidth,
-    height: headerHeight,
-    color: teal
+    height: tableHeaderHeight,
+    color: COLORS.teal,
   });
 
-  const headerY = cursorY - headerHeight + 4;
+  const tableHeaderY = cursorY - tableHeaderHeight + 4;
 
   const headerCells = [
-    { text: "Category", x: margin + 4 },
-    { text: "Low", x: margin + colCategoryWidth + 4 },
-    { text: "Typical", x: margin + colCategoryWidth + colValueWidth + 4 },
-    { text: "High", x: margin + colCategoryWidth + colValueWidth * 2 + 4 }
+    { text: "Category", x: MARGIN + 4 },
+    { text: "Low", x: MARGIN + tableCategoryWidth + 4 },
+    { text: "Typical", x: MARGIN + tableCategoryWidth + tableValueWidth + 4 },
+    { text: "High", x: MARGIN + tableCategoryWidth + tableValueWidth * 2 + 4 },
   ];
+
   for (const cell of headerCells) {
-    drawText({ text: cell.text, size: tableTextSize, font: fontBold, color: white, x: cell.x, y: headerY });
+    drawText({
+      text: cell.text,
+      size: FONT_SIZES.table,
+      font: fontBold,
+      color: COLORS.white,
+      x: cell.x,
+      y: tableHeaderY,
+    });
   }
 
-  cursorY -= headerHeight + 4;
+  cursorY -= tableHeaderHeight + 4;
 
-  type Row = { category: string; low: number; typical: number; high: number };
-
-  const rows: Row[] = [
-    ...input.categories.map((c) => ({
-      category: c.category.charAt(0).toUpperCase() + c.category.slice(1),
-      low: c.low,
-      typical: c.typical,
-      high: c.high
+  const rows: CurrencyRow[] = [
+    ...input.categories.map((item) => ({
+      label: titleCase(item.category),
+      low: item.low,
+      typical: item.typical,
+      high: item.high,
     })),
-    ...(input.additionalFeatures ?? []).map((f) => ({
-      category: f.label,
-      low: f.low,
-      typical: f.typical,
-      high: f.high
-    }))
+    ...(input.additionalFeatures ?? []).map((item) => ({
+      label: titleCase(item.label),
+      low: item.low,
+      typical: item.typical,
+      high: item.high,
+    })),
   ];
 
   const rowHeight = 16;
+
   rows.forEach((row, index) => {
     ensureSpace(rowHeight + 2);
 
-    const isAlt = index % 2 === 1;
-    if (isAlt) {
+    if (index % 2 === 1) {
       currentPage.drawRectangle({
-        x: margin,
+        x: MARGIN,
         y: cursorY - rowHeight,
         width: contentWidth,
         height: rowHeight,
-        color: lightGrey
+        color: COLORS.lightGrey,
       });
     }
 
     const rowY = cursorY - rowHeight + 3;
+    const categoryText = truncateText(
+      row.label,
+      FONT_SIZES.table,
+      fontRegular,
+      tableCategoryWidth - 8,
+    );
 
-    drawText({ text: row.category, size: tableTextSize, font: fontRegular, color: darkText, x: margin + 4, y: rowY });
+    drawText({
+      text: categoryText,
+      size: FONT_SIZES.table,
+      font: fontRegular,
+      color: COLORS.darkText,
+      x: MARGIN + 4,
+      y: rowY,
+    });
+
     drawText({
       text: formatCurrencyGBP(row.low),
-      size: tableTextSize,
+      size: FONT_SIZES.table,
       font: fontRegular,
-      color: darkText,
-      x: margin + colCategoryWidth + 4,
-      y: rowY
+      color: COLORS.darkText,
+      x: MARGIN + tableCategoryWidth + 4,
+      y: rowY,
     });
+
     drawText({
       text: formatCurrencyGBP(row.typical),
-      size: tableTextSize,
+      size: FONT_SIZES.table,
       font: fontRegular,
-      color: darkText,
-      x: margin + colCategoryWidth + colValueWidth + 4,
-      y: rowY
+      color: COLORS.darkText,
+      x: MARGIN + tableCategoryWidth + tableValueWidth + 4,
+      y: rowY,
     });
+
     drawText({
       text: formatCurrencyGBP(row.high),
-      size: tableTextSize,
+      size: FONT_SIZES.table,
       font: fontRegular,
-      color: darkText,
-      x: margin + colCategoryWidth + colValueWidth * 2 + 4,
-      y: rowY
+      color: COLORS.darkText,
+      x: MARGIN + tableCategoryWidth + tableValueWidth * 2 + 4,
+      y: rowY,
     });
 
     cursorY -= rowHeight + 2;
   });
 
-  // -----------------------------
-  // Additional Costs
-  // -----------------------------
-
   cursorY -= 6;
   drawSectionHeading("Additional Costs");
-
-  // Architect fees (estimate): £X–£Y
-  // Planning: £258
-  // Building control: £500–£1,200
-  // Contingency (10%): £X
 
   const planningFee = 258;
   const buildingControlLow = 500;
   const buildingControlHigh = 1200;
 
-  // Use feesPercent if provided (assume % of total typical), otherwise show a small default range.
-  let architectLow: number | undefined;
-  let architectHigh: number | undefined;
+  let architectLow: number;
+  let architectHigh: number;
+
   if (isFiniteNumber(input.feesPercent)) {
     const pct = input.feesPercent / 100;
-    // Provide a small range around the configured percent.
     architectLow = Math.round(input.totalTypical * Math.max(0, pct - 0.01));
     architectHigh = Math.round(input.totalTypical * (pct + 0.01));
   } else {
     architectLow = Math.round(input.totalTypical * 0.06);
-    architectHigh = Math.round(input.totalTypical * 0.10);
+    architectHigh = Math.round(input.totalTypical * 0.1);
   }
 
-  const contingencyPct = isFiniteNumber(input.contingencyPercent) ? input.contingencyPercent : 10;
-  const contingencyValue = Math.round(input.totalTypical * (contingencyPct / 100));
+  const contingencyPercent = isFiniteNumber(input.contingencyPercent)
+    ? input.contingencyPercent
+    : 10;
+  const contingencyValue = Math.round(input.totalTypical * (contingencyPercent / 100));
 
-  const additionalLines = [
-    `Architect fees (estimate): ${formatCurrencyGBP(architectLow)}–${formatCurrencyGBP(architectHigh)}`,
+  const additionalCostLines = [
+    `Architect fees (estimate): ${formatCurrencyGBP(architectLow)}–${formatCurrencyGBP(
+      architectHigh,
+    )}`,
     `Planning: ${formatCurrencyGBP(planningFee)}`,
-    `Building control: ${formatCurrencyGBP(buildingControlLow)}–${formatCurrencyGBP(buildingControlHigh)}`,
-    `Contingency (${contingencyPct}%): ${formatCurrencyGBP(contingencyValue)}`
+    `Building control: ${formatCurrencyGBP(buildingControlLow)}–${formatCurrencyGBP(
+      buildingControlHigh,
+    )}`,
+    `Contingency (${contingencyPercent}%): ${formatCurrencyGBP(contingencyValue)}`,
   ];
 
-  for (const line of additionalLines) {
-    const lines = wrapText(line, bodySize, fontRegular, contentWidth);
-    for (const l of lines) {
-      ensureSpace(bodySize + 2);
-      drawText({ text: `• ${l}`, size: bodySize, font: fontRegular, color: darkText, x: margin, y: cursorY });
-      cursorY -= bodySize + 4;
-    }
+  for (const line of additionalCostLines) {
+    drawBodyLines(
+      wrapText(line, FONT_SIZES.body, fontRegular, contentWidth),
+      fontRegular,
+      COLORS.darkText,
+      FONT_SIZES.body,
+      true,
+    );
   }
 
   cursorY -= 8;
 
-  // -----------------------------
-  // Assumptions & Disclaimers
-  // -----------------------------
+  if ((input.adjustments?.length ?? 0) > 0) {
+    drawSectionHeading("Adjustments");
+
+    for (const adjustment of input.adjustments ?? []) {
+      const amountText =
+        adjustment.amount >= 0
+          ? `+${formatCurrencyGBP(adjustment.amount)}`
+          : `-${formatCurrencyGBP(Math.abs(adjustment.amount))}`;
+
+      const fullText = `${adjustment.label}: ${amountText} — ${adjustment.reason}`;
+      drawBodyLines(
+        wrapText(fullText, FONT_SIZES.body, fontRegular, contentWidth),
+        fontRegular,
+        COLORS.darkText,
+      );
+    }
+
+    cursorY -= 8;
+  }
 
   drawSectionHeading("Assumptions & Disclaimers");
 
-  const regionName = input.metadata?.regionName ?? input.metadata?.postcodeDistrict ?? "your area";
+  const regionalPricingArea = normaliseSingleLineText(
+    input.metadata?.regionName ?? input.metadata?.postcodeDistrict,
+    "your area",
+  );
 
-  const fixedLines = [
+  const disclaimerLines = [
     disclaimerText,
-    "This estimate was generated by Refurb Estimator (refurb-estimator.vercel.app)",
-    `Prices based on UK regional averages for ${regionName}. Actual costs may vary.`
+    "This estimate was generated by UK Property Refurb Estimator (refurb-estimator.vercel.app).",
+    `Prices are based on UK regional averages for ${regionalPricingArea}. Actual costs may vary.`,
   ];
 
-  for (const line of fixedLines) {
-    const lines = wrapText(line, bodySize, fontRegular, contentWidth);
-    for (const l of lines) {
-      ensureSpace(bodySize + 2);
-      drawText({ text: l, size: bodySize, font: fontRegular, color: mediumGrey, x: margin, y: cursorY });
-      cursorY -= bodySize + 4;
-    }
+  for (const line of disclaimerLines) {
+    drawBodyLines(
+      wrapText(line, FONT_SIZES.body, fontRegular, contentWidth),
+      fontRegular,
+      COLORS.mediumGrey,
+    );
     cursorY -= 2;
   }
 
-  // Footer on last page only
   const pages = pdfDoc.getPages();
   const lastPage = pages[pages.length - 1];
+  const footerY = MARGIN;
 
-  const footerY = margin;
   lastPage.drawText(`Generated on ${dateStr} • ${estimateReference}`, {
-    x: margin,
+    x: MARGIN,
     y: footerY,
-    size: smallSize,
+    size: FONT_SIZES.small,
     font: fontRegular,
-    color: mediumGrey
+    color: COLORS.mediumGrey,
   });
 
-  const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
-  const trailer = `\n% ${companyName}\n% ${disclaimerText}\n`;
-  const trailerBytes = new TextEncoder().encode(trailer);
-  const mergedBytes = new Uint8Array(pdfBytes.length + trailerBytes.length);
-  mergedBytes.set(pdfBytes, 0);
-  mergedBytes.set(trailerBytes, pdfBytes.length);
-  return mergedBytes;
+  return await pdfDoc.save({ useObjectStreams: false });
 }

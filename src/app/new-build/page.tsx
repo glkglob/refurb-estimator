@@ -344,6 +344,7 @@ export default function NewBuildPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     } catch {
       toast({
         title: "PDF generation failed",

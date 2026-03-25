@@ -1,6 +1,21 @@
 import { z } from "zod";
 
-const serverEnvSchema = z.object({
+/**
+ * Core server environment variables.
+ * Keep this minimal: only things required for non-AI server features
+ * (e.g., Supabase service role for share links).
+ */
+const serverCoreEnvSchema = z.object({
+  SUPABASE_SERVICE_ROLE_KEY: z
+    .string()
+    .min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
+});
+
+/**
+ * AI server environment variables.
+ * Only required for endpoints that actually call AI providers.
+ */
+const serverAiEnvSchema = z.object({
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   HUGGINGFACE_PRICING_API_KEY: z
     .string()
@@ -9,9 +24,6 @@ const serverEnvSchema = z.object({
     .string()
     .min(1, "HUGGINGFACE_REFURB_DESIGN_KEY is required"),
   OPENAI_DESIGNER_MODEL: z.string().min(1).default("gpt-4.1"),
-  SUPABASE_SERVICE_ROLE_KEY: z
-    .string()
-    .min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
 });
 
 const clientEnvSchema = z.object({
@@ -24,13 +36,16 @@ const clientEnvSchema = z.object({
   NEXT_PUBLIC_API_BASE_URL: z.string().optional(),
 });
 
-export type ServerEnv = z.infer<typeof serverEnvSchema>;
+export type ServerCoreEnv = z.infer<typeof serverCoreEnvSchema>;
+export type ServerAiEnv = z.infer<typeof serverAiEnvSchema>;
 export type ClientEnv = z.infer<typeof clientEnvSchema>;
+
+type EnvScope = "server core" | "server ai" | "client";
 
 type ParseEnvArgs<T> = {
   schema: z.ZodSchema<T>;
   values: unknown;
-  scope: "server" | "client";
+  scope: EnvScope;
 };
 
 function formatErrors(error: z.ZodError): string {
@@ -51,16 +66,25 @@ function parseEnv<T>({ schema, values, scope }: ParseEnvArgs<T>): T {
   return result.data;
 }
 
-function readServerEnv(): ServerEnv {
+function readServerCoreEnv(): ServerCoreEnv {
   return parseEnv({
-    schema: serverEnvSchema,
-    scope: "server",
+    schema: serverCoreEnvSchema,
+    scope: "server core",
+    values: {
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    },
+  });
+}
+
+function readServerAiEnv(): ServerAiEnv {
+  return parseEnv({
+    schema: serverAiEnvSchema,
+    scope: "server ai",
     values: {
       OPENAI_API_KEY: process.env.OPENAI_API_KEY,
       HUGGINGFACE_PRICING_API_KEY: process.env.HUGGINGFACE_PRICING_API_KEY,
       HUGGINGFACE_REFURB_DESIGN_KEY: process.env.HUGGINGFACE_REFURB_DESIGN_KEY,
       OPENAI_DESIGNER_MODEL: process.env.OPENAI_DESIGNER_MODEL,
-      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     },
   });
 }
@@ -77,15 +101,24 @@ function readClientEnv(): ClientEnv {
   });
 }
 
-let cachedServerEnv: ServerEnv | undefined;
+let cachedServerCoreEnv: ServerCoreEnv | undefined;
+let cachedServerAiEnv: ServerAiEnv | undefined;
 let cachedClientEnv: ClientEnv | undefined;
 
-export function getServerEnv(): ServerEnv {
-  if (!cachedServerEnv) {
-    cachedServerEnv = readServerEnv();
+export function getServerCoreEnv(): ServerCoreEnv {
+  if (!cachedServerCoreEnv) {
+    cachedServerCoreEnv = readServerCoreEnv();
   }
 
-  return cachedServerEnv;
+  return cachedServerCoreEnv;
+}
+
+export function getServerAiEnv(): ServerAiEnv {
+  if (!cachedServerAiEnv) {
+    cachedServerAiEnv = readServerAiEnv();
+  }
+
+  return cachedServerAiEnv;
 }
 
 export function getClientEnv(): ClientEnv {
@@ -100,6 +133,7 @@ export function getClientEnv(): ClientEnv {
  * Reset cached env values. Only intended for use in tests.
  */
 export function _resetEnvCache(): void {
-  cachedServerEnv = undefined;
+  cachedServerCoreEnv = undefined;
+  cachedServerAiEnv = undefined;
   cachedClientEnv = undefined;
 }

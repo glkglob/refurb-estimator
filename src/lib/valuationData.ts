@@ -1,4 +1,4 @@
-export type RefurbType = "cosmetic" | "light" | "full";
+export type RefurbType = "light" | "medium" | "heavy" | "extension" | "loft";
 
 export const upliftFactors: Record<
   RefurbType,
@@ -7,17 +7,25 @@ export const upliftFactors: Record<
     max: number;
   }
 > = {
-  cosmetic: {
+  light: {
     min: 0.05,
     max: 0.1,
   },
-  light: {
+  medium: {
     min: 0.1,
     max: 0.15,
   },
-  full: {
+  heavy: {
     min: 0.15,
     max: 0.25,
+  },
+  extension: {
+    min: 0.2,
+    max: 0.35,
+  },
+  loft: {
+    min: 0.15,
+    max: 0.3,
   },
 };
 

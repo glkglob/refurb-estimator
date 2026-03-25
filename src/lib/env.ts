@@ -9,6 +9,9 @@ const serverEnvSchema = z.object({
     .string()
     .min(1, "HUGGINGFACE_REFURB_DESIGN_KEY is required"),
   OPENAI_DESIGNER_MODEL: z.string().min(1).default("gpt-4.1"),
+  SUPABASE_SERVICE_ROLE_KEY: z
+    .string()
+    .min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
 });
 
 const clientEnvSchema = z.object({
@@ -57,6 +60,7 @@ function readServerEnv(): ServerEnv {
       HUGGINGFACE_PRICING_API_KEY: process.env.HUGGINGFACE_PRICING_API_KEY,
       HUGGINGFACE_REFURB_DESIGN_KEY: process.env.HUGGINGFACE_REFURB_DESIGN_KEY,
       OPENAI_DESIGNER_MODEL: process.env.OPENAI_DESIGNER_MODEL,
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     },
   });
 }

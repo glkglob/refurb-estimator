@@ -1,4 +1,4 @@
-import { calculateUplift } from "./valuationData";
+import { calculateUplift, calculateValuation } from "./valuationData";
 
 describe("calculateUplift", () => {
   test("returns uplift, new value, and ROI for known inputs", () => {
@@ -47,5 +47,43 @@ describe("calculateUplift", () => {
         refurbType: "cosmetic",
       }),
     ).toThrow("currentValue must be a finite number greater than 0");
+  });
+});
+
+describe("calculateValuation", () => {
+  test("calculates uplift and ROI for a profitable refurb", () => {
+    const result = calculateValuation({
+      currentValue: 350_000,
+      refurbCost: 25_000,
+      expectedValue: 425_000,
+    });
+
+    expect(result.grossUplift).toBe(75_000);
+    expect(result.netUplift).toBe(50_000);
+    expect(result.roiPercent).toBe(200.0);
+  });
+
+  test("handles zero refurb cost safely", () => {
+    const result = calculateValuation({
+      currentValue: 300_000,
+      refurbCost: 0,
+      expectedValue: 330_000,
+    });
+
+    expect(result.grossUplift).toBe(30_000);
+    expect(result.netUplift).toBe(30_000);
+    expect(result.roiPercent).toBe(0);
+  });
+
+  test("handles negative uplift (bad deal)", () => {
+    const result = calculateValuation({
+      currentValue: 400_000,
+      refurbCost: 40_000,
+      expectedValue: 380_000,
+    });
+
+    expect(result.grossUplift).toBe(-20_000);
+    expect(result.netUplift).toBe(-60_000);
+    expect(result.roiPercent).toBeCloseTo(-150.0);
   });
 });

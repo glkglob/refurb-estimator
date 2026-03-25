@@ -1,4 +1,12 @@
-import { PDFDocument, PDFFont, PDFImage, rgb, StandardFonts } from "pdf-lib";
+import {
+  PDFDocument,
+  PDFFont,
+  PDFImage,
+  rgb,
+  StandardFonts,
+  // NOTE: Intentionally NOT importing PDFName/PDFString.
+  // We avoid poking into pdf-lib internal trailer/info dictionaries.
+} from "pdf-lib";
 
 export type QuotePdfInput = {
   propertyDescription: string;
@@ -141,15 +149,14 @@ function wrapText(text: string, size: number, font: PDFFont, maxWidth: number): 
       continue;
     }
 
-    if (currentLine) {
-      lines.push(currentLine);
-    }
+    if (currentLine) lines.push(currentLine);
 
     if (font.widthOfTextAtSize(word, size) <= maxWidth) {
       currentLine = word;
       continue;
     }
 
+    // hard wrap a single long "word"
     let chunk = "";
     for (const char of word) {
       const nextChunk = `${chunk}${char}`;
@@ -264,13 +271,8 @@ async function embedLogoIfAvailable(
     const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
     const bytes = new Uint8Array(await response.arrayBuffer());
 
-    if (contentType.includes("png")) {
-      return await pdfDoc.embedPng(bytes);
-    }
-
-    if (contentType.includes("jpeg") || contentType.includes("jpg")) {
-      return await pdfDoc.embedJpg(bytes);
-    }
+    if (contentType.includes("png")) return await pdfDoc.embedPng(bytes);
+    if (contentType.includes("jpeg") || contentType.includes("jpg")) return await pdfDoc.embedJpg(bytes);
 
     return undefined;
   } catch {
@@ -292,35 +294,19 @@ export async function generateQuotePdf(
   const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  const companyName = normaliseSingleLineText(
-    options?.companyName,
-    "UK Property Refurb Estimator",
-  );
+  const companyName = normaliseSingleLineText(options?.companyName, "UK Property Refurb Estimator");
   const generatedAt = options?.generatedAt ?? new Date();
-  const estimateReference =
-    options?.estimateReference ?? makeEstimateReference(input, generatedAt);
+  const estimateReference = options?.estimateReference ?? makeEstimateReference(input, generatedAt);
 
   const defaultDisclaimer =
     "This estimate is for guidance only and does not constitute a formal quotation. Actual costs may vary based on site conditions, specifications, and market rates. We recommend obtaining contractor quotations before proceeding.";
-  const disclaimerText = normaliseSingleLineText(
-    options?.disclaimer,
-    defaultDisclaimer,
-  );
+  const disclaimerText = normaliseSingleLineText(options?.disclaimer, defaultDisclaimer);
 
+  // Metadata (public pdf-lib API only)
   pdfDoc.setTitle(companyName);
   pdfDoc.setAuthor(companyName);
   pdfDoc.setProducer(companyName);
   pdfDoc.setCreator(companyName);
-  import { PDFName, PDFString } from "pdf-lib";
-  // After pdfDoc.setTitle/Author/Producer/Creator/Subject...
-const info = pdfDoc.context.lookup(pdfDoc.context.trailerInfo.Info);
-if (info) {
-  info.set(PDFName.of("Producer"), PDFString.of(companyName));
-  info.set(PDFName.of("Creator"), PDFString.of(companyName));
-  // (Optional) keep these aligned too:
-  info.set(PDFName.of("Title"), PDFString.of(companyName));
-  info.set(PDFName.of("Author"), PDFString.of(companyName));
-}
   pdfDoc.setSubject("Property refurbishment estimate");
   pdfDoc.setKeywords([
     "property refurbishment",
@@ -426,9 +412,7 @@ if (info) {
 
   const addressText =
     input.metadata?.propertyAddress || input.metadata?.postcode
-      ? [input.metadata?.propertyAddress, input.metadata?.postcode]
-          .filter(Boolean)
-          .join(", ")
+      ? [input.metadata?.propertyAddress, input.metadata?.postcode].filter(Boolean).join(", ")
       : normaliseSingleLineText(input.propertyDescription, "Property address not provided");
 
   const headerRightLimit = PAGE_WIDTH - MARGIN - headerLeftX;
@@ -482,29 +466,20 @@ if (info) {
   const projectType = titleCase(input.metadata?.renovationScope ?? "—");
   const finishLevel = titleCase(input.metadata?.qualityTier ?? "—");
   const regionText = normaliseSingleLineText(
-    input.metadata?.regionName ??
-      input.metadata?.postcodeDistrict ??
-      input.metadata?.postcode,
+    input.metadata?.regionName ?? input.metadata?.postcodeDistrict ?? input.metadata?.postcode,
     "—",
   );
 
   const summaryLine = `Project type: ${projectType}   |   Finish level: ${finishLevel}   |   Region: ${regionText}`;
-  drawBodyLines(
-    wrapText(summaryLine, FONT_SIZES.body, fontRegular, contentWidth),
-    fontRegular,
-    COLORS.darkText,
-  );
+  drawBodyLines(wrapText(summaryLine, FONT_SIZES.body, fontRegular, contentWidth), fontRegular, COLORS.darkText);
 
   const propertyFacts: string[] = [];
-
   if (input.metadata?.postcodeDistrict?.trim()) {
     propertyFacts.push(`Postcode district: ${input.metadata.postcodeDistrict.trim()}`);
   }
-
   if (typeof input.metadata?.yearBuilt === "number") {
     propertyFacts.push(`Year built: ${input.metadata.yearBuilt}`);
   }
-
   if (typeof input.metadata?.listedBuilding === "boolean") {
     propertyFacts.push(`Listed building: ${input.metadata.listedBuilding ? "Yes" : "No"}`);
   }
@@ -613,12 +588,7 @@ if (info) {
     }
 
     const rowY = cursorY - rowHeight + 3;
-    const categoryText = truncateText(
-      row.label,
-      FONT_SIZES.table,
-      fontRegular,
-      tableCategoryWidth - 8,
-    );
+    const categoryText = truncateText(row.label, FONT_SIZES.table, fontRegular, tableCategoryWidth - 8);
 
     drawText({
       text: categoryText,
@@ -678,19 +648,13 @@ if (info) {
     architectHigh = Math.round(input.totalTypical * 0.1);
   }
 
-  const contingencyPercent = isFiniteNumber(input.contingencyPercent)
-    ? input.contingencyPercent
-    : 10;
+  const contingencyPercent = isFiniteNumber(input.contingencyPercent) ? input.contingencyPercent : 10;
   const contingencyValue = Math.round(input.totalTypical * (contingencyPercent / 100));
 
   const additionalCostLines = [
-    `Architect fees (estimate): ${formatCurrencyGBP(architectLow)}–${formatCurrencyGBP(
-      architectHigh,
-    )}`,
+    `Architect fees (estimate): ${formatCurrencyGBP(architectLow)}–${formatCurrencyGBP(architectHigh)}`,
     `Planning: ${formatCurrencyGBP(planningFee)}`,
-    `Building control: ${formatCurrencyGBP(buildingControlLow)}–${formatCurrencyGBP(
-      buildingControlHigh,
-    )}`,
+    `Building control: ${formatCurrencyGBP(buildingControlLow)}–${formatCurrencyGBP(buildingControlHigh)}`,
     `Contingency (${contingencyPercent}%): ${formatCurrencyGBP(contingencyValue)}`,
   ];
 
@@ -716,11 +680,7 @@ if (info) {
           : `-${formatCurrencyGBP(Math.abs(adjustment.amount))}`;
 
       const fullText = `${adjustment.label}: ${amountText} — ${adjustment.reason}`;
-      drawBodyLines(
-        wrapText(fullText, FONT_SIZES.body, fontRegular, contentWidth),
-        fontRegular,
-        COLORS.darkText,
-      );
+      drawBodyLines(wrapText(fullText, FONT_SIZES.body, fontRegular, contentWidth), fontRegular, COLORS.darkText);
     }
 
     cursorY -= 8;
@@ -740,11 +700,7 @@ if (info) {
   ];
 
   for (const line of disclaimerLines) {
-    drawBodyLines(
-      wrapText(line, FONT_SIZES.body, fontRegular, contentWidth),
-      fontRegular,
-      COLORS.mediumGrey,
-    );
+    drawBodyLines(wrapText(line, FONT_SIZES.body, fontRegular, contentWidth), fontRegular, COLORS.mediumGrey);
     cursorY -= 2;
   }
 

@@ -85,12 +85,17 @@ export async function GET(request: Request) {
 
     const currentViewCount = data.view_count ?? 0;
 
-    void supabaseAdmin
-      .from("shared_estimates")
-      .update({ view_count: currentViewCount + 1 })
-      .eq("token", token)
-      .then(() => undefined)
-      .catch(() => undefined);
+    // Async IIFE to handle view count increment
+    try {
+      await (async () => {
+        await supabaseAdmin
+          .from("shared_estimates")
+          .update({ view_count: currentViewCount + 1 })
+          .eq("token", token);
+      })();
+    } catch {
+      // ignore
+    }
 
     return NextResponse.json({
       estimateData: data.estimate_data,

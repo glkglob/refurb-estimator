@@ -202,14 +202,63 @@ export default function HomePage() {
       <p className="text-sm text-muted-foreground">
         Enter your property details below and click Calculate to get an instant estimate.
       </p>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Loft conversion</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Band a loft project with regional multipliers and add-ons.
-            </p>
-          </CardHeader>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+  <Card>
+    <CardHeader>
+      <CardTitle>Loft conversion</CardTitle>
+      <p className="text-sm text-muted-foreground">
+        Band a loft project with regional multipliers and add-ons.
+      </p>
+    </CardHeader>
+    <CardFooter>
+      <Button asChild variant="outline">
+        <Link href="/loft">Open loft calculator</Link>
+      </Button>
+    </CardFooter>
+  </Card>
+
+  <Card>
+    <CardHeader>
+      <CardTitle>New Build</CardTitle>
+      <p className="text-sm text-muted-foreground">
+        Estimate build costs for new homes and developments.
+      </p>
+    </CardHeader>
+    <CardFooter>
+      <Button asChild variant="outline">
+        <Link href="/new-build">Open calculator →</Link>
+      </Button>
+    </CardFooter>
+  </Card>
+
+  <Card>
+    <CardHeader>
+      <CardTitle>Extensions</CardTitle>
+      <p className="text-sm text-muted-foreground">
+        Single/double storey rear, side return, and wrap-around extensions.
+      </p>
+    </CardHeader>
+    <CardFooter>
+      <Button asChild variant="outline">
+        <Link href="/extension">Open calculator →</Link>
+      </Button>
+    </CardFooter>
+  </Card>
+
+  <Card>
+    <CardHeader>
+      <CardTitle>Detailed rooms</CardTitle>
+      <p className="text-sm text-muted-foreground">
+        Build a room-by-room estimate with a deeper breakdown.
+      </p>
+    </CardHeader>
+    <CardFooter>
+      <Button asChild variant="outline">
+        <Link href="/rooms">Open calculator →</Link>
+      </Button>
+    </CardFooter>
+  </Card>
+</div>
           <CardFooter>
             <Button asChild variant="outline">
               <Link href="/loft">Open loft calculator</Link>

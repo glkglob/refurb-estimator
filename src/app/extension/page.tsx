@@ -9,7 +9,6 @@ import { ValueUpliftCard } from "@/components/ValueUpliftCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -70,7 +69,6 @@ export default function ExtensionPage() {
   const [finishLevel, setFinishLevel] =
     useState<ExtensionFinishLevel>("standard");
 
-  // Issue asked for slider (10–80). Repo tends to use numeric inputs; this enforces the same range.
   const [floorAreaM2, setFloorAreaM2] = useState("25");
   const [postcodeDistrict, setPostcodeDistrict] = useState("");
 
@@ -282,31 +280,38 @@ export default function ExtensionPage() {
 
             <div className="space-y-3">
               <Label>Options</Label>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <label className="flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
-                  <Checkbox
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-muted-foreground/30 text-primary focus:ring-primary"
                     checked={includeKitchen}
-                    onCheckedChange={(value) => setIncludeKitchen(Boolean(value))}
+                    onChange={(event) => setIncludeKitchen(event.target.checked)}
                   />
-                  Include new kitchen
+                  <span>Include new kitchen</span>
                 </label>
 
-                <label className="flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
-                  <Checkbox
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-muted-foreground/30 text-primary focus:ring-primary"
                     checked={includeBifolds}
-                    onCheckedChange={(value) => setIncludeBifolds(Boolean(value))}
+                    onChange={(event) => setIncludeBifolds(event.target.checked)}
                   />
-                  Bifold / sliding doors
+                  <span>Bifold / sliding doors</span>
                 </label>
 
-                <label className="flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
-                  <Checkbox
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-muted-foreground/30 text-primary focus:ring-primary"
                     checked={includeUnderfloorHeating}
-                    onCheckedChange={(value) =>
-                      setIncludeUnderfloorHeating(Boolean(value))
+                    onChange={(event) =>
+                      setIncludeUnderfloorHeating(event.target.checked)
                     }
                   />
-                  Underfloor heating
+                  <span>Underfloor heating</span>
                 </label>
               </div>
             </div>

@@ -14,6 +14,9 @@ import { saveScenario } from "@/lib/dataService";
 import { exportToCsv } from "@/lib/exportCsv";
 import type { QuotePdfInput } from "@/lib/generateQuotePdf";
 import { shareOrCopy } from "@/lib/share";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import type { EstimateInput, EstimateResult, Scenario } from "@/lib/types";
 import {
   calculateEnhancedEstimate,
@@ -201,6 +204,49 @@ export default function HomePage() {
         Enter your property details below and click Calculate to get an instant estimate.
       </p>
       <AuthBanner />
+      <div className="grid gap-4 md:grid-cols-3">
+  <Card>
+    <CardHeader>
+      <CardTitle className="text-base">New Build</CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Estimate build costs for new homes and developments.
+      </p>
+      <Button asChild variant="outline">
+        <Link href="/new-build">Open calculator →</Link>
+      </Button>
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader>
+      <CardTitle className="text-base">Extension</CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Single/double storey rear, side return, and wrap-around extensions.
+      </p>
+      <Button asChild variant="outline">
+        <Link href="/extension">Open calculator →</Link>
+      </Button>
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader>
+      <CardTitle className="text-base">Detailed Rooms</CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Build a room-by-room estimate with a deeper breakdown.
+      </p>
+      <Button asChild variant="outline">
+        <Link href="/rooms">Open calculator →</Link>
+      </Button>
+    </CardContent>
+  </Card>
+</div>
       <div id="estimate-form">
         <EstimateForm
           key={formKey}

@@ -77,7 +77,7 @@ const REGION_VALUES: Region[] = [
   "YorkshireAndTheHumber",
   "Scotland",
   "Wales",
-  "NorthIreland"
+  "NorthernIreland"
 ];
 const CONDITION_VALUES: Condition[] = ["poor", "fair", "good"];
 const FINISH_LEVEL_VALUES: FinishLevel[] = ["budget", "standard", "premium"];

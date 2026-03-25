@@ -344,10 +344,10 @@ export default function ExtensionPage() {
                     {card.recommended ? <Badge>Recommended</Badge> : null}
                   </div>
                   <div className="text-2xl font-semibold">
-                    <CurrencyDisplay value={card.total} />
+                    <CurrencyDisplay amount={card.total} />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    ~ <CurrencyDisplay value={card.perM2} /> / m²
+                    ~ <CurrencyDisplay amount={card.perM2} /> / m²
                   </p>
                 </CardHeader>
               </Card>
@@ -392,7 +392,7 @@ export default function ExtensionPage() {
                       <p className="text-xs text-muted-foreground">{adj.reason}</p>
                     </div>
                     <p className="text-sm font-semibold">
-                      <CurrencyDisplay value={adj.amount} />
+                      <CurrencyDisplay amount={adj.amount} />
                     </p>
                   </div>
                 ))}

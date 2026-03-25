@@ -1,3 +1,4 @@
+import AdditionalCostsPanel from "@/components/AdditionalCostsPanel";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
 import dynamic from "next/dynamic";
 import TermTooltip from "@/components/TermTooltip";
@@ -209,6 +210,7 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
           </Table>
         </CardContent>
       </Card>
-    </section>
+          <AdditionalCostsPanel buildCost={result.totalTypical} />
+</section>
   );
 }

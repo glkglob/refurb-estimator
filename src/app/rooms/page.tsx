@@ -36,13 +36,19 @@ const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
   loading: () => <div className="h-72 animate-pulse rounded-lg bg-muted" />
 });
 
-const regions: Region[] = [
+const REGION_VALUES: Region[] = [
   "London",
   "SouthEast",
-  "Midlands",
-  "North",
+  "EastOfEngland",
+  "EastMidlands",
+  "WestMidlands",
+  "SouthWest",
+  "NorthWest",
+  "NorthEast",
+  "YorkshireAndTheHumber",
   "Scotland",
-  "Wales"
+  "Wales",
+  "NorthernIreland"
 ];
 
 const conditions: Condition[] = ["poor", "fair", "good"];

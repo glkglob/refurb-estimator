@@ -17,8 +17,14 @@ import {
 type ValueUpliftCardProps = {
   refurbCost: number;
   postcode?: string;
-  currentValue?: number;
-  defaultRefurbType?: RefurbType;
+
+  // Required + controlled by parent
+  currentValue: number;
+  refurbType: RefurbType;
+
+  // Required change handlers (to keep inputs editable)
+  onCurrentValueChange: (nextValue: number) => void;
+  onRefurbTypeChange: (nextValue: RefurbType) => void;
 };
 
 const REFURB_TYPE_OPTIONS: Array<{ value: RefurbType; label: string }> = [
@@ -33,13 +39,11 @@ export function ValueUpliftCard({
   refurbCost,
   postcode,
   currentValue,
-  defaultRefurbType = "medium",
+  refurbType,
+  onCurrentValueChange,
+  onRefurbTypeChange,
 }: ValueUpliftCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [currentValueInput, setCurrentValueInput] = useState(
-    currentValue ? String(currentValue) : "",
-  );
-  const [refurbType, setRefurbType] = useState<RefurbType>(defaultRefurbType);
 
   function formatCurrency(value: number): string {
     return new Intl.NumberFormat("en-GB", {
@@ -53,30 +57,20 @@ export function ValueUpliftCard({
     return `${(value * 100).toFixed(0)}%`;
   }
 
-  const numericCurrentValue = Number(currentValueInput);
-
   const result = useMemo(() => {
-    if (!currentValueInput.trim()) {
-      return null;
-    }
-
     try {
       return calculateUplift({
-        currentValue: numericCurrentValue,
+        currentValue,
         refurbCost,
         refurbType,
       });
     } catch {
       return null;
     }
-  }, [currentValueInput, numericCurrentValue, refurbCost, refurbType]);
+  }, [currentValue, refurbCost, refurbType]);
 
   const validationMessage = useMemo(() => {
-    if (!currentValueInput.trim()) {
-      return "Enter the current property value to estimate the value impact.";
-    }
-
-    if (!Number.isFinite(numericCurrentValue) || numericCurrentValue <= 0) {
+    if (!Number.isFinite(currentValue) || currentValue <= 0) {
       return "Current value must be greater than 0.";
     }
 
@@ -85,7 +79,7 @@ export function ValueUpliftCard({
     }
 
     return null;
-  }, [currentValueInput, numericCurrentValue, refurbCost]);
+  }, [currentValue, refurbCost]);
 
   return (
     <Card>
@@ -126,8 +120,11 @@ export function ValueUpliftCard({
                 min={0}
                 step={1000}
                 placeholder="e.g. 350000"
-                value={currentValueInput}
-                onChange={(event) => setCurrentValueInput(event.target.value)}
+                value={Number.isFinite(currentValue) ? String(currentValue) : ""}
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  onCurrentValueChange(next);
+                }}
               />
             </div>
 
@@ -140,7 +137,7 @@ export function ValueUpliftCard({
               </label>
               <Select
                 value={refurbType}
-                onValueChange={(value) => setRefurbType(value as RefurbType)}
+                onValueChange={(value) => onRefurbTypeChange(value as RefurbType)}
               >
                 <SelectTrigger id="refurb-type">
                   <SelectValue placeholder="Select refurb type" />
@@ -166,7 +163,9 @@ export function ValueUpliftCard({
               </span>
             </div>
 
-            {result ? (
+            {validationMessage ? (
+              <p className="text-sm text-muted-foreground">{validationMessage}</p>
+            ) : result ? (
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="rounded-md border bg-background p-3">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -193,13 +192,14 @@ export function ValueUpliftCard({
                     Estimated ROI
                   </p>
                   <p className="mt-1 text-sm font-semibold text-foreground">
-                    {formatPercent(result.roiMin)} –{" "}
-                    {formatPercent(result.roiMax)}
+                    {formatPercent(result.roiMin)} – {formatPercent(result.roiMax)}
                   </p>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">{validationMessage}</p>
+              <p className="text-sm text-muted-foreground">
+                Unable to calculate uplift for the provided inputs.
+              </p>
             )}
           </div>
 

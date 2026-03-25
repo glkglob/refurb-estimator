@@ -72,7 +72,7 @@ const REGION_VALUES: Region[] = [
   "EastMidlands",
   "WestMidlands",
   "SouthWest",
-  "Northwest",
+  "NorthWest",
   "NorthEast",
   "YorkshireAndTheHumber",
   "Scotland",

@@ -64,7 +64,7 @@ const finishLevels: RoomInput["finishLevel"][] = ["budget", "standard", "premium
 const intensityOptions: RoomInput["intensity"][] = ["light", "full"];
 
 export default function RoomsPage() {
-  const [region, setRegion] = useState<Region>("Midlands");
+  const [region, setRegion] = useState<Region>("EastMidlands");
   const [condition, setCondition] = useState<Condition>("fair");
   const [rooms, setRooms] = useState<RoomInput[]>([
     {

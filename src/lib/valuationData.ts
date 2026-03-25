@@ -24,17 +24,15 @@ export type UKRegion =
  * These are then adjusted by regionMultipliers when a region/postcode is provided.
  */
 export const upliftFactors: Record<RefurbType, { min: number; max: number }> = {
-  light: { min: 0.05, max: 0.1 }, // cosmetic / decoration
-  medium: { min: 0.1, max: 0.15 }, // kitchen + bathroom
-  heavy: { min: 0.15, max: 0.25 }, // full structural refurb
-  extension: { min: 0.2, max: 0.35 }, // rear/side extension
-  loft: { min: 0.15, max: 0.3 }, // loft conversion
+  light: { min: 0.05, max: 0.1 },
+  medium: { min: 0.1, max: 0.15 },
+  heavy: { min: 0.15, max: 0.25 },
+  extension: { min: 0.2, max: 0.35 },
+  loft: { min: 0.15, max: 0.3 },
 };
 
 /**
  * Regional multipliers applied on top of upliftFactors.
- * Example: London tends to have higher absolute uplift potential due to higher baseline values.
- * Keep these conservative. v1 is indicative only.
  */
 export const regionMultipliers: Record<UKRegion, { min: number; max: number }> = {
   london: { min: 1.1, max: 1.25 },
@@ -60,17 +58,7 @@ export interface CalculateUpliftInput {
   currentValue: number;
   refurbCost: number;
   refurbType: RefurbType;
-
-  /**
-   * Optional: postcode used to derive UKRegion in v1.
-   * If not provided or unrecognized, defaults to UKRegion "unknown" (multiplier 1.0).
-   */
   postcode?: string;
-
-  /**
-   * Optional override: if you already know the region (e.g., captured elsewhere),
-   * you can supply it directly and skip postcode parsing.
-   */
   region?: UKRegion;
 }
 
@@ -81,15 +69,7 @@ export interface CalculateUpliftResult {
   newValueMax: number;
   roiMin: number;
   roiMax: number;
-
-  /**
-   * Helpful for UI/debugging so you can show the region used.
-   */
   regionUsed: UKRegion;
-
-  /**
-   * Effective factors after region adjustment.
-   */
   effectiveFactorMin: number;
   effectiveFactorMax: number;
 }
@@ -125,9 +105,9 @@ function clamp(value: number, min: number, max: number): number {
 /**
  * Very lightweight postcode parsing:
  * - Normalizes whitespace and casing.
- * - Uses outward code "area" letters to pick a region.
+ * - Uses outward-code area letters to pick a region.
  *
- * This is NOT perfect and is meant only to support a coarse v1 region adjustment.
+ * This is intentionally coarse and only for v1 heuristics.
  */
 export function getRegionFromPostcode(postcode?: string): UKRegion {
   if (!postcode) return "unknown";
@@ -135,7 +115,152 @@ export function getRegionFromPostcode(postcode?: string): UKRegion {
   const normalized = postcode.trim().toUpperCase().replace(/\s+/g, "");
   if (normalized.length < 2) return "unknown";
 
-  // Extract postcode "area" (leading 1-2 letters)
+  // Extract postcode area (leading 1–2 letters)
   // Examples: "SW1A1AA" -> "SW", "M11AE" -> "M", "EH12NG" -> "EH"
-  const match = normalized.match(/^([A-Z]{1,2}\d[A-Z\d]?)/);
-  if (!*
+  const match = normalized.match(/^([A-Z]{1,2})/);
+  if (!match) {
+    return "unknown";
+  }
+
+  const area = match[1];
+
+  if (
+    [
+      "E",
+      "EC",
+      "N",
+      "NW",
+      "SE",
+      "SW",
+      "W",
+      "WC",
+      "BR",
+      "CR",
+      "DA",
+      "EN",
+      "HA",
+      "IG",
+      "KT",
+      "RM",
+      "SM",
+      "TW",
+      "UB",
+      "WD",
+    ].includes(area)
+  ) {
+    return "london";
+  }
+
+  if (["GU", "HP", "ME", "MK", "OX", "RG", "SL", "TN"].includes(area)) {
+    return "south_east";
+  }
+
+  if (["AL", "CB", "CM", "CO", "IP", "LU", "NR", "PE", "SG", "SS"].includes(area)) {
+    return "east_of_england";
+  }
+
+  if (["BA", "BH", "BS", "DT", "EX", "GL", "PL", "SN", "SP", "TA", "TQ", "TR"].includes(area)) {
+    return "south_west";
+  }
+
+  if (["B", "CV", "DY", "HR", "ST", "TF", "WR", "WS", "WV"].includes(area)) {
+    return "west_midlands";
+  }
+
+  if (["DE", "LE", "LN", "NG", "NN"].includes(area)) {
+    return "east_midlands";
+  }
+
+  if (["BB", "BL", "CA", "CH", "CW", "FY", "L", "LA", "M", "OL", "PR", "SK", "WA", "WN"].includes(area)) {
+    return "north_west";
+  }
+
+  if (["DH", "DL", "NE", "SR", "TS"].includes(area)) {
+    return "north_east";
+  }
+
+  if (["BD", "DN", "HD", "HG", "HU", "HX", "LS", "S", "WF", "YO"].includes(area)) {
+    return "yorkshire_and_humber";
+  }
+
+  if (["AB", "DD", "DG", "EH", "FK", "G", "HS", "IV", "KA", "KW", "KY", "ML", "PA", "PH", "TD", "ZE"].includes(area)) {
+    return "scotland";
+  }
+
+  if (["CF", "LD", "LL", "NP", "SA"].includes(area)) {
+    return "wales";
+  }
+
+  if (["BT"].includes(area)) {
+    return "northern_ireland";
+  }
+
+  return "unknown";
+}
+
+function resolveRegion(region?: UKRegion, postcode?: string): UKRegion {
+  return region ?? getRegionFromPostcode(postcode);
+}
+
+export function calculateUplift({
+  currentValue,
+  refurbCost,
+  refurbType,
+  postcode,
+  region,
+}: CalculateUpliftInput): CalculateUpliftResult {
+  assertFinitePositive(currentValue, "currentValue");
+  assertFiniteNonNegative(refurbCost, "refurbCost");
+
+  const baseFactors = upliftFactors[refurbType];
+  if (!baseFactors) {
+    throw new Error(`Unsupported refurbType: ${refurbType}`);
+  }
+
+  const regionUsed = resolveRegion(region, postcode);
+  const multipliers = regionMultipliers[regionUsed] ?? regionMultipliers.unknown;
+
+  const effectiveFactorMin = clamp(baseFactors.min * multipliers.min, 0, 1);
+  const effectiveFactorMax = clamp(baseFactors.max * multipliers.max, 0, 1);
+
+  const upliftMin = currentValue * effectiveFactorMin;
+  const upliftMax = currentValue * effectiveFactorMax;
+
+  const newValueMin = currentValue + upliftMin;
+  const newValueMax = currentValue + upliftMax;
+
+  const roiMin = refurbCost === 0 ? 0 : upliftMin / refurbCost;
+  const roiMax = refurbCost === 0 ? 0 : upliftMax / refurbCost;
+
+  return {
+    upliftMin,
+    upliftMax,
+    newValueMin,
+    newValueMax,
+    roiMin,
+    roiMax,
+    regionUsed,
+    effectiveFactorMin,
+    effectiveFactorMax,
+  };
+}
+
+export function calculateValuation({
+  currentValue,
+  refurbCost,
+  expectedValue,
+}: ValuationInput): ValuationResult {
+  assertFinitePositive(currentValue, "currentValue");
+  assertFiniteNonNegative(refurbCost, "refurbCost");
+  assertFinitePositive(expectedValue, "expectedValue");
+
+  const grossUplift = expectedValue - currentValue;
+  const netUplift = grossUplift - refurbCost;
+  const roiPercent = refurbCost === 0 ? 0 : (netUplift / refurbCost) * 100;
+
+  return {
+    grossUplift,
+    netUplift,
+    roiPercent: Number(roiPercent.toFixed(1)),
+  };
+}

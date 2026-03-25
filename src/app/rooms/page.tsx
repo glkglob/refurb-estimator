@@ -6,6 +6,7 @@ import { AlertTriangle, Plus } from "lucide-react";
 
 import AuthBanner from "@/components/AuthBanner";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
+import ShareEstimateModal from "@/components/ShareEstimateModal";
 import TermTooltip from "@/components/TermTooltip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { defaultCostLibrary } from "@/lib/costLibrary";
 import { saveScenario } from "@/lib/dataService";
 import { estimateRooms } from "@/lib/estimator";
+import type { SharedEstimateSnapshot } from "@/lib/share";
 import type {
   Condition,
   EstimateInput,
@@ -53,6 +55,7 @@ const REGION_VALUES: Region[] = [
 ];
 
 const CONDITIONS: Condition[] = ["poor", "fair", "good"];
+
 const ROOM_TYPES: RoomType[] = [
   "kitchen",
   "bathroom",
@@ -61,11 +64,13 @@ const ROOM_TYPES: RoomType[] = [
   "hallway",
   "utility",
 ];
+
 const FINISH_LEVELS: RoomInput["finishLevel"][] = [
   "budget",
   "standard",
   "premium",
 ];
+
 const INTENSITY_OPTIONS: RoomInput["intensity"][] = ["light", "full"];
 
 const INITIAL_ROOMS: RoomInput[] = [
@@ -97,6 +102,7 @@ export default function RoomsPage() {
   const [rooms, setRooms] = useState<RoomInput[]>(INITIAL_ROOMS);
   const [nextRoomId, setNextRoomId] = useState(3);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const shouldScrollToResultsRef = useRef(false);
 
@@ -131,8 +137,10 @@ export default function RoomsPage() {
       if (prev.length <= 1) {
         return prev;
       }
+
       return prev.filter((room) => room.id !== id);
     });
+
     markShouldScroll();
   }
 
@@ -176,6 +184,18 @@ export default function RoomsPage() {
     };
   }, [rooms, region, condition]);
 
+  const shareSnapshot = useMemo<SharedEstimateSnapshot | null>(() => {
+    if (!calculation.result) {
+      return null;
+    }
+
+    return {
+      kind: "rooms",
+      input: estimateInput,
+      result: calculation.result,
+    };
+  }, [estimateInput, calculation.result]);
+
   async function handleSaveScenario(
     name: string,
     purchasePrice?: number,
@@ -201,12 +221,14 @@ export default function RoomsPage() {
     try {
       await saveScenario(scenario);
       setIsSaveModalOpen(false);
+
       toast({
         title: "Scenario saved",
         description: "You can compare it on the Scenario Comparison page.",
       });
     } catch (error) {
       setIsSaveModalOpen(false);
+
       toast({
         title: "Scenario saved locally",
         description:
@@ -221,6 +243,7 @@ export default function RoomsPage() {
   return (
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Detailed Rooms</h1>
+
       <AuthBanner />
 
       <Card>
@@ -237,6 +260,7 @@ export default function RoomsPage() {
               <SelectTrigger id="rooms-region" className="w-full">
                 <SelectValue />
               </SelectTrigger>
+
               <SelectContent>
                 {REGION_VALUES.map((regionValue) => (
                   <SelectItem key={regionValue} value={regionValue}>
@@ -259,6 +283,7 @@ export default function RoomsPage() {
               <SelectTrigger id="rooms-condition" className="w-full">
                 <SelectValue />
               </SelectTrigger>
+
               <SelectContent>
                 {CONDITIONS.map((conditionValue) => (
                   <SelectItem key={conditionValue} value={conditionValue}>
@@ -294,6 +319,7 @@ export default function RoomsPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle className="text-lg">Room {index + 1}</CardTitle>
+
                   <Button
                     type="button"
                     variant="destructive"
@@ -319,6 +345,7 @@ export default function RoomsPage() {
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
+
                       <SelectContent>
                         {ROOM_TYPES.map((roomType) => (
                           <SelectItem key={roomType} value={roomType}>
@@ -343,6 +370,7 @@ export default function RoomsPage() {
                       aria-invalid={hasAreaError}
                       className={cn("w-full", hasAreaError && "border-destructive")}
                     />
+
                     {hasAreaError ? (
                       <div className="bp-warning mt-1 flex items-start gap-1.5 rounded-md border px-2 py-1 text-sm">
                         <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
@@ -386,6 +414,7 @@ export default function RoomsPage() {
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
+
                       <SelectContent>
                         {FINISH_LEVELS.map((finishLevel) => (
                           <SelectItem key={finishLevel} value={finishLevel}>
@@ -416,9 +445,24 @@ export default function RoomsPage() {
 
       {calculation.result ? (
         <div id="results" className="space-y-4">
-          <Button type="button" variant="default" onClick={() => setIsSaveModalOpen(true)}>
-            Save as Scenario
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => setIsSaveModalOpen(true)}
+            >
+              Save as Scenario
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsShareModalOpen(true)}
+            >
+              Share estimate
+            </Button>
+          </div>
+
           <EstimateResults result={calculation.result} />
         </div>
       ) : null}
@@ -428,6 +472,14 @@ export default function RoomsPage() {
         onClose={() => setIsSaveModalOpen(false)}
         onSave={handleSaveScenario}
       />
+
+      {shareSnapshot ? (
+        <ShareEstimateModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          snapshot={shareSnapshot}
+        />
+      ) : null}
     </section>
   );
 }

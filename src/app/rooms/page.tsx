@@ -30,6 +30,8 @@ import type {
   Scenario
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import ShareEstimateModal from "@/components/ShareEstimateModal";
+import type { SharedEstimateSnapshot } from "@/lib/share";
 
 const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
   ssr: false,

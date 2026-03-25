@@ -1,13 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AlertTriangle } from "lucide-react";
 
 import CurrencyDisplay from "@/components/CurrencyDisplay";
 import { ValueUpliftCard } from "@/components/ValueUpliftCard";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -68,7 +70,7 @@ export default function ExtensionPage() {
   const [finishLevel, setFinishLevel] =
     useState<ExtensionFinishLevel>("standard");
 
-  // Slider not currently used elsewhere; use numeric input to keep consistent with repo.
+  // Issue asked for slider (10–80). Repo tends to use numeric inputs; this enforces the same range.
   const [floorAreaM2, setFloorAreaM2] = useState("25");
   const [postcodeDistrict, setPostcodeDistrict] = useState("");
 
@@ -231,7 +233,7 @@ export default function ExtensionPage() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select finish level" />
+                    <SelectValue placeholder="Select finish" />
                   </SelectTrigger>
                   <SelectContent>
                     {FINISH_LEVEL_OPTIONS.map((opt) => (
@@ -241,84 +243,73 @@ export default function ExtensionPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">{finishHelper}</p>
+                {finishHelper ? (
+                  <p className="text-xs text-muted-foreground">{finishHelper}</p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="extension-area">Floor area (m²)</Label>
+                <Label htmlFor="floor-area">Floor area (m²)</Label>
                 <Input
-                  id="extension-area"
+                  id="floor-area"
                   type="number"
+                  inputMode="numeric"
                   min={10}
                   max={80}
                   step={1}
-                  placeholder="e.g. 25"
                   value={floorAreaM2}
                   onChange={(event) => setFloorAreaM2(event.target.value)}
+                  placeholder="e.g. 25"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Range: 10–80m²
+                  Enter a value between 10 and 80m².
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="extension-postcode">Postcode district</Label>
+                <Label htmlFor="postcode">Postcode district</Label>
                 <Input
-                  id="extension-postcode"
-                  type="text"
-                  maxLength={8}
-                  placeholder="e.g. SW1A"
+                  id="postcode"
                   value={postcodeDistrict}
-                  onChange={(event) =>
-                    setPostcodeDistrict(event.target.value.toUpperCase())
-                  }
+                  onChange={(event) => setPostcodeDistrict(event.target.value)}
+                  placeholder="e.g. SW1A"
                 />
                 <p className="text-xs text-muted-foreground">
-                  For regional pricing
+                  Used to apply regional pricing multipliers.
                 </p>
               </div>
             </div>
 
-            <Card className="border border-border/60">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Options
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-muted-foreground/30 text-primary focus:ring-primary"
+            <div className="space-y-3">
+              <Label>Options</Label>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                  <Checkbox
                     checked={includeKitchen}
-                    onChange={(event) => setIncludeKitchen(event.target.checked)}
+                    onCheckedChange={(value) => setIncludeKitchen(Boolean(value))}
                   />
-                  <span>Include new kitchen</span>
+                  Include new kitchen
                 </label>
 
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-muted-foreground/30 text-primary focus:ring-primary"
+                <label className="flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                  <Checkbox
                     checked={includeBifolds}
-                    onChange={(event) => setIncludeBifolds(event.target.checked)}
+                    onCheckedChange={(value) => setIncludeBifolds(Boolean(value))}
                   />
-                  <span>Bifold / sliding doors</span>
+                  Bifold / sliding doors
                 </label>
 
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-muted-foreground/30 text-primary focus:ring-primary"
+                <label className="flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                  <Checkbox
                     checked={includeUnderfloorHeating}
-                    onChange={(event) =>
-                      setIncludeUnderfloorHeating(event.target.checked)
+                    onCheckedChange={(value) =>
+                      setIncludeUnderfloorHeating(Boolean(value))
                     }
                   />
-                  <span>Underfloor heating</span>
+                  Underfloor heating
                 </label>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {error ? (
               <div className="bp-warning flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
@@ -327,12 +318,10 @@ export default function ExtensionPage() {
               </div>
             ) : null}
 
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" variant="default">
-                Calculate estimate
-              </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button type="submit">Calculate</Button>
               <Button type="button" variant="outline" onClick={handleReset}>
-                New estimate
+                Reset
               </Button>
             </div>
           </form>
@@ -341,101 +330,70 @@ export default function ExtensionPage() {
 
       {result ? (
         <div id="results" className="space-y-6">
-          <div className="flex flex-col gap-4 md:flex-row">
+          <div className="flex flex-col gap-3 md:flex-row">
             {summaryCards.map((card) => (
               <Card key={card.label} className={card.className}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
-                    {card.label}
-                    {"recommended" in card && (card as any).recommended ? (
-                      <Badge variant="secondary" className="ml-2 text-[10px]">
-                        Recommended
-                      </Badge>
-                    ) : null}
-                  </CardTitle>
+                <CardHeader className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <CardTitle className="text-base">{card.label}</CardTitle>
+                    {card.recommended ? <Badge>Recommended</Badge> : null}
+                  </div>
+                  <div className="text-2xl font-semibold">
+                    <CurrencyDisplay value={card.total} />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    ~ <CurrencyDisplay value={card.perM2} /> / m²
+                  </p>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="whitespace-nowrap text-2xl font-semibold font-mono">
-                    <CurrencyDisplay amount={card.total} />
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">
-                      Cost per m²:
-                    </span>{" "}
-                    <CurrencyDisplay amount={card.perM2} />{" "}
-                    <span className="font-mono">/m²</span>
-                  </p>
-                </CardContent>
               </Card>
             ))}
           </div>
 
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle>Timeline & planning</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div>
-                <span className="text-muted-foreground">Timeline:</span>{" "}
-                <span className="font-medium">{result.timeline}</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-muted-foreground">Planning note:</span>
-                <p className="text-sm">{result.planningNote}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Timeline</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{result.timeline}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Planning note</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  {result.planningNote}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
           {result.adjustments.length > 0 ? (
-            <Card className="shadow-sm">
+            <Card>
               <CardHeader>
-                <CardTitle>Options included</CardTitle>
+                <CardTitle className="text-base">Included options</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm">
+              <CardContent className="space-y-3">
                 {result.adjustments.map((adj) => (
-                  <div key={adj.label} className="space-y-1">
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="font-medium text-foreground">
-                        {adj.label}
-                      </span>
-                      <span className="text-sm text-foreground font-mono">
-                        <CurrencyDisplay amount={adj.amount} />
-                      </span>
+                  <div
+                    key={adj.label}
+                    className="flex items-start justify-between gap-4 rounded-md border bg-muted/20 px-3 py-2"
+                  >
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">{adj.label}</p>
+                      <p className="text-xs text-muted-foreground">{adj.reason}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">{adj.reason}</p>
+                    <p className="text-sm font-semibold">
+                      <CurrencyDisplay value={adj.amount} />
+                    </p>
                   </div>
                 ))}
               </CardContent>
             </Card>
           ) : null}
-
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle>Project details</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <span className="text-muted-foreground">Extension type:</span>{" "}
-                <span className="font-mono">{result.metadata.extensionType}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Finish level:</span>{" "}
-                <span className="font-mono">{result.metadata.finishLevel}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Area:</span>{" "}
-                <span className="font-mono">{result.metadata.floorAreaM2}m²</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Postcode:</span>{" "}
-                <span className="font-mono">{result.metadata.postcodeDistrict}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Region:</span>{" "}
-                {result.region}
-              </div>
-            </CardContent>
-          </Card>
 
           <ValueUpliftCard
             refurbCost={result.totalTypical}
@@ -443,11 +401,19 @@ export default function ExtensionPage() {
             defaultRefurbType="extension"
           />
 
-          <div className="flex">
-            <Button asChild variant="default">
-              <a href="/tradespeople">Get quotes from contractors →</a>
-            </Button>
-          </div>
+          <Card>
+            <CardContent className="flex flex-col items-start justify-between gap-4 pt-6 md:flex-row md:items-center">
+              <div>
+                <p className="text-sm font-medium">Next step</p>
+                <p className="text-sm text-muted-foreground">
+                  Get quotes from vetted contractors for your extension.
+                </p>
+              </div>
+              <Button asChild>
+                <Link href="/tradespeople">Get quotes from contractors →</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       ) : null}
     </section>

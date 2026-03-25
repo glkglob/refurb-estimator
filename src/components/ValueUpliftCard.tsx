@@ -6,6 +6,7 @@ import { calculateUplift, type RefurbType } from "@/lib/valuationData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -17,14 +18,8 @@ import {
 type ValueUpliftCardProps = {
   refurbCost: number;
   postcode?: string;
-
-  // Required + controlled by parent
-  currentValue: number;
-  refurbType: RefurbType;
-
-  // Required change handlers (to keep inputs editable)
-  onCurrentValueChange: (nextValue: number) => void;
-  onRefurbTypeChange: (nextValue: RefurbType) => void;
+  currentValue?: number;
+  defaultRefurbType?: RefurbType;
 };
 
 const REFURB_TYPE_OPTIONS: Array<{ value: RefurbType; label: string }> = [
@@ -35,42 +30,46 @@ const REFURB_TYPE_OPTIONS: Array<{ value: RefurbType; label: string }> = [
   { value: "loft", label: "Loft" },
 ];
 
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatPercent(value: number): string {
+  return `${(value * 100).toFixed(0)}%`;
+}
+
 export function ValueUpliftCard({
   refurbCost,
   postcode,
   currentValue,
-  refurbType,
-  onCurrentValueChange,
-  onRefurbTypeChange,
+  defaultRefurbType = "medium",
 }: ValueUpliftCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [currentValueInput, setCurrentValueInput] = useState(
+    currentValue ? String(currentValue) : "",
+  );
+  const [refurbType, setRefurbType] = useState<RefurbType>(defaultRefurbType);
 
-  function formatCurrency(value: number): string {
-    return new Intl.NumberFormat("en-GB", {
-      style: "currency",
-      currency: "GBP",
-      maximumFractionDigits: 0,
-    }).format(value);
-  }
-
-  function formatPercent(value: number): string {
-    return `${(value * 100).toFixed(0)}%`;
-  }
-
-  const result = useMemo(() => {
-    try {
-      return calculateUplift({
-        currentValue,
-        refurbCost,
-        refurbType,
-      });
-    } catch {
+  const parsedCurrentValue = useMemo(() => {
+    const trimmed = currentValueInput.trim();
+    if (!trimmed) {
       return null;
     }
-  }, [currentValue, refurbCost, refurbType]);
+
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }, [currentValueInput]);
 
   const validationMessage = useMemo(() => {
-    if (!Number.isFinite(currentValue) || currentValue <= 0) {
+    if (!currentValueInput.trim()) {
+      return "Enter the current property value to estimate the value impact.";
+    }
+
+    if (parsedCurrentValue === null || parsedCurrentValue <= 0) {
       return "Current value must be greater than 0.";
     }
 
@@ -79,7 +78,24 @@ export function ValueUpliftCard({
     }
 
     return null;
-  }, [currentValue, refurbCost]);
+  }, [currentValueInput, parsedCurrentValue, refurbCost]);
+
+  const result = useMemo(() => {
+    if (validationMessage || parsedCurrentValue === null) {
+      return null;
+    }
+
+    try {
+      return calculateUplift({
+        currentValue: parsedCurrentValue,
+        refurbCost,
+        refurbType,
+        postcode,
+      });
+    } catch {
+      return null;
+    }
+  }, [validationMessage, parsedCurrentValue, refurbCost, refurbType, postcode]);
 
   return (
     <Card>
@@ -107,12 +123,7 @@ export function ValueUpliftCard({
         <CardContent className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label
-                htmlFor="current-value"
-                className="text-sm font-medium text-foreground"
-              >
-                Current value
-              </label>
+              <Label htmlFor="current-value">Current value</Label>
               <Input
                 id="current-value"
                 type="number"
@@ -120,24 +131,16 @@ export function ValueUpliftCard({
                 min={0}
                 step={1000}
                 placeholder="e.g. 350000"
-                value={Number.isFinite(currentValue) ? String(currentValue) : ""}
-                onChange={(event) => {
-                  const next = Number(event.target.value);
-                  onCurrentValueChange(next);
-                }}
+                value={currentValueInput}
+                onChange={(event) => setCurrentValueInput(event.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <label
-                htmlFor="refurb-type"
-                className="text-sm font-medium text-foreground"
-              >
-                Refurb type
-              </label>
+              <Label htmlFor="refurb-type">Refurb type</Label>
               <Select
                 value={refurbType}
-                onValueChange={(value) => onRefurbTypeChange(value as RefurbType)}
+                onValueChange={(value) => setRefurbType(value as RefurbType)}
               >
                 <SelectTrigger id="refurb-type">
                   <SelectValue placeholder="Select refurb type" />

@@ -5,6 +5,7 @@ import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
 
 import NewBuildResults from "@/components/NewBuildResults";
 import ShareEstimateModal from "@/components/ShareEstimateModal";
+import { ValueUpliftCard } from "@/components/ValueUpliftCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -878,10 +879,6 @@ export default function NewBuildPage() {
       {result ? (
         <div id="results" className="space-y-6">
           <div className="flex flex-wrap gap-2">
-            <NewBuildResults result={result} />
-            <ValueUpliftCard ... />
-  </div>
-) : null}
             <Button
               type="button"
               variant="outline"
@@ -906,6 +903,11 @@ export default function NewBuildPage() {
           </div>
 
           <NewBuildResults result={result} />
+
+          <ValueUpliftCard
+            refurbCost={result.totalTypical}
+            postcode={lastInput?.postcodeDistrict}
+          />
         </div>
       ) : null}
 

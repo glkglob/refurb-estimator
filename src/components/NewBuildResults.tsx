@@ -1,4 +1,5 @@
 "use client";
+import AdditionalCostsPanel from "@/components/AdditionalCostsPanel";
 
 import CurrencyDisplay from "@/components/CurrencyDisplay";
 import TermTooltip from "@/components/TermTooltip";
@@ -295,7 +296,8 @@ export default function NewBuildResults({ result }: NewBuildResultsProps) {
             </div>
           ) : null}
         </CardContent>
-      </Card>
+            <AdditionalCostsPanel buildCost={result.totalTypical} />
+</Card>
     </section>
   );
 }

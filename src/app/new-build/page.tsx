@@ -878,6 +878,9 @@ export default function NewBuildPage() {
       {result ? (
         <div id="results" className="space-y-6">
           <div className="flex flex-wrap gap-2">
+            <NewBuildResults result={result} />
+  </div>
+) : null}
             <Button
               type="button"
               variant="outline"

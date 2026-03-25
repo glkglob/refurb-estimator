@@ -27,9 +27,9 @@ const clientEnvSchema = z.object({
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 export type ClientEnv = z.infer<typeof clientEnvSchema>;
 
-type ParseEnvResult<T> = {
+type ParseEnvArgs<T> = {
   schema: z.ZodSchema<T>;
-  values: T;
+  values: unknown;
   scope: "server" | "client";
 };
 
@@ -39,7 +39,7 @@ function formatErrors(error: z.ZodError): string {
     .join("\n");
 }
 
-function parseEnv<T>({ schema, values, scope }: ParseEnvResult<T>): T {
+function parseEnv<T>({ schema, values, scope }: ParseEnvArgs<T>): T {
   const result = schema.safeParse(values);
 
   if (!result.success) {

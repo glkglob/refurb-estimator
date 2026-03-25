@@ -12,12 +12,18 @@ import type { AuthenticatedUser } from "@/lib/supabase/auth-helpers";
 import type { ProfileUpdateInput } from "@/lib/platform-types";
 
 const REGION_VALUES: Region[] = [
-  "London",
+   "London",
   "SouthEast",
-  "Midlands",
-  "North",
+  "EastOfEngland",
+  "EastMidlands",
+  "WestMidlands",
+  "SouthWest",
+  "NorthWest",
+  "NorthEast",
+  "YorkshireAndTheHumber",
   "Scotland",
-  "Wales"
+  "Wales",
+  "NorthernIreland"
 ];
 const CONDITION_VALUES: Condition[] = ["poor", "fair", "good"];
 const FINISH_LEVEL_VALUES: FinishLevel[] = ["budget", "standard", "premium"];

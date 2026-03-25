@@ -29,10 +29,16 @@ const ROUTE_TAG = "api/v1/estimate/project";
 const REGION_VALUES: Region[] = [
   "London",
   "SouthEast",
-  "Midlands",
-  "North",
+  "EastOfEngland",
+  "EastMidlands",
+  "WestMidlands",
+  "SouthWest",
+  "NorthWest",
+  "NorthEast",
+  "YorkshireAndTheHumber",
   "Scotland",
-  "Wales"
+  "Wales",
+  "NorhternIreland"
 ];
 const CONDITION_VALUES: Condition[] = ["poor", "fair", "good"];
 const FINISH_LEVEL_VALUES: FinishLevel[] = ["budget", "standard", "premium"];

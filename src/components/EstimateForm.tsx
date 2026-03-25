@@ -34,10 +34,16 @@ type FormErrors = Partial<Record<keyof FormValues, string>>;
 const regions: EstimateInput["region"][] = [
   "London",
   "SouthEast",
-  "Midlands",
-  "North",
+  "EastOfEngland",
+  "EastMidlands",
+  "WestMidlands",
+  "SouthWest",
+  "NorthWest",
+  "NorthEast",
+  "YorkshireAndTheHumber",
   "Scotland",
-  "Wales"
+  "Wales",
+  "NorthernIreland"
 ];
 
 const conditions: EstimateInput["condition"][] = ["poor", "fair", "good"];

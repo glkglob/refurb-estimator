@@ -16,12 +16,14 @@ describe("getServerEnv", () => {
     process.env.OPENAI_API_KEY = "sk-test-key";
     process.env.HUGGINGFACE_PRICING_API_KEY = "hf-test-key";
     process.env.HUGGINGFACE_REFURB_DESIGN_KEY = "hf-test-key";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
     Object.assign(process.env, overrides);
   }
 
   test("throws when OPENAI_API_KEY is missing", () => {
     process.env.HUGGINGFACE_PRICING_API_KEY = "hf-test-key";
     process.env.HUGGINGFACE_REFURB_DESIGN_KEY = "hf-test-key";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
     delete process.env.OPENAI_API_KEY;
 
     expect(() => getServerEnv()).toThrow("OPENAI_API_KEY");
@@ -30,6 +32,7 @@ describe("getServerEnv", () => {
   test("throws when HUGGINGFACE_PRICING_API_KEY is missing", () => {
     process.env.OPENAI_API_KEY = "sk-test-key";
     process.env.HUGGINGFACE_REFURB_DESIGN_KEY = "hf-test-key";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
     delete process.env.HUGGINGFACE_PRICING_API_KEY;
 
     expect(() => getServerEnv()).toThrow("HUGGINGFACE_PRICING_API_KEY");
@@ -38,9 +41,19 @@ describe("getServerEnv", () => {
   test("throws when HUGGINGFACE_REFURB_DESIGN_KEY is missing", () => {
     process.env.OPENAI_API_KEY = "sk-test-key";
     process.env.HUGGINGFACE_PRICING_API_KEY = "hf-test-key";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
     delete process.env.HUGGINGFACE_REFURB_DESIGN_KEY;
 
     expect(() => getServerEnv()).toThrow("HUGGINGFACE_REFURB_DESIGN_KEY");
+  });
+
+  test("throws when SUPABASE_SERVICE_ROLE_KEY is missing", () => {
+    process.env.OPENAI_API_KEY = "sk-test-key";
+    process.env.HUGGINGFACE_PRICING_API_KEY = "hf-test-key";
+    process.env.HUGGINGFACE_REFURB_DESIGN_KEY = "hf-test-key";
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    expect(() => getServerEnv()).toThrow("SUPABASE_SERVICE_ROLE_KEY");
   });
 
   test("returns validated env when all required vars are set", () => {
@@ -51,6 +64,7 @@ describe("getServerEnv", () => {
     expect(env.OPENAI_API_KEY).toBe("sk-test-key");
     expect(env.HUGGINGFACE_PRICING_API_KEY).toBe("hf-test-key");
     expect(env.HUGGINGFACE_REFURB_DESIGN_KEY).toBe("hf-test-key");
+    expect(env.SUPABASE_SERVICE_ROLE_KEY).toBe("service-role-test-key");
   });
 
   test("returns default for OPENAI_DESIGNER_MODEL when not set", () => {

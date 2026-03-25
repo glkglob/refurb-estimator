@@ -311,6 +311,16 @@ export async function generateQuotePdf(
   pdfDoc.setAuthor(companyName);
   pdfDoc.setProducer(companyName);
   pdfDoc.setCreator(companyName);
+  import { PDFName, PDFString } from "pdf-lib";
+  // After pdfDoc.setTitle/Author/Producer/Creator/Subject...
+const info = pdfDoc.context.lookup(pdfDoc.context.trailerInfo.Info);
+if (info) {
+  info.set(PDFName.of("Producer"), PDFString.of(companyName));
+  info.set(PDFName.of("Creator"), PDFString.of(companyName));
+  // (Optional) keep these aligned too:
+  info.set(PDFName.of("Title"), PDFString.of(companyName));
+  info.set(PDFName.of("Author"), PDFString.of(companyName));
+}
   pdfDoc.setSubject("Property refurbishment estimate");
   pdfDoc.setKeywords([
     "property refurbishment",

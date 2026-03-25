@@ -57,11 +57,11 @@ describe("getServerAiEnv", () => {
   });
 
   test("uses provided OPENAI_DESIGNER_MODEL when set", () => {
-    setServerEnv({ OPENAI_DESIGNER_MODEL: "gpt-4o" });
+    setServerEnv({ OPENAI_DESIGNER_MODEL: "gpt-4.1" });
 
     const env = getServerAiEnv();
 
-    expect(env.OPENAI_DESIGNER_MODEL).toBe("gpt-4o");
+    expect(env.OPENAI_DESIGNER_MODEL).toBe("gpt-4.1");
   });
 });
 

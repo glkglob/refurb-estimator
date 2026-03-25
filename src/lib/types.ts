@@ -1,10 +1,16 @@
 export type Region =
   | "London"
   | "SouthEast"
-  | "Midlands"
-  | "North"
+  | "EastOfEngland"
+  | "EastMidlands"
+  | "WestMidlands"
+  | "SouthWest"
+  | "NorthWest"
+  | "NorthEast"
+  | "YorkshireAndTheHumber"
   | "Scotland"
-  | "Wales";
+  | "Wales"
+  | "NorthernIreland";
 
 export type FinishLevel = "budget" | "standard" | "premium";
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { AlertTriangle, Plus } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { AlertTriangle, Plus } from "lucide-react";
+
 import AuthBanner from "@/components/AuthBanner";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import TermTooltip from "@/components/TermTooltip";
@@ -15,7 +16,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { defaultCostLibrary } from "@/lib/costLibrary";
@@ -27,15 +28,13 @@ import type {
   Region,
   RoomInput,
   RoomType,
-  Scenario
+  Scenario,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import ShareEstimateModal from "@/components/ShareEstimateModal";
-import type { SharedEstimateSnapshot } from "@/lib/share";
 
 const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
   ssr: false,
-  loading: () => <div className="h-72 animate-pulse rounded-lg bg-muted" />
+  loading: () => <div className="h-72 animate-pulse rounded-lg bg-muted" />,
 });
 
 const REGION_VALUES: Region[] = [
@@ -50,53 +49,69 @@ const REGION_VALUES: Region[] = [
   "YorkshireAndTheHumber",
   "Scotland",
   "Wales",
-  "NorthernIreland"
+  "NorthernIreland",
 ];
 
-const conditions: Condition[] = ["poor", "fair", "good"];
-const roomTypes: RoomType[] = [
+const CONDITIONS: Condition[] = ["poor", "fair", "good"];
+const ROOM_TYPES: RoomType[] = [
   "kitchen",
   "bathroom",
   "bedroom",
   "living",
   "hallway",
-  "utility"
+  "utility",
 ];
-const finishLevels: RoomInput["finishLevel"][] = ["budget", "standard", "premium"];
-const intensityOptions: RoomInput["intensity"][] = ["light", "full"];
+const FINISH_LEVELS: RoomInput["finishLevel"][] = [
+  "budget",
+  "standard",
+  "premium",
+];
+const INTENSITY_OPTIONS: RoomInput["intensity"][] = ["light", "full"];
+
+const INITIAL_ROOMS: RoomInput[] = [
+  {
+    id: "room-1",
+    roomType: "kitchen",
+    areaM2: 15,
+    intensity: "full",
+    finishLevel: "standard",
+  },
+  {
+    id: "room-2",
+    roomType: "bathroom",
+    areaM2: 5,
+    intensity: "full",
+    finishLevel: "standard",
+  },
+];
+
+function formatLabel(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
 
 export default function RoomsPage() {
-  const [region, setRegion] = useState<Region>("EastMidlands");
-  const [condition, setCondition] = useState<Condition>("fair");
-  const [rooms, setRooms] = useState<RoomInput[]>([
-    {
-      id: "room-1",
-      roomType: "kitchen",
-      areaM2: 15,
-      intensity: "full",
-      finishLevel: "standard"
-    },
-    {
-      id: "room-2",
-      roomType: "bathroom",
-      areaM2: 5,
-      intensity: "full",
-      finishLevel: "standard"
-    }
-  ]);
-  const [nextRoomId, setNextRoomId] = useState(3);
-  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-  const shouldScrollToResultsRef = useRef(false);
   const { toast } = useToast();
 
-  function updateRoom(id: string, patch: Partial<Omit<RoomInput, "id">>) {
-    setRooms((prev) =>
-      prev.map((room) => (room.id === id ? { ...room, ...patch } : room))
-    );
+  const [region, setRegion] = useState<Region>("EastMidlands");
+  const [condition, setCondition] = useState<Condition>("fair");
+  const [rooms, setRooms] = useState<RoomInput[]>(INITIAL_ROOMS);
+  const [nextRoomId, setNextRoomId] = useState(3);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+
+  const shouldScrollToResultsRef = useRef(false);
+
+  function markShouldScroll(): void {
     shouldScrollToResultsRef.current = true;
   }
 
-  function addRoom() {
+  function updateRoom(id: string, patch: Partial<Omit<RoomInput, "id">>): void {
+    setRooms((prev) =>
+      prev.map((room) => (room.id === id ? { ...room, ...patch } : room)),
+    );
+    markShouldScroll();
+  }
+
+  function addRoom(): void {
     setRooms((prev) => [
       ...prev,
       {
@@ -104,33 +119,34 @@ export default function RoomsPage() {
         roomType: "bedroom",
         areaM2: 12,
         intensity: "full",
-        finishLevel: "standard"
-      }
+        finishLevel: "standard",
+      },
     ]);
     setNextRoomId((prev) => prev + 1);
-    shouldScrollToResultsRef.current = true;
+    markShouldScroll();
   }
 
-  function removeRoom(id: string) {
+  function removeRoom(id: string): void {
     setRooms((prev) => {
       if (prev.length <= 1) {
         return prev;
       }
       return prev.filter((room) => room.id !== id);
     });
-    shouldScrollToResultsRef.current = true;
+    markShouldScroll();
   }
 
   const calculation = useMemo(() => {
     try {
       return {
         result: estimateRooms(rooms, { region, condition }, defaultCostLibrary),
-        error: null as string | null
+        error: null as string | null,
       };
     } catch (error) {
       if (error instanceof Error) {
         return { result: null, error: error.message };
       }
+
       return { result: null, error: "Unable to estimate rooms" };
     }
   }, [rooms, region, condition]);
@@ -156,20 +172,21 @@ export default function RoomsPage() {
       totalAreaM2,
       condition,
       finishLevel: "standard",
-      rooms
+      rooms,
     };
   }, [rooms, region, condition]);
 
   async function handleSaveScenario(
     name: string,
     purchasePrice?: number,
-    gdv?: number
+    gdv?: number,
   ): Promise<void> {
     if (!calculation.result) {
       return;
     }
 
     const timestamp = new Date().toISOString();
+
     const scenario: Scenario = {
       id: crypto.randomUUID(),
       name,
@@ -178,24 +195,25 @@ export default function RoomsPage() {
       createdAt: timestamp,
       updatedAt: timestamp,
       purchasePrice,
-      gdv
+      gdv,
     };
-    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
     try {
       await saveScenario(scenario);
       setIsSaveModalOpen(false);
       toast({
         title: "Scenario saved",
-        description: "You can compare it on the Scenario Comparison page."
+        description: "You can compare it on the Scenario Comparison page.",
       });
     } catch (error) {
       setIsSaveModalOpen(false);
       toast({
         title: "Scenario saved locally",
         description:
-          error instanceof Error ? error.message : "Cloud sync failed. Scenario was saved locally.",
-        variant: "destructive"
+          error instanceof Error
+            ? error.message
+            : "Cloud sync failed. Scenario was saved locally.",
+        variant: "destructive",
       });
     }
   }
@@ -213,7 +231,7 @@ export default function RoomsPage() {
               value={region}
               onValueChange={(value) => {
                 setRegion(value as Region);
-                shouldScrollToResultsRef.current = true;
+                markShouldScroll();
               }}
             >
               <SelectTrigger id="rooms-region" className="w-full">
@@ -235,16 +253,16 @@ export default function RoomsPage() {
               value={condition}
               onValueChange={(value) => {
                 setCondition(value as Condition);
-                shouldScrollToResultsRef.current = true;
+                markShouldScroll();
               }}
             >
               <SelectTrigger id="rooms-condition" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {conditions.map((conditionValue) => (
+                {CONDITIONS.map((conditionValue) => (
                   <SelectItem key={conditionValue} value={conditionValue}>
-                    {conditionValue.charAt(0).toUpperCase() + conditionValue.slice(1)}
+                    {formatLabel(conditionValue)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -294,15 +312,17 @@ export default function RoomsPage() {
                     <Label>Room type</Label>
                     <Select
                       value={room.roomType}
-                      onValueChange={(value) => updateRoom(room.id, { roomType: value as RoomType })}
+                      onValueChange={(value) =>
+                        updateRoom(room.id, { roomType: value as RoomType })
+                      }
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {roomTypes.map((roomType) => (
+                        {ROOM_TYPES.map((roomType) => (
                           <SelectItem key={roomType} value={roomType}>
-                            {roomType.charAt(0).toUpperCase() + roomType.slice(1)}
+                            {formatLabel(roomType)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -317,14 +337,18 @@ export default function RoomsPage() {
                       step={1}
                       placeholder="e.g. 12"
                       value={room.areaM2}
-                      onChange={(event) => updateRoom(room.id, { areaM2: Number(event.target.value) })}
+                      onChange={(event) =>
+                        updateRoom(room.id, { areaM2: Number(event.target.value) })
+                      }
                       aria-invalid={hasAreaError}
                       className={cn("w-full", hasAreaError && "border-destructive")}
                     />
                     {hasAreaError ? (
                       <div className="bp-warning mt-1 flex items-start gap-1.5 rounded-md border px-2 py-1 text-sm">
                         <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
-                        <p className="text-destructive">Area must be greater than zero</p>
+                        <p className="text-destructive">
+                          Area must be greater than zero
+                        </p>
                       </div>
                     ) : null}
                   </div>
@@ -332,8 +356,9 @@ export default function RoomsPage() {
                   <div className="space-y-1">
                     <Label>Intensity</Label>
                     <div className="grid grid-cols-2 gap-2">
-                      {intensityOptions.map((intensity) => {
+                      {INTENSITY_OPTIONS.map((intensity) => {
                         const isActive = room.intensity === intensity;
+
                         return (
                           <Button
                             key={intensity}
@@ -341,7 +366,7 @@ export default function RoomsPage() {
                             variant={isActive ? "default" : "outline"}
                             onClick={() => updateRoom(room.id, { intensity })}
                           >
-                            {intensity}
+                            {formatLabel(intensity)}
                           </Button>
                         );
                       })}
@@ -354,7 +379,7 @@ export default function RoomsPage() {
                       value={room.finishLevel}
                       onValueChange={(value) =>
                         updateRoom(room.id, {
-                          finishLevel: value as RoomInput["finishLevel"]
+                          finishLevel: value as RoomInput["finishLevel"],
                         })
                       }
                     >
@@ -362,9 +387,9 @@ export default function RoomsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {finishLevels.map((finishLevel) => (
+                        {FINISH_LEVELS.map((finishLevel) => (
                           <SelectItem key={finishLevel} value={finishLevel}>
-                            {finishLevel.charAt(0).toUpperCase() + finishLevel.slice(1)}
+                            {formatLabel(finishLevel)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -388,6 +413,7 @@ export default function RoomsPage() {
           <p className="font-medium text-destructive">{calculation.error}</p>
         </div>
       ) : null}
+
       {calculation.result ? (
         <div id="results" className="space-y-4">
           <Button type="button" variant="default" onClick={() => setIsSaveModalOpen(true)}>
@@ -396,6 +422,7 @@ export default function RoomsPage() {
           <EstimateResults result={calculation.result} />
         </div>
       ) : null}
+
       <SaveScenarioModal
         isOpen={isSaveModalOpen}
         onClose={() => setIsSaveModalOpen(false)}

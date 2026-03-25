@@ -217,7 +217,7 @@ export default function RoomsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {region.map((regionValue) => (
+                {REGION_VALUES.map((regionValue) => (
                   <SelectItem key={regionValue} value={regionValue}>
                     {regionValue}
                   </SelectItem>

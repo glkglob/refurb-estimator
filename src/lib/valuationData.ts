@@ -137,5 +137,5 @@ export function getRegionFromPostcode(postcode?: string): UKRegion {
 
   // Extract postcode "area" (leading 1-2 letters)
   // Examples: "SW1A1AA" -> "SW", "M11AE" -> "M", "EH12NG" -> "EH"
-  const match = normalized.match(/^([A-Z]{1,2})/);
+  const match = normalized.match(/^([A-Z]{1,2}\d[A-Z\d]?)/);
   if (!*

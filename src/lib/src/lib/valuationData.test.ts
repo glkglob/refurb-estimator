@@ -1,0 +1,51 @@
+import { calculateUplift } from "./valuationData";
+
+describe("calculateUplift", () => {
+  test("returns uplift, new value, and ROI for known inputs", () => {
+    const result = calculateUplift({
+      currentValue: 200_000,
+      refurbCost: 20_000,
+      refurbType: "light",
+    });
+
+    expect(result.upliftMin).toBeCloseTo(20_000);
+    expect(result.upliftMax).toBeCloseTo(30_000);
+    expect(result.newValueMin).toBeCloseTo(220_000);
+    expect(result.newValueMax).toBeCloseTo(230_000);
+    expect(result.roiMin).toBeCloseTo(1);
+    expect(result.roiMax).toBeCloseTo(1.5);
+  });
+
+  test("ROI changes when refurbCost changes for the same currentValue and refurbType", () => {
+    const lowerCostResult = calculateUplift({
+      currentValue: 250_000,
+      refurbCost: 25_000,
+      refurbType: "full",
+    });
+
+    const higherCostResult = calculateUplift({
+      currentValue: 250_000,
+      refurbCost: 50_000,
+      refurbType: "full",
+    });
+
+    expect(lowerCostResult.upliftMin).toBeCloseTo(higherCostResult.upliftMin);
+    expect(lowerCostResult.upliftMax).toBeCloseTo(higherCostResult.upliftMax);
+
+    expect(lowerCostResult.roiMin).toBeCloseTo(1.5);
+    expect(lowerCostResult.roiMax).toBeCloseTo(2.5);
+
+    expect(higherCostResult.roiMin).toBeCloseTo(0.75);
+    expect(higherCostResult.roiMax).toBeCloseTo(1.25);
+  });
+
+  test("throws when currentValue is 0", () => {
+    expect(() =>
+      calculateUplift({
+        currentValue: 0,
+        refurbCost: 10_000,
+        refurbType: "cosmetic",
+      }),
+    ).toThrow("currentValue must be a finite number greater than 0");
+  });
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import {
   requestAssistantResponse
 } from "@/lib/assistant/client";
 import type { AssistantAction, AppMode, AssistantRequest } from "@/lib/assistant/schemas";
+import { trackTelemetryEvent } from "@/lib/telemetry/client";
 
 type EstimateAssistantPanelProps = {
   mode: AppMode;
@@ -50,28 +51,35 @@ function shouldEmitUiTelemetrySample(): boolean {
   return isProductionLike && Math.random() <= sampleRate;
 }
 
-function emitUiTelemetry(event: {
-  mode: AppMode;
+type AssistantTelemetryProperties = {
   agent: "chat" | "editor" | "copilot";
-  outcome: "applied" | "rejected" | "none";
-  actionCount: number;
-  noneReason?: string | null;
-}): void {
-  if (!shouldEmitUiTelemetrySample()) {
+  mode: AppMode;
+  trigger: "user_input" | "auto_followup" | "system";
+  message_length: number;
+  actions_count: number;
+  none_reason?: string;
+  dropped_fields_count: number;
+  dropped_actions_count: number;
+  had_recalculate: boolean;
+  timestamp_ms: number;
+};
+
+function emitAssistantTelemetry(
+  sampled: boolean,
+  eventName: string,
+  properties: Omit<AssistantTelemetryProperties, "timestamp_ms">
+): void {
+  if (!sampled) {
     return;
   }
 
-  console.warn(
-    JSON.stringify({
-      level: "info",
-      route: "assistant-ui",
-      mode: event.mode,
-      agent: event.agent,
-      outcome: event.outcome,
-      actionCount: event.actionCount,
-      noneReason: event.noneReason ?? null
-    })
-  );
+  trackTelemetryEvent({
+    eventName,
+    properties: {
+      ...properties,
+      timestamp_ms: Date.now()
+    }
+  });
 }
 
 export default function EstimateAssistantPanel({
@@ -90,6 +98,20 @@ export default function EstimateAssistantPanel({
     () => message.trim().length > 0 && !isSubmitting,
     [isSubmitting, message]
   );
+  const telemetrySampled = useMemo(() => shouldEmitUiTelemetrySample(), []);
+
+  useEffect(() => {
+    emitAssistantTelemetry(telemetrySampled, "assistant.chat_shown", {
+      agent: "chat",
+      mode,
+      trigger: "system",
+      message_length: 0,
+      actions_count: 0,
+      dropped_fields_count: 0,
+      dropped_actions_count: 0,
+      had_recalculate: false
+    });
+  }, [mode, telemetrySampled]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -117,16 +139,40 @@ export default function EstimateAssistantPanel({
         const hasStateAction = response.actions.some(
           (action) => action.type === "update_fields" || action.type === "add_room" || action.type === "remove_room"
         );
+        const hadRecalculate = response.actions.some((action) => action.type === "recalculate");
+
+        emitAssistantTelemetry(
+          telemetrySampled,
+          hasStateAction
+            ? "assistant.editor_actions_proposed"
+            : "assistant.editor_none_returned",
+          {
+            agent: "editor",
+            mode,
+            trigger: "user_input",
+            message_length: trimmedMessage.length,
+            actions_count: response.actions.length,
+            ...(noneAction?.reason ? { none_reason: noneAction.reason } : {}),
+            dropped_fields_count: 0,
+            dropped_actions_count: 0,
+            had_recalculate: hadRecalculate
+          }
+        );
 
         await onApplyEditorActions?.(response.actions);
 
-        emitUiTelemetry({
-          mode,
-          agent,
-          outcome: hasStateAction ? "applied" : "none",
-          actionCount: response.actions.length,
-          noneReason: noneAction?.reason ?? null
-        });
+        if (hasStateAction) {
+          emitAssistantTelemetry(telemetrySampled, "assistant.editor_actions_applied", {
+            agent: "editor",
+            mode,
+            trigger: "user_input",
+            message_length: trimmedMessage.length,
+            actions_count: response.actions.length,
+            dropped_fields_count: 0,
+            dropped_actions_count: 0,
+            had_recalculate: hadRecalculate
+          });
+        }
 
         setAssistantState({
           reply: response.reply,
@@ -147,6 +193,18 @@ export default function EstimateAssistantPanel({
           nextSteps: response.nextSteps,
           agentLabel: agent
         });
+
+        emitAssistantTelemetry(telemetrySampled, "assistant.copilot_suggestion_shown", {
+          agent: "copilot",
+          mode,
+          trigger: "user_input",
+          message_length: trimmedMessage.length,
+          actions_count: response.suggestedActions?.length ?? 0,
+          dropped_fields_count: 0,
+          dropped_actions_count: 0,
+          had_recalculate:
+            response.suggestedActions?.some((action) => action.type === "recalculate") ?? false
+        });
       } else {
         const response = await requestAssistantResponse({
           agent: "chat",
@@ -161,17 +219,19 @@ export default function EstimateAssistantPanel({
           suggestions: response.suggestions,
           agentLabel: agent
         });
-      }
-    } catch (submitError) {
-      if (agent === "editor") {
-        emitUiTelemetry({
+
+        emitAssistantTelemetry(telemetrySampled, "assistant.chat_replied", {
+          agent: "chat",
           mode,
-          agent,
-          outcome: "rejected",
-          actionCount: 0
+          trigger: "user_input",
+          message_length: trimmedMessage.length,
+          actions_count: response.actions?.length ?? 0,
+          dropped_fields_count: 0,
+          dropped_actions_count: 0,
+          had_recalculate: false
         });
       }
-
+    } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : "Unable to contact the assistant."
       );

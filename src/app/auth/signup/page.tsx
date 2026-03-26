@@ -1,18 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { AlertCircle } from "lucide-react";
 import AuthValueProposition from "@/components/auth/AuthValueProposition";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
-
-const isSupabaseConfigured = Boolean(
-  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import {
+  createClientSafely,
+  SUPABASE_CLIENT_UNAVAILABLE_MESSAGE
+} from "@/lib/supabase/client";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -21,14 +20,16 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const supabase = useMemo(() => createClientSafely(), []);
+  const isAuthUnavailable = supabase === null;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setMessage(null);
 
-    if (!isSupabaseConfigured) {
-      setError("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+    if (!supabase) {
+      setError(SUPABASE_CLIENT_UNAVAILABLE_MESSAGE);
       return;
     }
 
@@ -38,7 +39,6 @@ export default function SignupPage() {
     }
 
     setIsLoading(true);
-    const supabase = createClient();
     const { error: signUpError } = await supabase.auth.signUp({ email, password });
     setIsLoading(false);
 
@@ -61,6 +61,11 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent className="p-0">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isAuthUnavailable ? (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+                {SUPABASE_CLIENT_UNAVAILABLE_MESSAGE}
+              </div>
+            ) : null}
             <div className="space-y-1">
               <Label htmlFor="email" className="text-foreground">
                 Email
@@ -113,7 +118,12 @@ export default function SignupPage() {
             ) : null}
             {message ? <p className="text-sm text-primary">{message}</p> : null}
 
-            <Button type="submit" variant="default" disabled={isLoading} className="w-full">
+            <Button
+              type="submit"
+              variant="default"
+              disabled={isLoading || isAuthUnavailable}
+              className="w-full"
+            >
               {isLoading ? "Creating account..." : "Create account"}
             </Button>
           </form>

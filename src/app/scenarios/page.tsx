@@ -28,7 +28,10 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { deleteScenario, loadScenarios } from "@/lib/dataService";
-import { createClient } from "@/lib/supabase/client";
+import {
+  createClientSafely,
+  SUPABASE_CLIENT_UNAVAILABLE_MESSAGE
+} from "@/lib/supabase/client";
 import type { Scenario } from "@/lib/types";
 
 function formatRoi(value: number): string {
@@ -44,9 +47,8 @@ const BarChart = dynamic(
 );
 
 export default function ScenariosPage() {
-  const isSupabaseConfigured = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+  const supabase = useMemo(() => createClientSafely(), []);
+  const isCloudAuthAvailable = supabase !== null;
   const gbpFormatter = new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: "GBP",
@@ -57,40 +59,42 @@ export default function ScenariosPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [scenarioToDelete, setScenarioToDelete] = useState<Scenario | null>(null);
   const [authState, setAuthState] = useState<"checking" | "authenticated" | "unauthenticated">(
-    isSupabaseConfigured ? "checking" : "authenticated"
+    isCloudAuthAvailable ? "checking" : "authenticated"
   );
 
   useEffect(() => {
-    if (!isSupabaseConfigured) {
+    if (!supabase) {
       return;
     }
 
     let isActive = true;
-    const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data }) => {
+    async function loadAuthState() {
+      const result = await supabase.auth.getUser();
       if (!isActive) {
         return;
       }
 
-      setAuthState(data.user ? "authenticated" : "unauthenticated");
-    });
+      setAuthState(result.data.user ? "authenticated" : "unauthenticated");
+    }
+
+    void loadAuthState();
 
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(() => {
       if (!isActive) {
         return;
       }
 
-      setAuthState(session?.user ? "authenticated" : "unauthenticated");
+      void loadAuthState();
     });
 
     return () => {
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [isSupabaseConfigured]);
+  }, [supabase]);
 
   useEffect(() => {
     let isMounted = true;
@@ -173,8 +177,9 @@ export default function ScenariosPage() {
         }),
     [sortedScenarios]
   );
-  const isSignedOut = authState === "unauthenticated";
-  const shouldGateComparison = authState !== "authenticated" && sortedScenarios.length > 1;
+  const isSignedOut = isCloudAuthAvailable && authState === "unauthenticated";
+  const shouldGateComparison =
+    isCloudAuthAvailable && authState !== "authenticated" && sortedScenarios.length > 1;
 
   async function handleDeleteConfirm(): Promise<void> {
     if (!scenarioToDelete) {
@@ -333,6 +338,14 @@ export default function ScenariosPage() {
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Scenario Comparison</h1>
       <AuthBanner />
+      {!isCloudAuthAvailable ? (
+        <Card className="border-amber-500/30 bg-amber-500/10">
+          <CardContent className="pt-6 text-sm text-amber-200">
+            {SUPABASE_CLIENT_UNAVAILABLE_MESSAGE} Scenarios remain available locally on this
+            device.
+          </CardContent>
+        </Card>
+      ) : null}
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (

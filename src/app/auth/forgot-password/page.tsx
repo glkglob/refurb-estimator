@@ -7,18 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
-
-const isSupabaseConfigured = Boolean(
-  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import {
+  createClientSafely,
+  SUPABASE_CLIENT_UNAVAILABLE_MESSAGE
+} from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const supabase = useMemo(() => (isSupabaseConfigured ? createClient() : null), []);
+  const supabase = useMemo(() => createClientSafely(), []);
+  const isAuthUnavailable = supabase === null;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,7 +26,7 @@ export default function ForgotPasswordPage() {
     setMessage(null);
 
     if (!supabase) {
-      setError("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      setError(SUPABASE_CLIENT_UNAVAILABLE_MESSAGE);
       return;
     }
 
@@ -55,6 +55,11 @@ export default function ForgotPasswordPage() {
         </CardHeader>
         <CardContent className="p-0">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isAuthUnavailable ? (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+                {SUPABASE_CLIENT_UNAVAILABLE_MESSAGE}
+              </div>
+            ) : null}
             <div className="space-y-1">
               <Label htmlFor="email" className="text-foreground">
                 Email
@@ -77,7 +82,12 @@ export default function ForgotPasswordPage() {
             ) : null}
             {message ? <p className="text-sm text-primary">{message}</p> : null}
 
-            <Button type="submit" variant="default" disabled={isLoading} className="w-full">
+            <Button
+              type="submit"
+              variant="default"
+              disabled={isLoading || isAuthUnavailable}
+              className="w-full"
+            >
               {isLoading ? "Sending reset link..." : "Send reset link"}
             </Button>
           </form>

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Lock } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClientSafely } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -20,33 +20,33 @@ export default function AuthGate({
   featureName,
   featureDescription
 }: AuthGateProps) {
-  const isSupabaseConfigured = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+  const supabase = useMemo(() => createClientSafely(), []);
   const [authState, setAuthState] = useState<AuthState>(
-    isSupabaseConfigured ? "checking" : "authenticated"
+    supabase ? "checking" : "authenticated"
   );
 
   useEffect(() => {
-    if (!isSupabaseConfigured) {
+    if (!supabase) {
       return;
     }
 
     let isActive = true;
-    const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data }) => {
+    async function loadAuthState() {
+      const result = await supabase.auth.getUser();
       if (!isActive) {
         return;
       }
 
-      setAuthState(data.user ? "authenticated" : "unauthenticated");
-    });
+      setAuthState(result.data.user ? "authenticated" : "unauthenticated");
+    }
+
+    void loadAuthState();
 
     return () => {
       isActive = false;
     };
-  }, [isSupabaseConfigured]);
+  }, [supabase]);
 
   if (authState === "authenticated") {
     return <>{children}</>;

@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { AlertTriangle, ChevronDown, Share2 } from "lucide-react";
 import AuthGate from "@/components/AuthGate";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
+import EstimateAssistantPanel from "@/components/EstimateAssistantPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,8 @@ import {
   type AppraisalResult,
   type ViabilityStatus
 } from "@/lib/developmentAppraisal";
+import type { AssistantAction } from "@/lib/assistant/schemas";
+import { applyEditorActionsToDevelopmentInput } from "@/lib/assistant/developmentActions";
 import { shareOrCopy } from "@/lib/share";
 
 type FormState = {
@@ -143,6 +146,25 @@ export default function DevelopmentAppraisalPage() {
     setFormState((prev) => ({ ...prev, [key]: value }));
   }
 
+  function syncFormStateFromInput(input: AppraisalInput): void {
+    setFormState({
+      purchasePrice: String(input.purchasePrice),
+      grossDevelopmentValue: String(input.grossDevelopmentValue),
+      acquisitionLegalFees: String(input.acquisitionLegalFees),
+      buildCosts: String(input.buildCosts),
+      professionalFees: String(input.professionalFees),
+      planningCosts: String(input.planningCosts),
+      contingencyPercent: String(input.contingencyPercent),
+      includeFinance: input.includeFinance,
+      bridgingRateMonthlyPercent: String(input.bridgingRateMonthlyPercent),
+      loanTermMonths: String(input.loanTermMonths),
+      loanToValuePercent: String(input.loanToValuePercent),
+      saleLegalFees: String(input.saleLegalFees),
+      estateAgentFeePercent: String(input.estateAgentFeePercent),
+      targetProfitMarginPercent: String(input.targetProfitMarginPercent)
+    });
+  }
+
   function buildInput(): AppraisalInput {
     const isFinanceIncluded = formState.includeFinance;
 
@@ -208,6 +230,31 @@ export default function DevelopmentAppraisalPage() {
         submitError instanceof Error
           ? submitError.message
           : "Unable to calculate development appraisal"
+      );
+    }
+  }
+
+  function handleApplyAssistantEditorActions(actions: AssistantAction[]): void {
+    if (!inputSnapshot) {
+      return;
+    }
+
+    const applied = applyEditorActionsToDevelopmentInput(inputSnapshot, actions);
+    if (applied.changedFields.length === 0 || !applied.shouldRecalculate) {
+      return;
+    }
+
+    try {
+      const nextResult = calculateDevelopmentAppraisal(applied.nextInput);
+      setInputSnapshot(applied.nextInput);
+      syncFormStateFromInput(applied.nextInput);
+      setResult(nextResult);
+      setError(null);
+    } catch (assistantError) {
+      setError(
+        assistantError instanceof Error
+          ? assistantError.message
+          : "Unable to recalculate appraisal after assistant changes"
       );
     }
   }
@@ -509,6 +556,15 @@ export default function DevelopmentAppraisalPage() {
                 Share this appraisal
               </Button>
             </div>
+
+            {inputSnapshot ? (
+              <EstimateAssistantPanel
+                mode="development"
+                estimateInput={inputSnapshot}
+                estimateResult={result}
+                onApplyEditorActions={handleApplyAssistantEditorActions}
+              />
+            ) : null}
 
             <Card>
               <CardHeader>

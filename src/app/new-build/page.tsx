@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+import EstimateAssistantPanel from "@/components/EstimateAssistantPanel";
 import NewBuildResults from "@/components/NewBuildResults";
 import ShareEstimateModal from "@/components/ShareEstimateModal";
 import { ValueUpliftCard } from "@/components/ValueUpliftCard";
@@ -19,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import type { AssistantAction } from "@/lib/assistant/schemas";
+import { applyEditorActionsToNewBuildInput } from "@/lib/assistant/newBuildActions";
 import { apiFetch } from "@/lib/apiClient";
 import type { QuotePdfInput } from "@/lib/generateQuotePdf";
 import { calculateNewBuild } from "@/lib/newBuildEstimator";
@@ -311,6 +314,60 @@ export default function NewBuildPage() {
       result,
     };
   }, [lastInput, result]);
+
+  function syncFormStateFromInput(input: NewBuildInput): void {
+    setPropertyType(input.propertyType);
+    setSpec(input.spec);
+    setTotalAreaM2(String(input.totalAreaM2));
+    setBedrooms(String(input.bedrooms));
+    setStoreys(String(input.storeys));
+    setBlockStoreys(String(input.numberOfStoreys ?? input.storeys));
+    setPostcodeDistrict(input.postcodeDistrict ?? "");
+
+    setGarage(Boolean(input.garage));
+    setRenewableEnergy(Boolean(input.renewableEnergy));
+    setBasementIncluded(Boolean(input.basementIncluded));
+
+    setNumberOfUnits(String(input.numberOfUnits ?? 6));
+    setLiftIncluded(Boolean(input.liftIncluded));
+    setCommercialGroundFloor(Boolean(input.commercialGroundFloor));
+
+    setNumberOfLettableRooms(String(input.numberOfLettableRooms ?? 6));
+    setEnSuitePerRoom(Boolean(input.enSuitePerRoom));
+    setCommunalKitchen(input.communalKitchen ?? true);
+    setFireEscapeRequired(Boolean(input.fireEscapeRequired));
+
+    setCommercialType(input.commercialType ?? "office");
+    setFitOutLevel(input.fitOutLevel ?? "cat_a");
+    setDisabledAccess(Boolean(input.disabledAccess));
+    setExtractionSystem(Boolean(input.extractionSystem));
+    setParkingSpaces(String(input.parkingSpaces ?? 0));
+  }
+
+  function handleApplyAssistantEditorActions(actions: AssistantAction[]): void {
+    if (!lastInput) {
+      return;
+    }
+
+    const applied = applyEditorActionsToNewBuildInput(lastInput, actions);
+    if (applied.changedFields.length === 0 || !applied.shouldRecalculate) {
+      return;
+    }
+
+    try {
+      const recalculated = calculateNewBuild(applied.nextInput);
+      setLastInput(applied.nextInput);
+      syncFormStateFromInput(applied.nextInput);
+      setResult(recalculated);
+      setError(null);
+    } catch (assistantError) {
+      setError(
+        assistantError instanceof Error
+          ? assistantError.message
+          : "Unable to recalculate estimate after assistant changes"
+      );
+    }
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -916,6 +973,15 @@ export default function NewBuildPage() {
               Get quotes from vetted contractors →
             </Button>
           </div>
+
+          {lastInput ? (
+            <EstimateAssistantPanel
+              mode="new_build"
+              estimateInput={lastInput}
+              estimateResult={result}
+              onApplyEditorActions={handleApplyAssistantEditorActions}
+            />
+          ) : null}
 
           <NewBuildResults result={result} />
 

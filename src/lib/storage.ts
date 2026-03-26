@@ -1,6 +1,14 @@
 import type { Scenario } from "@/lib/types";
 
 const STORAGE_KEY = "refurb-scenarios";
+export const MAX_LOCAL_SCENARIOS_FOR_SIGNED_OUT_USERS = 1;
+
+export class ScenarioLimitExceededError extends Error {
+  constructor() {
+    super("Sign in to save and compare multiple scenarios");
+    this.name = "ScenarioLimitExceededError";
+  }
+}
 
 function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -36,13 +44,26 @@ function writeScenariosToStorage(scenarios: Scenario[]): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(scenarios));
 }
 
-export function saveScenario(scenario: Scenario): void {
+export function saveScenario(
+  scenario: Scenario,
+  options?: { enforceLimit?: boolean }
+): void {
   if (!canUseStorage()) {
     return;
   }
 
+  const enforceLimit = options?.enforceLimit ?? true;
   const scenarios = readScenariosFromStorage();
   const index = scenarios.findIndex((item) => item.id === scenario.id);
+  const isNewScenario = index < 0;
+
+  if (
+    enforceLimit &&
+    isNewScenario &&
+    scenarios.length >= MAX_LOCAL_SCENARIOS_FOR_SIGNED_OUT_USERS
+  ) {
+    throw new ScenarioLimitExceededError();
+  }
 
   if (index >= 0) {
     scenarios[index] = scenario;

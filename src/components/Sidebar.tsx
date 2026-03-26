@@ -27,14 +27,21 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { VisuallyHidden } from "radix-ui";
 
-const navItems = [
+const calculatorNavItems = [
   { href: "/", label: "Quick Estimate", icon: "Calculator" },
   { href: "/photo", label: "AI Estimate", icon: "Camera" },
   { href: "/ai-pricing", label: "AI Pricing", icon: "Sparkles" },
   { href: "/design-agent", label: "AI Design", icon: "Palette" },
   { href: "/new-build", label: "New Build", icon: "Building2" },
   { href: "/loft", label: "Loft", icon: "Calculator" },
-  { href: "/rooms", label: "Detailed Rooms", icon: "LayoutGrid" },
+  { href: "/rooms", label: "Detailed Rooms", icon: "LayoutGrid" }
+] as const;
+
+const developmentNavItems = [
+  { href: "/development", label: "Development Appraisal", icon: "Building2" }
+] as const;
+
+const planningNavItems = [
   { href: "/scenarios", label: "Scenario Comparison", icon: "GitCompare" },
   { href: "/budget", label: "Budget Tracker", icon: "Wallet" }
 ] as const;
@@ -121,7 +128,20 @@ function SidebarContent({
       </div>
 
       <nav className="flex flex-col gap-1 px-2 py-4">
-        {navItems.map((item) => renderNavLink(item))}
+        <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          Calculators
+        </p>
+        {calculatorNavItems.map((item) => renderNavLink(item))}
+
+        <div className="mx-3 my-2 border-t border-[var(--border)]" />
+        <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          Development
+        </p>
+        {developmentNavItems.map((item) => renderNavLink(item))}
+
+        <div className="mx-3 my-2 border-t border-[var(--border)]" />
+        {planningNavItems.map((item) => renderNavLink(item))}
+
         {user ? <div className="mx-3 my-2 border-t border-[var(--border)]" /> : null}
         {dashboardItems.map((item) => renderNavLink(item, true))}
       </nav>

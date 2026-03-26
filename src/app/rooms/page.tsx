@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Plus } from "lucide-react";
 
 import AuthBanner from "@/components/AuthBanner";
+import ScenarioLimitPromptDialog from "@/components/ScenarioLimitPromptDialog";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import ShareEstimateModal from "@/components/ShareEstimateModal";
 import TermTooltip from "@/components/TermTooltip";
@@ -26,6 +27,7 @@ import { defaultCostLibrary } from "@/lib/costLibrary";
 import { saveScenario } from "@/lib/dataService";
 import { estimateRooms } from "@/lib/estimator";
 import type { SharedEstimateSnapshot } from "@/lib/share";
+import { ScenarioLimitExceededError } from "@/lib/storage";
 import type {
   Condition,
   EstimateInput,
@@ -107,6 +109,7 @@ export default function RoomsPage() {
   const [nextRoomId, setNextRoomId] = useState(3);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isScenarioLimitPromptOpen, setIsScenarioLimitPromptOpen] = useState(false);
 
   const shouldScrollToResultsRef = useRef(false);
 
@@ -232,6 +235,11 @@ export default function RoomsPage() {
       });
     } catch (error) {
       setIsSaveModalOpen(false);
+
+      if (error instanceof ScenarioLimitExceededError) {
+        setIsScenarioLimitPromptOpen(true);
+        return;
+      }
 
       toast({
         title: "Scenario saved locally",
@@ -510,6 +518,11 @@ export default function RoomsPage() {
           snapshot={shareSnapshot}
         />
       ) : null}
+
+      <ScenarioLimitPromptDialog
+        isOpen={isScenarioLimitPromptOpen}
+        onOpenChange={setIsScenarioLimitPromptOpen}
+      />
     </section>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, AlertTriangle } from "lucide-react";
 import AuthBanner from "@/components/AuthBanner";
+import AuthGate from "@/components/AuthGate";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
 import TermTooltip from "@/components/TermTooltip";
 import { Badge } from "@/components/ui/badge";
@@ -417,113 +418,131 @@ export default function BudgetPage() {
         </div>
       ) : null}
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Scenario</p>
-            <Select value={selectedScenarioId} onValueChange={setSelectedScenarioId}>
-              <SelectTrigger id="scenario-select" className="w-full">
-                <SelectValue placeholder="Select scenario" />
-              </SelectTrigger>
-              <SelectContent>
-                {scenarios.map((scenario) => (
-                  <SelectItem key={scenario.id} value={scenario.id}>
-                    {scenario.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {selectedScenario ? (
+      <AuthGate
+        featureName="Budget Tracking"
+        featureDescription="Track your budget vs actual spend and keep your refurbishment on track."
+      >
         <>
-          <div className="overflow-x-auto rounded-lg border border-border bg-card">
-            <Table className="min-w-[980px]">
-              <TableHeader className="bg-muted/60">
-                <TableRow>
-                  <TableHead className="px-4">Category</TableHead>
-                  <TableHead className="px-4">Planned (Typical)</TableHead>
-                  <TableHead className="px-4">Actual</TableHead>
-                  <TableHead className="px-4">Variance</TableHead>
-                  <TableHead className="px-4">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row, index) => (
-                  <TableRow key={row.category} className={index % 2 !== 0 ? "bg-muted/20" : ""}>
-                    <TableCell className="px-4 font-medium">{renderCategoryLabel(row.category)}</TableCell>
-                    <TableCell className="px-4 font-mono">
-                      <CurrencyDisplay amount={row.planned} />
-                    </TableCell>
-                    <TableCell className="px-4">
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        placeholder="£0"
-                        value={typeof row.actual === "number" ? row.actual : ""}
-                        onChange={(event) => handleActualChange(row.category, event.target.value)}
-                        className="h-8 w-full max-w-40 text-right font-mono"
-                      />
-                    </TableCell>
-                    <TableCell className={`px-4 font-mono ${getVarianceClass(row.actual, row.variance)}`}>
-                      {typeof row.variance === "number" ? (
-                        <CurrencyDisplay amount={row.variance} />
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4">{getStatusBadge(row.status)}</TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="bg-muted/50 font-semibold">
-                  <TableCell className="px-4">Total</TableCell>
-                  <TableCell className="px-4 font-mono">
-                    <CurrencyDisplay amount={totalPlanned} />
-                  </TableCell>
-                  <TableCell className="px-4 font-mono">
-                    {typeof totalActual === "number" ? (
-                      <CurrencyDisplay amount={totalActual} />
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className={`px-4 font-mono ${getVarianceClass(totalActual, totalVariance)}`}>
-                    {typeof totalVariance === "number" ? (
-                      <CurrencyDisplay amount={totalVariance} />
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="px-4">{getStatusBadge(totalStatus)}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+          <Card>
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Scenario</p>
+                <Select value={selectedScenarioId} onValueChange={setSelectedScenarioId}>
+                  <SelectTrigger id="scenario-select" className="w-full">
+                    <SelectValue placeholder="Select scenario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {scenarios.map((scenario) => (
+                      <SelectItem key={scenario.id} value={scenario.id}>
+                        {scenario.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
-          {hasAnyActual ? (
-            <Card className="bp-card-border bg-card">
-              <CardHeader>
-                <CardTitle>Planned vs Actual by Category</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <BarChart
-                    data={plannedVsActualChartData}
-                    index="name"
-                    categories={["Planned", "Actual"]}
-                    colors={["blue", "amber"]}
-                    valueFormatter={(value) => gbpFormatter.format(value)}
-                    className="h-72 min-w-[500px] [&_.tremor-base]:bg-transparent [&_[role='tooltip']]:border-border [&_[role='tooltip']]:bg-card [&_[role='tooltip']]:text-foreground"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+          {selectedScenario ? (
+            <>
+              <div className="overflow-x-auto rounded-lg border border-border bg-card">
+                <Table className="min-w-[980px]">
+                  <TableHeader className="bg-muted/60">
+                    <TableRow>
+                      <TableHead className="px-4">Category</TableHead>
+                      <TableHead className="px-4">Planned (Typical)</TableHead>
+                      <TableHead className="px-4">Actual</TableHead>
+                      <TableHead className="px-4">Variance</TableHead>
+                      <TableHead className="px-4">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.map((row, index) => (
+                      <TableRow
+                        key={row.category}
+                        className={index % 2 !== 0 ? "bg-muted/20" : ""}
+                      >
+                        <TableCell className="px-4 font-medium">
+                          {renderCategoryLabel(row.category)}
+                        </TableCell>
+                        <TableCell className="px-4 font-mono">
+                          <CurrencyDisplay amount={row.planned} />
+                        </TableCell>
+                        <TableCell className="px-4">
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            placeholder="£0"
+                            value={typeof row.actual === "number" ? row.actual : ""}
+                            onChange={(event) =>
+                              handleActualChange(row.category, event.target.value)
+                            }
+                            className="h-8 w-full max-w-40 text-right font-mono"
+                          />
+                        </TableCell>
+                        <TableCell
+                          className={`px-4 font-mono ${getVarianceClass(row.actual, row.variance)}`}
+                        >
+                          {typeof row.variance === "number" ? (
+                            <CurrencyDisplay amount={row.variance} />
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell className="px-4">{getStatusBadge(row.status)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/50 font-semibold">
+                      <TableCell className="px-4">Total</TableCell>
+                      <TableCell className="px-4 font-mono">
+                        <CurrencyDisplay amount={totalPlanned} />
+                      </TableCell>
+                      <TableCell className="px-4 font-mono">
+                        {typeof totalActual === "number" ? (
+                          <CurrencyDisplay amount={totalActual} />
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell
+                        className={`px-4 font-mono ${getVarianceClass(totalActual, totalVariance)}`}
+                      >
+                        {typeof totalVariance === "number" ? (
+                          <CurrencyDisplay amount={totalVariance} />
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell className="px-4">{getStatusBadge(totalStatus)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+
+              {hasAnyActual ? (
+                <Card className="bp-card-border bg-card">
+                  <CardHeader>
+                    <CardTitle>Planned vs Actual by Category</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <BarChart
+                        data={plannedVsActualChartData}
+                        index="name"
+                        categories={["Planned", "Actual"]}
+                        colors={["blue", "amber"]}
+                        valueFormatter={(value) => gbpFormatter.format(value)}
+                        className="h-72 min-w-[500px] [&_.tremor-base]:bg-transparent [&_[role='tooltip']]:border-border [&_[role='tooltip']]:bg-card [&_[role='tooltip']]:text-foreground"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null}
+            </>
           ) : null}
         </>
-      ) : null}
+      </AuthGate>
     </section>
   );
 }

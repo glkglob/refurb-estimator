@@ -3,6 +3,24 @@
 ## Platform Overview
 Refurb Estimator is a UK-focused property cost platform combining refurbishment and new-build estimate engines with AI photo analysis, scenario planning, budget tracking, shareable outputs, and a tradesperson ecosystem (profiles, gallery, notifications, and admin tooling).
 
+## Supported Property Types
+The platform uses a single `PropertyType` enum across UI, API, and estimator logic. Supported values are:
+
+- `Detached House` — standalone residential homes.
+- `Semi-Detached House` — linked pair housing stock.
+- `Terraced House` — mid-terrace residential properties.
+- `End-Off-Terrace` — end-terrace units with one exposed side.
+- `Bungalow` — single-storey residential homes.
+- `Cottage` — smaller traditional houses, often with bespoke constraints.
+- `Flat / Apartment` — single dwellings in multi-unit buildings.
+- `Maisonette` — split-level flats with independent entrances.
+- `Townhouse` — multi-storey residential homes on tighter plots.
+- `Office` — business workspace developments and fit-outs.
+- `Retail` — shopfront and customer-facing commercial units.
+- `Industrial` — warehouse/light-industrial construction and refurbishment.
+- `Leisure` — hospitality, gym, or venue-led commercial projects.
+- `Healthcare` — clinical and care-related buildings with compliance overhead.
+
 ## Tech Stack
 - Next.js 16 (App Router) + React 19 + TypeScript (strict)
 - Tailwind CSS v4 + shadcn/ui + Lucide + Tremor charts

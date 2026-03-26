@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { PROPERTY_TYPE_DISPLAY_ORDER, type PropertyType } from "@/lib/propertyType";
 import { cn } from "@/lib/utils";
 import type { EstimateInput } from "@/lib/types";
 
@@ -23,7 +24,7 @@ type EstimateFormProps = {
 
 type FormValues = {
   region: EstimateInput["region"] | "";
-  propertyType: string;
+  propertyType: PropertyType | "";
   totalAreaM2: string;
   condition: EstimateInput["condition"] | "";
   finishLevel: EstimateInput["finishLevel"] | "";
@@ -48,15 +49,7 @@ const regions: EstimateInput["region"][] = [
 
 const conditions: EstimateInput["condition"][] = ["poor", "fair", "good"];
 const finishLevels: EstimateInput["finishLevel"][] = ["budget", "standard", "premium"];
-const propertyTypes = [
-  "Flat",
-  "Terraced house",
-  "Semi-detached",
-  "Detached",
-  "Bungalow",
-  "HMO",
-  "Commercial"
-] as const;
+const propertyTypes = PROPERTY_TYPE_DISPLAY_ORDER;
 
 export default function EstimateForm({ onSubmit, onValidationError }: EstimateFormProps) {
   const [values, setValues] = useState<FormValues>({
@@ -82,7 +75,7 @@ export default function EstimateForm({ onSubmit, onValidationError }: EstimateFo
       nextErrors.region = "Region is required";
     }
 
-    if (!values.propertyType.trim()) {
+    if (!values.propertyType) {
       nextErrors.propertyType = "Property type is required";
     }
 
@@ -117,7 +110,7 @@ export default function EstimateForm({ onSubmit, onValidationError }: EstimateFo
     onSubmit({
       region: values.region as EstimateInput["region"],
       projectType: "refurb",
-      propertyType: values.propertyType.trim(),
+      propertyType: values.propertyType as PropertyType,
       totalAreaM2: areaAsNumber,
       condition: values.condition as EstimateInput["condition"],
       finishLevel: values.finishLevel as EstimateInput["finishLevel"]
@@ -176,8 +169,8 @@ export default function EstimateForm({ onSubmit, onValidationError }: EstimateFo
                   Property type
                 </Label>
                 <Select
-                  value={values.propertyType}
-                  onValueChange={(value) => updateField("propertyType", value)}
+                  value={values.propertyType || undefined}
+                  onValueChange={(value) => updateField("propertyType", value as PropertyType)}
                 >
                   <SelectTrigger
                     id="propertyType"

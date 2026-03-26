@@ -246,7 +246,7 @@ export default function NewBuildResults({ result }: NewBuildResultsProps) {
         <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
           <div>
             <span className="text-muted-foreground">Property type:</span>{" "}
-            {result.metadata.propertyType.replace("_", " ")}
+            {result.metadata.propertyType}
           </div>
           <div>
             <span className="text-muted-foreground">Specification:</span>{" "}
@@ -286,7 +286,7 @@ export default function NewBuildResults({ result }: NewBuildResultsProps) {
           {result.metadata.commercialType ? (
             <div>
               <span className="text-muted-foreground">Commercial type:</span>{" "}
-              {result.metadata.commercialType}
+              {result.metadata.commercialType.replace("_", " ")}
             </div>
           ) : null}
           {result.metadata.fitOutLevel ? (

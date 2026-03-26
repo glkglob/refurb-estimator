@@ -1,4 +1,6 @@
 export const typeDefs = `#graphql
+  scalar PropertyType
+
   type User {
     id: ID!
     email: String!
@@ -21,7 +23,7 @@ export const typeDefs = `#graphql
   type EstimateInputData {
     region: String!
     projectType: String!
-    propertyType: String!
+    propertyType: PropertyType!
     totalAreaM2: Float!
     condition: String!
     finishLevel: String!
@@ -99,7 +101,7 @@ export const typeDefs = `#graphql
   input CreateEstimateInput {
     name: String
     region: String!
-    propertyType: String!
+    propertyType: PropertyType!
     totalAreaM2: Float!
     condition: String!
     finishLevel: String!

@@ -9,6 +9,8 @@ import AuthBanner from "@/components/AuthBanner";
 import EstimateResultsFallback from "@/components/EstimateResultsFallback";
 import EstimateForm from "@/components/EstimateForm";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
+import TestimonialsSection from "@/components/TestimonialsSection";
+import TrustBanner from "@/components/TrustBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -214,6 +216,8 @@ export default function HomePage() {
         Enter your property details below and click Calculate to get an instant estimate.
       </p>
 
+      <TrustBanner />
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
@@ -360,6 +364,8 @@ export default function HomePage() {
           <EstimateResults result={result} />
         </div>
       ) : null}
+
+      <TestimonialsSection />
 
       <SaveScenarioModal
         isOpen={isSaveModalOpen}

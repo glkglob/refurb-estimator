@@ -44,11 +44,14 @@ describe("AuthGate", () => {
     }
   });
 
-  test("shows gated overlay and preview for signed-out users", async () => {
+  test("shows the gated overlay for signed-out users", async () => {
     mockSupabaseUser(null);
 
     render(
-      <AuthGate preview={<p>Preview summary</p>}>
+      <AuthGate
+        featureName="Development Appraisal"
+        featureDescription="Sign in to unlock the full appraisal breakdown."
+      >
         <div>Private appraisal figures</div>
       </AuthGate>
     );
@@ -57,8 +60,18 @@ describe("AuthGate", () => {
       expect(screen.getByText("Sign in to unlock")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Preview summary")).toBeInTheDocument();
-    expect(screen.getAllByText("Pro feature — free during beta")).toHaveLength(2);
+    expect(screen.getByText("Development Appraisal")).toBeInTheDocument();
+    expect(
+      screen.getByText("Sign in to unlock the full appraisal breakdown.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sign in to unlock" })).toHaveAttribute(
+      "href",
+      "/auth/signin"
+    );
+    expect(screen.getByRole("link", { name: "Create free account" })).toHaveAttribute(
+      "href",
+      "/auth/signup"
+    );
     expect(screen.getByText("Private appraisal figures")).toBeInTheDocument();
   });
 
@@ -66,7 +79,10 @@ describe("AuthGate", () => {
     mockSupabaseUser({ id: "user-123" });
 
     render(
-      <AuthGate>
+      <AuthGate
+        featureName="Development Appraisal"
+        featureDescription="Sign in to unlock the full appraisal breakdown."
+      >
         <div>Private appraisal figures</div>
       </AuthGate>
     );

@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import AuthBanner from "@/components/AuthBanner";
 import EstimateResultsFallback from "@/components/EstimateResultsFallback";
 import EstimateForm from "@/components/EstimateForm";
+import ScenarioLimitPromptDialog from "@/components/ScenarioLimitPromptDialog";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
 import { exportToCsv } from "@/lib/exportCsv";
 import type { QuotePdfInput } from "@/lib/generateQuotePdf";
 import { shareOrCopy } from "@/lib/share";
+import { ScenarioLimitExceededError } from "@/lib/storage";
 import type { EstimateInput, EstimateResult, Scenario } from "@/lib/types";
 
 const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
@@ -37,6 +39,7 @@ export default function HomePage() {
   const [result, setResult] = useState<EstimateResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isScenarioLimitPromptOpen, setIsScenarioLimitPromptOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { toast } = useToast();
@@ -114,6 +117,11 @@ export default function HomePage() {
       });
     } catch (error) {
       setIsSaveModalOpen(false);
+
+      if (error instanceof ScenarioLimitExceededError) {
+        setIsScenarioLimitPromptOpen(true);
+        return;
+      }
 
       toast({
         title: "Scenario saved locally",
@@ -399,6 +407,10 @@ export default function HomePage() {
         onClose={() => setIsSaveModalOpen(false)}
         onSave={handleSaveScenario}
         isSaving={isSaving}
+      />
+      <ScenarioLimitPromptDialog
+        isOpen={isScenarioLimitPromptOpen}
+        onOpenChange={setIsScenarioLimitPromptOpen}
       />
     </section>
   );

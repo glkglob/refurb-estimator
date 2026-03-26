@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { AlertCircle } from "lucide-react";
+import AuthValueProposition from "@/components/auth/AuthValueProposition";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,7 @@ export default function SignupPage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-md">
+    <section className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[1.2fr_0.8fr]">
       <Card className="bg-card bp-card-border rounded-xl p-6">
         <CardHeader className="border-border p-0 pb-4">
           <CardTitle className="text-2xl text-foreground">Create account</CardTitle>
@@ -125,6 +126,9 @@ export default function SignupPage() {
           </p>
         </CardContent>
       </Card>
+      <div className="lg:pt-1">
+        <AuthValueProposition />
+      </div>
     </section>
   );
 }

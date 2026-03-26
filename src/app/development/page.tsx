@@ -496,19 +496,8 @@ export default function DevelopmentAppraisalPage() {
 
       {result && viabilityMeta ? (
         <AuthGate
-          proLabel="Pro feature — free during beta"
-          preview={
-            <div className="space-y-2">
-              <p>
-                Preview: this scenario currently reads as{" "}
-                <span className="font-semibold text-foreground">{viabilityMeta.label}</span>.
-              </p>
-              <p>
-                Sign in to reveal the exact totals, margin, return on cost, and BRRR refinance
-                release values.
-              </p>
-            </div>
-          }
+          featureName="Development Appraisal"
+          featureDescription={`Pro feature — free during beta. Preview status: ${viabilityMeta.label}. Sign in to unlock exact totals, margin, ROC, and BRRR values.`}
         >
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">

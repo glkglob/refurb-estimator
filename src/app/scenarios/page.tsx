@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import AuthBanner from "@/components/AuthBanner";
+import AuthGate from "@/components/AuthGate";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
 import TermTooltip from "@/components/TermTooltip";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { deleteScenario, loadScenarios } from "@/lib/dataService";
+import { createClient } from "@/lib/supabase/client";
 import type { Scenario } from "@/lib/types";
 
 function formatRoi(value: number): string {
@@ -42,6 +44,9 @@ const BarChart = dynamic(
 );
 
 export default function ScenariosPage() {
+  const isSupabaseConfigured = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
   const gbpFormatter = new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: "GBP",
@@ -51,6 +56,41 @@ export default function ScenariosPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [scenarioToDelete, setScenarioToDelete] = useState<Scenario | null>(null);
+  const [authState, setAuthState] = useState<"checking" | "authenticated" | "unauthenticated">(
+    isSupabaseConfigured ? "checking" : "authenticated"
+  );
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      return;
+    }
+
+    let isActive = true;
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (!isActive) {
+        return;
+      }
+
+      setAuthState(data.user ? "authenticated" : "unauthenticated");
+    });
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isActive) {
+        return;
+      }
+
+      setAuthState(session?.user ? "authenticated" : "unauthenticated");
+    });
+
+    return () => {
+      isActive = false;
+      subscription.unsubscribe();
+    };
+  }, [isSupabaseConfigured]);
 
   useEffect(() => {
     let isMounted = true;
@@ -133,6 +173,8 @@ export default function ScenariosPage() {
         }),
     [sortedScenarios]
   );
+  const isSignedOut = authState === "unauthenticated";
+  const shouldGateComparison = authState !== "authenticated" && sortedScenarios.length > 1;
 
   async function handleDeleteConfirm(): Promise<void> {
     if (!scenarioToDelete) {
@@ -153,6 +195,139 @@ export default function ScenariosPage() {
 
     setScenarioToDelete(null);
   }
+
+  const comparisonSection = (
+    <>
+      <div className="overflow-x-auto rounded-lg border border-border bg-card">
+        <Table className="min-w-[960px]">
+          <TableHeader className="bg-muted/60">
+            <TableRow>
+              <TableHead className="px-4">Name</TableHead>
+              <TableHead className="px-4">Total (Typical)</TableHead>
+              <TableHead className="px-4">£/m²</TableHead>
+              <TableHead className="px-4">Purchase Price</TableHead>
+              <TableHead className="px-4">
+                <TermTooltip
+                  term="GDV"
+                  explanation="Gross Development Value — the estimated market value of the property after refurbishment."
+                />
+              </TableHead>
+              <TableHead className="px-4">Profit</TableHead>
+              <TableHead className="px-4">
+                <TermTooltip
+                  term="ROI"
+                  explanation="Return on Investment — profit as a percentage of total purchase and refurbishment costs."
+                />
+              </TableHead>
+              <TableHead className="px-4">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedScenarios.map((scenario, index) => {
+              const totalTypical = scenario.result.totalTypical;
+              const costPerM2Typical = scenario.result.costPerM2.typical;
+              const purchasePrice = scenario.purchasePrice;
+              const gdv = scenario.gdv;
+              const hasFinancials = typeof purchasePrice === "number" && typeof gdv === "number";
+              const profit = hasFinancials ? gdv - purchasePrice - totalTypical : null;
+              const roi =
+                hasFinancials && profit !== null
+                  ? (profit / (purchasePrice + totalTypical)) * 100
+                  : null;
+              const roiPositive = typeof roi === "number" ? roi >= 0 : false;
+
+              return (
+                <TableRow key={scenario.id} className={index % 2 !== 0 ? "bg-muted/20" : ""}>
+                  <TableCell className="px-4 font-medium">{scenario.name}</TableCell>
+                  <TableCell className="px-4 font-mono">
+                    <CurrencyDisplay amount={totalTypical} />
+                  </TableCell>
+                  <TableCell className="px-4 font-mono">
+                    <CurrencyDisplay amount={costPerM2Typical} />
+                  </TableCell>
+                  <TableCell className="px-4 font-mono">
+                    {typeof purchasePrice === "number" ? (
+                      <CurrencyDisplay amount={purchasePrice} />
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4 font-mono">
+                    {typeof gdv === "number" ? <CurrencyDisplay amount={gdv} /> : "—"}
+                  </TableCell>
+                  <TableCell className="px-4 font-mono">
+                    {profit !== null ? <CurrencyDisplay amount={profit} /> : "—"}
+                  </TableCell>
+                  <TableCell className="px-4">
+                    {roi !== null ? (
+                      <Badge
+                        variant={roiPositive ? "default" : "destructive"}
+                        className="font-medium font-mono"
+                      >
+                        {formatRoi(roi)}
+                      </Badge>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setScenarioToDelete(scenario)}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      {scenarioCostChartData.length >= 2 ? (
+        <Card className="bp-card-border bg-card">
+          <CardHeader>
+            <CardTitle>Scenario Cost Comparison</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <BarChart
+                data={scenarioCostChartData}
+                index="name"
+                categories={["Low", "Typical", "High"]}
+                colors={["blue", "amber", "cyan"]}
+                valueFormatter={(value) => gbpFormatter.format(value)}
+                className="h-72 min-w-[500px] [&_.tremor-base]:bg-transparent [&_[role='tooltip']]:border-border [&_[role='tooltip']]:bg-card [&_[role='tooltip']]:text-foreground"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {investmentChartData.length > 0 ? (
+        <Card className="bp-card-border bg-card">
+          <CardHeader>
+            <CardTitle>Investment Analysis</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <BarChart
+                data={investmentChartData}
+                index="name"
+                categories={["Purchase", "Refurb Cost", "GDV", "Profit"]}
+                colors={["blue", "amber", "cyan", "emerald"]}
+                valueFormatter={(value) => gbpFormatter.format(value)}
+                className="h-72 min-w-[500px] [&_.tremor-base]:bg-transparent [&_[role='tooltip']]:border-border [&_[role='tooltip']]:bg-card [&_[role='tooltip']]:text-foreground"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+    </>
+  );
 
   return (
     <section className="space-y-6">
@@ -197,135 +372,36 @@ export default function ScenariosPage() {
         </Card>
       ) : !isLoading ? (
         <>
-          <div className="overflow-x-auto rounded-lg border border-border bg-card">
-            <Table className="min-w-[960px]">
-              <TableHeader className="bg-muted/60">
-                <TableRow>
-                  <TableHead className="px-4">Name</TableHead>
-                  <TableHead className="px-4">Total (Typical)</TableHead>
-                  <TableHead className="px-4">£/m²</TableHead>
-                  <TableHead className="px-4">Purchase Price</TableHead>
-                  <TableHead className="px-4">
-                    <TermTooltip
-                      term="GDV"
-                      explanation="Gross Development Value — the estimated market value of the property after refurbishment."
-                    />
-                  </TableHead>
-                  <TableHead className="px-4">Profit</TableHead>
-                  <TableHead className="px-4">
-                    <TermTooltip
-                      term="ROI"
-                      explanation="Return on Investment — profit as a percentage of total purchase and refurbishment costs."
-                    />
-                  </TableHead>
-                  <TableHead className="px-4">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedScenarios.map((scenario, index) => {
-                  const totalTypical = scenario.result.totalTypical;
-                  const costPerM2Typical = scenario.result.costPerM2.typical;
-                  const purchasePrice = scenario.purchasePrice;
-                  const gdv = scenario.gdv;
-                  const hasFinancials =
-                    typeof purchasePrice === "number" && typeof gdv === "number";
-                  const profit = hasFinancials ? gdv - purchasePrice - totalTypical : null;
-                  const roi =
-                    hasFinancials && profit !== null
-                      ? (profit / (purchasePrice + totalTypical)) * 100
-                      : null;
-                  const roiPositive = typeof roi === "number" ? roi >= 0 : false;
-
-                  return (
-                    <TableRow key={scenario.id} className={index % 2 !== 0 ? "bg-muted/20" : ""}>
-                      <TableCell className="px-4 font-medium">{scenario.name}</TableCell>
-                      <TableCell className="px-4 font-mono">
-                        <CurrencyDisplay amount={totalTypical} />
-                      </TableCell>
-                      <TableCell className="px-4 font-mono">
-                        <CurrencyDisplay amount={costPerM2Typical} />
-                      </TableCell>
-                      <TableCell className="px-4 font-mono">
-                        {typeof purchasePrice === "number" ? (
-                          <CurrencyDisplay amount={purchasePrice} />
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 font-mono">
-                        {typeof gdv === "number" ? <CurrencyDisplay amount={gdv} /> : "—"}
-                      </TableCell>
-                      <TableCell className="px-4 font-mono">
-                        {profit !== null ? <CurrencyDisplay amount={profit} /> : "—"}
-                      </TableCell>
-                      <TableCell className="px-4">
-                        {roi !== null ? (
-                          <Badge
-                            variant={roiPositive ? "default" : "destructive"}
-                            className="font-medium font-mono"
-                          >
-                            {formatRoi(roi)}
-                          </Badge>
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4">
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setScenarioToDelete(scenario)}
-                        >
-                          Delete
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-
-          {scenarioCostChartData.length >= 2 ? (
-            <Card className="bp-card-border bg-card">
-              <CardHeader>
-                <CardTitle>Scenario Cost Comparison</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <BarChart
-                    data={scenarioCostChartData}
-                    index="name"
-                    categories={["Low", "Typical", "High"]}
-                    colors={["blue", "amber", "cyan"]}
-                    valueFormatter={(value) => gbpFormatter.format(value)}
-                    className="h-72 min-w-[500px] [&_.tremor-base]:bg-transparent [&_[role='tooltip']]:border-border [&_[role='tooltip']]:bg-card [&_[role='tooltip']]:text-foreground"
-                  />
+          {isSignedOut ? (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="space-y-3 pt-6 text-sm text-muted-foreground">
+                {sortedScenarios.length <= 1 ? (
+                  <p>You can save one scenario for free before signing in.</p>
+                ) : (
+                  <p>Sign in to save and compare multiple scenarios.</p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild>
+                    <Link href="/auth/signin">Sign in to unlock</Link>
+                  </Button>
+                  <Button variant="outline" asChild>
+                    <Link href="/auth/signup">Create free account</Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ) : null}
 
-          {investmentChartData.length > 0 ? (
-            <Card className="bp-card-border bg-card">
-              <CardHeader>
-                <CardTitle>Investment Analysis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <BarChart
-                    data={investmentChartData}
-                    index="name"
-                    categories={["Purchase", "Refurb Cost", "GDV", "Profit"]}
-                    colors={["blue", "amber", "cyan", "emerald"]}
-                    valueFormatter={(value) => gbpFormatter.format(value)}
-                    className="h-72 min-w-[500px] [&_.tremor-base]:bg-transparent [&_[role='tooltip']]:border-border [&_[role='tooltip']]:bg-card [&_[role='tooltip']]:text-foreground"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
+          {shouldGateComparison ? (
+            <AuthGate
+              featureName="Scenario Comparison"
+              featureDescription="Sign in to save and compare multiple scenarios."
+            >
+              {comparisonSection}
+            </AuthGate>
+          ) : (
+            comparisonSection
+          )}
         </>
       ) : null}
 

@@ -61,14 +61,14 @@ async function getAuthenticatedClient() {
 export async function saveScenario(scenario: Scenario): Promise<void> {
   const auth = await getAuthenticatedClient();
   if (!auth) {
-    saveScenarioLocal(scenario);
+    saveScenarioLocal(scenario, { enforceLimit: true });
     return;
   }
 
   try {
     await saveScenarioToDb(scenario);
   } catch (error) {
-    saveScenarioLocal(scenario);
+    saveScenarioLocal(scenario, { enforceLimit: false });
     const message = error instanceof Error ? error.message : "Unknown error";
     throw buildErrorWithFallback<void>(
       `Failed to save scenario to cloud. Saved locally instead: ${message}`

@@ -9,6 +9,7 @@ import AuthBanner from "@/components/AuthBanner";
 import EstimateResultsFallback from "@/components/EstimateResultsFallback";
 import EstimateForm from "@/components/EstimateForm";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -215,6 +216,24 @@ export default function HomePage() {
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2">
+        <Card className="border-primary/40 bg-primary/5 sm:col-span-2">
+          <CardHeader className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle>Development Appraisal</CardTitle>
+              <Badge variant="secondary">Pro feature — free during beta</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Run full deal viability checks with SDLT, finance, margin targets, and BRRR
+              refinance outputs.
+            </p>
+          </CardHeader>
+          <CardFooter>
+            <Button asChild>
+              <Link href="/development">Open Development Appraisal →</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Loft conversion</CardTitle>

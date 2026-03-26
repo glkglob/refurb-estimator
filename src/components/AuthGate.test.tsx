@@ -2,32 +2,31 @@
 
 import { render, screen, waitFor } from "@testing-library/react";
 import AuthGate from "./AuthGate";
-import { createClient } from "@/lib/supabase/client";
+import { createClientSafely } from "@/lib/supabase/client";
 
 jest.mock("@/lib/supabase/client", () => ({
-  createClient: jest.fn()
+  createClientSafely: jest.fn()
 }));
 
-const mockedCreateClient = jest.mocked(createClient);
+const mockedCreateClientSafely = jest.mocked(createClientSafely);
 
 const ORIGINAL_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ORIGINAL_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 function mockSupabaseUser(user: { id: string } | null): void {
-  mockedCreateClient.mockReturnValue({
+  mockedCreateClientSafely.mockReturnValue({
     auth: {
       getUser: jest.fn().mockResolvedValue({
         data: { user }
       })
     }
-  } as unknown as ReturnType<typeof createClient>);
+  } as NonNullable<ReturnType<typeof createClientSafely>>);
 }
 
 describe("AuthGate", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "public-anon-key";
+    mockedCreateClientSafely.mockReturnValue(null);
   });
 
   afterAll(() => {
@@ -77,6 +76,25 @@ describe("AuthGate", () => {
 
   test("renders children without gate when authenticated", async () => {
     mockSupabaseUser({ id: "user-123" });
+
+    render(
+      <AuthGate
+        featureName="Development Appraisal"
+        featureDescription="Sign in to unlock the full appraisal breakdown."
+      >
+        <div>Private appraisal figures</div>
+      </AuthGate>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Private appraisal figures")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Sign in to unlock")).not.toBeInTheDocument();
+  });
+
+  test("renders children without gate when client is unavailable", async () => {
+    mockedCreateClientSafely.mockReturnValueOnce(null);
 
     render(
       <AuthGate

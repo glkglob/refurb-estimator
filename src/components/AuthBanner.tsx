@@ -1,34 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createClientSafely } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export default function AuthBanner() {
   const [show, setShow] = useState(false);
+  const supabase = useMemo(() => createClientSafely(), []);
 
   useEffect(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabase) {
       return;
     }
 
     let isActive = true;
-    const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data }) => {
-      if (isActive && !data.user) {
+    async function loadAuthState() {
+      const result = await supabase.auth.getUser();
+      if (isActive && !result.data.user) {
         setShow(true);
       }
-    });
+    }
+
+    void loadAuthState();
 
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [supabase]);
 
   if (!show) {
     return null;

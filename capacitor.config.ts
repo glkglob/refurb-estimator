@@ -1,17 +1,14 @@
-import type { CapacitorConfig } from "@capacitor/cli";
-
-const isDev = process.env.NODE_ENV !== "production";
+// File: capacitor.config.ts
+import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: "com.rissolo.refurbestimator",
-  appName: "Refurb Estimator",
-  webDir: "out",
-  server: isDev
-    ? {
-        url: process.env.CAPACITOR_SERVER_URL || "https://refurb-estimator.vercel.app",
-        cleartext: false
-      }
-    : undefined
+  appId: 'com.rissolo.refurbestimator',
+  appName: 'Refurb Estimator',
+  webDir: 'out', // must match Next export folder if you later use static
+  server: {
+    url: 'https://refurb-estimator.vercel.app',
+    cleartext: true,
+  },
 };
 
 export default config;

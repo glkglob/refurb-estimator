@@ -55,12 +55,24 @@ export default async function TradespeoplePage({ searchParams }: PageProps) {
       ? resolvedSearchParams.city.trim()
       : undefined;
 
-  const { data: profiles } = await listPublicTradespeople({
-    page: 1,
-    limit: 20,
-    specialty,
-    city
-  });
+  let profiles: Awaited<ReturnType<typeof listPublicTradespeople>>["data"] = [];
+  let isDirectoryUnavailable = false;
+
+  try {
+    const result = await listPublicTradespeople({
+      page: 1,
+      limit: 20,
+      specialty,
+      city
+    });
+    profiles = result.data;
+  } catch (error) {
+    isDirectoryUnavailable = true;
+    console.error(
+      "[TradespeoplePage] Unable to load public trades directory. Showing fallback state.",
+      error
+    );
+  }
 
   return (
     <section className="space-y-6">
@@ -72,6 +84,17 @@ export default async function TradespeoplePage({ searchParams }: PageProps) {
       </header>
 
       <ContractorEnquiryForm />
+
+      {isDirectoryUnavailable ? (
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">
+              The trades directory is temporarily unavailable. You can still submit an enquiry and
+              we&apos;ll match you with local contractors.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardContent className="p-4">
@@ -111,7 +134,7 @@ export default async function TradespeoplePage({ searchParams }: PageProps) {
         </CardContent>
       </Card>
 
-      {profiles.length === 0 ? (
+      {isDirectoryUnavailable ? null : profiles.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-sm text-muted-foreground">

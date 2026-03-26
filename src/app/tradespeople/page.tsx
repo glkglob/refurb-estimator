@@ -134,7 +134,7 @@ export default async function TradespeoplePage({ searchParams }: PageProps) {
         </CardContent>
       </Card>
 
-      {profiles.length === 0 ? (
+      {isDirectoryUnavailable ? null : profiles.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-sm text-muted-foreground">

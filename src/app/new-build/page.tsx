@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import NewBuildResults from "@/components/NewBuildResults";
 import ShareEstimateModal from "@/components/ShareEstimateModal";
@@ -120,6 +121,7 @@ function parseNumber(value: string): number | null {
 }
 
 export default function NewBuildPage() {
+  const router = useRouter();
   const { toast } = useToast();
 
   const [propertyType, setPropertyType] =
@@ -899,6 +901,19 @@ export default function NewBuildPage() {
 
             <Button type="button" variant="outline" onClick={handleReset}>
               New estimate
+            </Button>
+
+            <Button
+              type="button"
+              onClick={() => {
+                const params = new URLSearchParams({
+                  postcode: (lastInput?.postcodeDistrict ?? "").trim().toUpperCase(),
+                  estimate: String(Math.round(result.totalTypical)),
+                });
+                router.push(`/tradespeople?${params.toString()}`);
+              }}
+            >
+              Get quotes from vetted contractors →
             </Button>
           </div>
 

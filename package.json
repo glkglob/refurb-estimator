@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:capacitor": "next build && next export -o capacitor-www",
     "start": "next start",
     "test": "jest",
     "lint": "eslint .",

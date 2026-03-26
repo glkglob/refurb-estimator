@@ -56,8 +56,6 @@ export const extensionBaseRates: Record<
 type Tier = "low" | "typical" | "high";
 type TierAmounts = Record<Tier, number>;
 
-const TIERS: Tier[] = ["low", "typical", "high"];
-
 function multiplyTier(amounts: TierAmounts, multiplier: number): TierAmounts {
   return {
     low: amounts.low * multiplier,

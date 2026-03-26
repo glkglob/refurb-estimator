@@ -234,6 +234,20 @@ export default function HomePage() {
           </CardFooter>
         </Card>
 
+        <Card className="border-primary/30 bg-primary/5 sm:col-span-2">
+          <CardHeader className="space-y-2">
+            <CardTitle>Find Tradespeople</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Browse verified contractors and send one enquiry to get matched locally.
+            </p>
+          </CardHeader>
+          <CardFooter>
+            <Button asChild variant="outline">
+              <Link href="/tradespeople">Open tradespeople directory →</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Loft conversion</CardTitle>

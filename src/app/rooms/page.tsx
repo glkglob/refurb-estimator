@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, Plus } from "lucide-react";
 
 import AuthBanner from "@/components/AuthBanner";
@@ -96,10 +97,12 @@ function formatLabel(value: string): string {
 }
 
 export default function RoomsPage() {
+  const router = useRouter();
   const { toast } = useToast();
 
   const [region, setRegion] = useState<Region>("EastMidlands");
   const [condition, setCondition] = useState<Condition>("fair");
+  const [contractorPostcode, setContractorPostcode] = useState("");
   const [rooms, setRooms] = useState<RoomInput[]>(INITIAL_ROOMS);
   const [nextRoomId, setNextRoomId] = useState(3);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -248,7 +251,7 @@ export default function RoomsPage() {
       <AuthBanner />
 
       <Card>
-        <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2">
+        <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-3">
           <div className="space-y-1">
             <Label htmlFor="rooms-region">Region</Label>
             <Select
@@ -293,6 +296,17 @@ export default function RoomsPage() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="rooms-postcode">Postcode (for contractor matching)</Label>
+            <Input
+              id="rooms-postcode"
+              maxLength={10}
+              placeholder="e.g. SW1A 1AA"
+              value={contractorPostcode}
+              onChange={(event) => setContractorPostcode(event.target.value.toUpperCase())}
+            />
           </div>
         </CardContent>
       </Card>
@@ -461,6 +475,19 @@ export default function RoomsPage() {
               onClick={() => setIsShareModalOpen(true)}
             >
               Share estimate
+            </Button>
+
+            <Button
+              type="button"
+              onClick={() => {
+                const params = new URLSearchParams({
+                  postcode: contractorPostcode.trim().toUpperCase(),
+                  estimate: String(Math.round(calculation.result.totalTypical)),
+                });
+                router.push(`/tradespeople?${params.toString()}`);
+              }}
+            >
+              Get quotes from vetted contractors →
             </Button>
           </div>
 

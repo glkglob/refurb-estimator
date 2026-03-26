@@ -1,5 +1,10 @@
 import { defaultCostLibrary } from "./costLibrary";
 import { postcodeToRegion } from "./enhancedEstimator";
+import {
+  isCommercialPropertyType,
+  isFlatLikePropertyType,
+  PropertyType
+} from "./propertyType";
 import type {
   NewBuildCategory,
   NewBuildInput,
@@ -10,6 +15,7 @@ import type {
 
 type Tier = "low" | "typical" | "high";
 type TierAmounts = Record<Tier, number>;
+type CommercialTypeValue = NonNullable<NewBuildInput["commercialType"]>;
 
 const TIERS: Tier[] = ["low", "typical", "high"];
 
@@ -17,45 +23,75 @@ const baseBuildRates: Record<
   NewBuildPropertyType,
   Record<NewBuildSpec, TierAmounts>
 > = {
-  flat: {
-    basic: { low: 1600, typical: 2100, high: 2600 },
-    standard: { low: 2100, typical: 2600, high: 3200 },
-    premium: { low: 2600, typical: 3300, high: 4200 }
-  },
-  terraced: {
-    basic: { low: 1550, typical: 2000, high: 2500 },
-    standard: { low: 2000, typical: 2500, high: 3100 },
-    premium: { low: 2500, typical: 3200, high: 4000 }
-  },
-  "semi-detached": {
-    basic: { low: 1650, typical: 2100, high: 2650 },
-    standard: { low: 2100, typical: 2650, high: 3200 },
-    premium: { low: 2650, typical: 3300, high: 4200 }
-  },
-  detached: {
+  [PropertyType.DETACHED_HOUSE]: {
     basic: { low: 1750, typical: 2200, high: 2800 },
     standard: { low: 2200, typical: 2800, high: 3400 },
     premium: { low: 2800, typical: 3500, high: 4500 }
   },
-  bungalow: {
+  [PropertyType.SEMI_DETACHED_HOUSE]: {
+    basic: { low: 1650, typical: 2100, high: 2650 },
+    standard: { low: 2100, typical: 2650, high: 3200 },
+    premium: { low: 2650, typical: 3300, high: 4200 }
+  },
+  [PropertyType.TERRACED_HOUSE]: {
+    basic: { low: 1550, typical: 2000, high: 2500 },
+    standard: { low: 2000, typical: 2500, high: 3100 },
+    premium: { low: 2500, typical: 3200, high: 4000 }
+  },
+  [PropertyType.END_OFF_TERRACE]: {
+    basic: { low: 1600, typical: 2050, high: 2575 },
+    standard: { low: 2050, typical: 2575, high: 3150 },
+    premium: { low: 2575, typical: 3250, high: 4100 }
+  },
+  [PropertyType.BUNGALOW]: {
     basic: { low: 1850, typical: 2350, high: 2900 },
     standard: { low: 2350, typical: 2900, high: 3500 },
     premium: { low: 2900, typical: 3600, high: 4600 }
   },
-  hmo: {
-    basic: { low: 1900, typical: 2400, high: 3000 },
-    standard: { low: 2400, typical: 3000, high: 3700 },
-    premium: { low: 3000, typical: 3800, high: 4800 }
+  [PropertyType.COTTAGE]: {
+    basic: { low: 1800, typical: 2300, high: 2850 },
+    standard: { low: 2300, typical: 2850, high: 3450 },
+    premium: { low: 2850, typical: 3550, high: 4550 }
   },
-  block_of_flats: {
-    basic: { low: 1800, typical: 2400, high: 3000 },
-    standard: { low: 2200, typical: 2800, high: 3500 },
-    premium: { low: 2800, typical: 3500, high: 4500 }
+  [PropertyType.FLAT_APARTMENT]: {
+    basic: { low: 1600, typical: 2100, high: 2600 },
+    standard: { low: 2100, typical: 2600, high: 3200 },
+    premium: { low: 2600, typical: 3300, high: 4200 }
   },
-  commercial: {
+  [PropertyType.MAISONETTE]: {
+    basic: { low: 1650, typical: 2150, high: 2700 },
+    standard: { low: 2150, typical: 2700, high: 3300 },
+    premium: { low: 2700, typical: 3400, high: 4300 }
+  },
+  [PropertyType.TOWNHOUSE]: {
+    basic: { low: 1700, typical: 2150, high: 2750 },
+    standard: { low: 2150, typical: 2750, high: 3350 },
+    premium: { low: 2750, typical: 3450, high: 4400 }
+  },
+  [PropertyType.OFFICE]: {
     basic: { low: 1200, typical: 1800, high: 2500 },
     standard: { low: 1800, typical: 2500, high: 3200 },
     premium: { low: 2500, typical: 3300, high: 4500 }
+  },
+  [PropertyType.RETAIL]: {
+    basic: { low: 1300, typical: 1900, high: 2600 },
+    standard: { low: 1900, typical: 2600, high: 3400 },
+    premium: { low: 2600, typical: 3500, high: 4700 }
+  },
+  [PropertyType.INDUSTRIAL]: {
+    basic: { low: 1000, typical: 1450, high: 2100 },
+    standard: { low: 1450, typical: 2100, high: 2850 },
+    premium: { low: 2100, typical: 2900, high: 3900 }
+  },
+  [PropertyType.LEISURE]: {
+    basic: { low: 1450, typical: 2050, high: 2800 },
+    standard: { low: 2050, typical: 2800, high: 3600 },
+    premium: { low: 2800, typical: 3700, high: 4900 }
+  },
+  [PropertyType.HEALTHCARE]: {
+    basic: { low: 1600, typical: 2300, high: 3100 },
+    standard: { low: 2300, typical: 3100, high: 4000 },
+    premium: { low: 3100, typical: 4100, high: 5400 }
   }
 };
 
@@ -148,6 +184,25 @@ function initializeCategoryTotals(): Record<NewBuildCategory, TierAmounts> {
   }, {} as Record<NewBuildCategory, TierAmounts>);
 }
 
+function toCommercialType(
+  propertyType: PropertyType
+): CommercialTypeValue | undefined {
+  switch (propertyType) {
+    case PropertyType.OFFICE:
+      return "office";
+    case PropertyType.RETAIL:
+      return "retail";
+    case PropertyType.INDUSTRIAL:
+      return "industrial";
+    case PropertyType.LEISURE:
+      return "leisure";
+    case PropertyType.HEALTHCARE:
+      return "healthcare";
+    default:
+      return undefined;
+  }
+}
+
 function validateNewBuildInput(input: NewBuildInput) {
   if (!Number.isFinite(input.totalAreaM2) || input.totalAreaM2 <= 0 || input.totalAreaM2 > 10000) {
     throw new Error("Total area must be between 1 and 10,000 square metres");
@@ -161,24 +216,24 @@ function validateNewBuildInput(input: NewBuildInput) {
     throw new Error("Postcode district is required");
   }
 
-  const storeyLimit = input.propertyType === "block_of_flats" ? 20 : 5;
+  const storeyLimit =
+    isCommercialPropertyType(input.propertyType) ||
+    isFlatLikePropertyType(input.propertyType)
+      ? 20
+      : 5;
   if (!Number.isFinite(input.storeys) || input.storeys < 1 || input.storeys > storeyLimit) {
     throw new Error(`Storeys must be between 1 and ${storeyLimit}`);
   }
 
-  if (input.propertyType === "block_of_flats") {
-    if (!input.numberOfUnits || input.numberOfUnits < 2) {
-      throw new Error("Block of flats must include at least 2 units");
-    }
+  if (input.numberOfUnits !== undefined && input.numberOfUnits < 2) {
+    throw new Error("Developments with units must include at least 2 units");
   }
 
-  if (input.propertyType === "hmo" && input.numberOfLettableRooms !== undefined) {
-    if (input.numberOfLettableRooms < 3) {
-      throw new Error("HMOs require at least 3 lettable rooms");
-    }
+  if (input.numberOfLettableRooms !== undefined && input.numberOfLettableRooms < 3) {
+    throw new Error("Lettable rooms must be at least 3");
   }
 
-  if (input.propertyType === "commercial" && input.parkingSpaces !== undefined) {
+  if (isCommercialPropertyType(input.propertyType) && input.parkingSpaces !== undefined) {
     if (input.parkingSpaces < 0 || input.parkingSpaces > 500) {
       throw new Error("Parking spaces must be between 0 and 500");
     }
@@ -192,11 +247,7 @@ export function calculateNewBuild(input: NewBuildInput): NewBuildResult {
   const region = postcodeToRegion(normalizedPostcode);
   const regionalMultiplier = defaultCostLibrary.regionalMultipliers[region];
 
-  const storeyCount =
-    input.propertyType === "block_of_flats"
-      ? input.numberOfStoreys ?? input.storeys
-      : input.storeys;
-
+  const storeyCount = input.numberOfStoreys ?? input.storeys;
   const baseRate = baseBuildRates[input.propertyType][input.spec];
   const storeyAdjustment = getStoreyAdjustment(storeyCount);
 
@@ -207,12 +258,12 @@ export function calculateNewBuild(input: NewBuildInput): NewBuildResult {
 
   const adjustments: Array<{ label: string; amount: number; reason: string }> = [];
 
-  if (input.propertyType === "block_of_flats" && input.numberOfUnits && input.numberOfUnits > 10) {
+  if (input.numberOfUnits && input.numberOfUnits > 10) {
     const discount = multiplyTier(baseCost, -0.05);
     adjustments.push({
       label: "Economies of scale discount",
       amount: Math.round(discount.typical),
-      reason: "Blocks with 10+ units benefit from bulk procurement efficiencies."
+      reason: "Large multi-unit developments benefit from procurement efficiencies."
     });
     baseCost = multiplyTier(baseCost, 0.95);
   }
@@ -243,9 +294,13 @@ export function calculateNewBuild(input: NewBuildInput): NewBuildResult {
   };
 
   const includeGarage =
-    Boolean(input.garage) && input.propertyType !== "flat";
+    Boolean(input.garage) &&
+    !isFlatLikePropertyType(input.propertyType) &&
+    !isCommercialPropertyType(input.propertyType);
   const includeBasement =
-    Boolean(input.basementIncluded) && input.propertyType !== "flat";
+    Boolean(input.basementIncluded) &&
+    !isFlatLikePropertyType(input.propertyType) &&
+    !isCommercialPropertyType(input.propertyType);
 
   if (includeGarage) {
     const garageAmounts = multiplyTier(garageCost, regionalMultiplier);
@@ -280,7 +335,7 @@ export function calculateNewBuild(input: NewBuildInput): NewBuildResult {
     );
   }
 
-  if (input.propertyType === "block_of_flats" && input.numberOfUnits) {
+  if (input.numberOfUnits && input.numberOfUnits >= 2) {
     if (input.liftIncluded) {
       const liftsRequired = Math.max(1, Math.ceil(input.numberOfUnits / 10));
       const liftAmounts = multiplyTier(liftCost, regionalMultiplier * liftsRequired);
@@ -307,13 +362,13 @@ export function calculateNewBuild(input: NewBuildInput): NewBuildResult {
     }
   }
 
-  if (input.propertyType === "hmo") {
-    const numberOfRooms = input.numberOfLettableRooms ?? input.bedrooms;
+  if (input.numberOfLettableRooms !== undefined) {
+    const numberOfRooms = input.numberOfLettableRooms;
     const fireSafetyAmounts = multiplyTier(fireSafetyCost, regionalMultiplier);
     addAdjustment(
       "preliminaries",
       fireSafetyAmounts,
-      "HMO fire safety package",
+      "Rental fire safety package",
       "Fire doors, alarm systems, emergency lighting, and signage."
     );
 
@@ -336,7 +391,7 @@ export function calculateNewBuild(input: NewBuildInput): NewBuildResult {
         "external_works",
         fireEscapeAmounts,
         "External fire escape",
-        "Required for multi-storey HMO compliance."
+        "Required for multi-storey rental compliance."
       );
     }
 
@@ -354,12 +409,12 @@ export function calculateNewBuild(input: NewBuildInput): NewBuildResult {
     addAdjustment(
       "preliminaries",
       licensingCost,
-      "HMO licensing",
+      "Rental licensing",
       "Council licensing and compliance fees."
     );
   }
 
-  if (input.propertyType === "commercial") {
+  if (isCommercialPropertyType(input.propertyType)) {
     const fitOutLevel = input.fitOutLevel ?? "cat_a";
     const fitOutAmounts = multiplyTier(
       fitOutRates[fitOutLevel],
@@ -476,7 +531,7 @@ export function calculateNewBuild(input: NewBuildInput): NewBuildResult {
     estimatedAt: new Date().toISOString()
   };
 
-  if (input.propertyType === "block_of_flats" && input.numberOfUnits) {
+  if (input.numberOfUnits && input.numberOfUnits >= 2) {
     metadata.numberOfUnits = input.numberOfUnits;
     metadata.costPerUnit = {
       low: Math.round(roundedTotals.low / input.numberOfUnits),
@@ -485,18 +540,17 @@ export function calculateNewBuild(input: NewBuildInput): NewBuildResult {
     };
   }
 
-  if (input.propertyType === "hmo") {
-    const lettableRooms = input.numberOfLettableRooms ?? input.bedrooms;
-    metadata.numberOfLettableRooms = lettableRooms;
+  if (input.numberOfLettableRooms && input.numberOfLettableRooms >= 3) {
+    metadata.numberOfLettableRooms = input.numberOfLettableRooms;
     metadata.costPerLettableRoom = {
-      low: Math.round(roundedTotals.low / lettableRooms),
-      typical: Math.round(roundedTotals.typical / lettableRooms),
-      high: Math.round(roundedTotals.high / lettableRooms)
+      low: Math.round(roundedTotals.low / input.numberOfLettableRooms),
+      typical: Math.round(roundedTotals.typical / input.numberOfLettableRooms),
+      high: Math.round(roundedTotals.high / input.numberOfLettableRooms)
     };
   }
 
-  if (input.propertyType === "commercial") {
-    metadata.commercialType = input.commercialType ?? "office";
+  if (isCommercialPropertyType(input.propertyType)) {
+    metadata.commercialType = toCommercialType(input.propertyType);
     metadata.fitOutLevel = input.fitOutLevel ?? "cat_a";
   }
 

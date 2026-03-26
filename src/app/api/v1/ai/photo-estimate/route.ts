@@ -13,6 +13,10 @@ import {
   getFallbackPostcodeDistrict,
   inferPropertyCategory
 } from "@/lib/enhancedEstimator";
+import {
+  inferPropertyTypeFromText,
+  PropertyType
+} from "@/lib/propertyType";
 import { validateJsonRequest } from "@/lib/validate";
 import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 
@@ -29,7 +33,7 @@ const PHOTO_MODEL = IS_LM_STUDIO ? (process.env.LM_STUDIO_MODEL ?? "qwen/qwen3-4
 const SYSTEM_PROMPT = `You are a UK property refurbishment expert and chartered surveyor. Analyse the provided property photo and return a JSON object with these exact fields:
 
 {
-  "propertyType": "string — one of: terraced house, semi-detached house, detached house, flat/apartment, bungalow, commercial unit",
+  "propertyType": "string — one of: Detached House, Semi-Detached House, Terraced House, End-Off-Terrace, Bungalow, Cottage, Flat / Apartment, Maisonette, Townhouse, Office, Retail, Industrial, Leisure, Healthcare",
   "totalAreaM2": number — estimated gross internal area in square metres,
   "condition": "string — one of: poor, fair, good",
   "finishLevel": "string — one of: budget, standard, premium — estimate what finish level the refurb would target",
@@ -407,7 +411,9 @@ export async function POST(request: Request) {
     const detectedRegion = isRegion(parsed.region) ? parsed.region : undefined;
     const region = overrideRegion ?? detectedRegion ?? DEFAULT_REGION;
     const totalAreaM2 = clampArea(parsed.totalAreaM2);
-    const propertyType = asNonEmptyString(parsed.propertyType, "flat/apartment");
+    const propertyType =
+      inferPropertyTypeFromText(parsed.propertyType) ??
+      PropertyType.FLAT_APARTMENT;
     const confidence: Confidence = isConfidence(parsed.confidence)
       ? parsed.confidence
       : "low";

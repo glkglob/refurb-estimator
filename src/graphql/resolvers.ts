@@ -1,7 +1,11 @@
-import { GraphQLError } from "graphql";
+import { GraphQLError, GraphQLScalarType, Kind } from "graphql";
 import { supabaseRepository } from "@/lib/prisma";
 import { defaultCostLibrary } from "@/lib/costLibrary";
 import { estimateProject } from "@/lib/estimator";
+import {
+  parsePropertyType,
+  type PropertyType
+} from "@/lib/propertyType";
 import type {
   Condition,
   EstimateInput,
@@ -32,7 +36,7 @@ type CreateEstimateArgs = {
   input: {
     name?: string | null;
     region: string;
-    propertyType: string;
+    propertyType: PropertyType;
     totalAreaM2: number;
     condition: string;
     finishLevel: string;
@@ -102,7 +106,47 @@ function ensureFinishLevel(value: string): FinishLevel {
   });
 }
 
+function ensurePropertyType(value: string): PropertyType {
+  const parsed = parsePropertyType(value);
+  if (parsed) {
+    return parsed;
+  }
+
+  throw new GraphQLError("Invalid propertyType", {
+    extensions: { code: "BAD_USER_INPUT" }
+  });
+}
+
 export const resolvers = {
+  PropertyType: new GraphQLScalarType({
+    name: "PropertyType",
+    description: "Supported property type label",
+    serialize(value: unknown): string {
+      const parsed = parsePropertyType(value);
+      if (!parsed) {
+        throw new TypeError("Invalid propertyType");
+      }
+      return parsed;
+    },
+    parseValue(value: unknown): PropertyType {
+      const parsed = parsePropertyType(value);
+      if (!parsed) {
+        throw new TypeError("Invalid propertyType");
+      }
+      return parsed;
+    },
+    parseLiteral(ast): PropertyType {
+      if (ast.kind !== Kind.STRING) {
+        throw new TypeError("propertyType must be a string");
+      }
+      const parsed = parsePropertyType(ast.value);
+      if (!parsed) {
+        throw new TypeError("Invalid propertyType");
+      }
+      return parsed;
+    }
+  }),
+
   Query: {
     me: (_parent: unknown, _args: unknown, context: GraphQLContext) => {
       return context.req.user;
@@ -192,13 +236,13 @@ export const resolvers = {
       const region = ensureRegion(args.input.region);
       const condition = ensureCondition(args.input.condition);
       const finishLevel = ensureFinishLevel(args.input.finishLevel);
-      const propertyType = args.input.propertyType?.trim();
-
-      if (!propertyType) {
+      const requestedPropertyType = args.input.propertyType?.trim();
+      if (!requestedPropertyType) {
         throw new GraphQLError("propertyType is required", {
           extensions: { code: "BAD_USER_INPUT" }
         });
       }
+      const propertyType = ensurePropertyType(requestedPropertyType);
 
       if (!Number.isFinite(args.input.totalAreaM2) || args.input.totalAreaM2 <= 0) {
         throw new GraphQLError("totalAreaM2 must be a positive number", {

@@ -25,6 +25,12 @@ import { applyEditorActionsToNewBuildInput } from "@/lib/assistant/newBuildActio
 import { apiFetch } from "@/lib/apiClient";
 import type { QuotePdfInput } from "@/lib/generateQuotePdf";
 import { calculateNewBuild } from "@/lib/newBuildEstimator";
+import {
+  isCommercialPropertyType,
+  isFlatLikePropertyType,
+  PROPERTY_TYPE_DISPLAY_ORDER,
+  PropertyType,
+} from "@/lib/propertyType";
 import type { SharedEstimateSnapshot } from "@/lib/share";
 import type {
   NewBuildInput,
@@ -33,18 +39,33 @@ import type {
   NewBuildSpec,
 } from "@/lib/types";
 
-type CommercialType = "office" | "retail" | "warehouse" | "restaurant";
+type CommercialType = NonNullable<NewBuildInput["commercialType"]>;
 type FitOutLevel = "shell_only" | "cat_a" | "cat_b";
 
+function getCommercialTypeForPropertyType(
+  propertyType: NewBuildPropertyType,
+): CommercialType | undefined {
+  switch (propertyType) {
+    case PropertyType.OFFICE:
+      return "office";
+    case PropertyType.RETAIL:
+      return "retail";
+    case PropertyType.INDUSTRIAL:
+      return "industrial";
+    case PropertyType.LEISURE:
+      return "leisure";
+    case PropertyType.HEALTHCARE:
+      return "healthcare";
+    default:
+      return undefined;
+  }
+}
+
 const PROPERTY_OPTIONS: Array<{ value: NewBuildPropertyType; label: string }> = [
-  { value: "flat", label: "Flat" },
-  { value: "terraced", label: "Terraced house" },
-  { value: "semi-detached", label: "Semi-detached house" },
-  { value: "detached", label: "Detached house" },
-  { value: "bungalow", label: "Bungalow" },
-  { value: "hmo", label: "HMO" },
-  { value: "block_of_flats", label: "Block of flats" },
-  { value: "commercial", label: "Commercial" },
+  ...PROPERTY_TYPE_DISPLAY_ORDER.map((propertyType) => ({
+    value: propertyType,
+    label: propertyType,
+  })),
 ];
 
 const SPEC_OPTIONS: Array<{
@@ -67,13 +88,6 @@ const SPEC_OPTIONS: Array<{
     label: "Premium",
     description: "High-end finishes, bespoke design",
   },
-];
-
-const COMMERCIAL_TYPES: Array<{ value: CommercialType; label: string }> = [
-  { value: "office", label: "Office" },
-  { value: "retail", label: "Retail" },
-  { value: "warehouse", label: "Warehouse" },
-  { value: "restaurant", label: "Restaurant" },
 ];
 
 const FIT_OUT_LEVELS: Array<{
@@ -99,14 +113,20 @@ const FIT_OUT_LEVELS: Array<{
 ];
 
 const PROPERTY_LABELS: Record<NewBuildPropertyType, string> = {
-  flat: "flat",
-  terraced: "terraced house",
-  "semi-detached": "semi-detached house",
-  detached: "detached house",
-  bungalow: "bungalow",
-  hmo: "HMO",
-  block_of_flats: "block of flats",
-  commercial: "commercial property",
+  [PropertyType.DETACHED_HOUSE]: "detached house",
+  [PropertyType.SEMI_DETACHED_HOUSE]: "semi-detached house",
+  [PropertyType.TERRACED_HOUSE]: "terraced house",
+  [PropertyType.END_OFF_TERRACE]: "end-off-terrace house",
+  [PropertyType.BUNGALOW]: "bungalow",
+  [PropertyType.COTTAGE]: "cottage",
+  [PropertyType.FLAT_APARTMENT]: "flat / apartment",
+  [PropertyType.MAISONETTE]: "maisonette",
+  [PropertyType.TOWNHOUSE]: "townhouse",
+  [PropertyType.OFFICE]: "office space",
+  [PropertyType.RETAIL]: "retail unit",
+  [PropertyType.INDUSTRIAL]: "industrial space",
+  [PropertyType.LEISURE]: "leisure venue",
+  [PropertyType.HEALTHCARE]: "healthcare facility",
 };
 
 const SPEC_LABELS: Record<NewBuildSpec, string> = {
@@ -128,7 +148,7 @@ export default function NewBuildPage() {
   const { toast } = useToast();
 
   const [propertyType, setPropertyType] =
-    useState<NewBuildPropertyType>("detached");
+    useState<NewBuildPropertyType>(PropertyType.DETACHED_HOUSE);
   const [spec, setSpec] = useState<NewBuildSpec>("standard");
   const [totalAreaM2, setTotalAreaM2] = useState("120");
   const [bedrooms, setBedrooms] = useState("3");
@@ -148,9 +168,8 @@ export default function NewBuildPage() {
   const [enSuitePerRoom, setEnSuitePerRoom] = useState(false);
   const [communalKitchen, setCommunalKitchen] = useState(true);
   const [fireEscapeRequired, setFireEscapeRequired] = useState(false);
+  const [enableRentalLayout, setEnableRentalLayout] = useState(false);
 
-  const [commercialType, setCommercialType] =
-    useState<CommercialType>("office");
   const [fitOutLevel, setFitOutLevel] = useState<FitOutLevel>("cat_a");
   const [disabledAccess, setDisabledAccess] = useState(false);
   const [extractionSystem, setExtractionSystem] = useState(false);
@@ -163,11 +182,12 @@ export default function NewBuildPage() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
-  const isBlockOfFlats = propertyType === "block_of_flats";
-  const isHmo = propertyType === "hmo";
-  const isCommercial = propertyType === "commercial";
-  const isFlat = propertyType === "flat";
-  const storeysMax = isBlockOfFlats ? 20 : 5;
+  const isCommercial = isCommercialPropertyType(propertyType);
+  const isFlatLike = isFlatLikePropertyType(propertyType);
+  const supportsMultiUnit = isFlatLike || isCommercial;
+  const supportsExtraction =
+    propertyType === PropertyType.RETAIL || propertyType === PropertyType.LEISURE;
+  const storeysMax = supportsMultiUnit ? 20 : 5;
 
   const specHelper = useMemo(
     () => SPEC_OPTIONS.find((option) => option.value === spec)?.description ?? "",
@@ -187,15 +207,16 @@ export default function NewBuildPage() {
   }, [result]);
 
   useEffect(() => {
-    if (!isHmo) {
+    if (!enableRentalLayout) {
       setEnSuitePerRoom(false);
       setFireEscapeRequired(false);
+      setCommunalKitchen(true);
     }
 
     if (!isCommercial) {
       setExtractionSystem(false);
     }
-  }, [isHmo, isCommercial]);
+  }, [enableRentalLayout, isCommercial]);
 
   function buildPropertyDescription(
     input: NewBuildInput,
@@ -205,15 +226,15 @@ export default function NewBuildPage() {
       `${input.totalAreaM2}m² ${PROPERTY_LABELS[input.propertyType]}`,
     ];
 
-    if (input.propertyType === "block_of_flats" && input.numberOfUnits) {
+    if (input.numberOfUnits && input.numberOfUnits >= 2) {
       parts.push(`${input.numberOfUnits} units`);
     }
 
-    if (input.propertyType === "commercial" && input.commercialType) {
-      parts.push(input.commercialType);
+    if (isCommercialPropertyType(input.propertyType)) {
+      parts.push(input.propertyType.toLowerCase());
     }
 
-    if (input.propertyType !== "commercial") {
+    if (!isCommercialPropertyType(input.propertyType)) {
       parts.push(`${input.bedrooms} bed`);
     }
 
@@ -226,7 +247,7 @@ export default function NewBuildPage() {
   function buildInput(): NewBuildInput | null {
     const areaValue = parseNumber(totalAreaM2);
     const bedroomValue = parseNumber(bedrooms);
-    const storeyValue = parseNumber(isBlockOfFlats ? blockStoreys : storeys);
+    const storeyValue = parseNumber(supportsMultiUnit ? blockStoreys : storeys);
 
     if (!areaValue || areaValue <= 0) {
       setError("Total floor area must be greater than zero");
@@ -255,30 +276,31 @@ export default function NewBuildPage() {
       bedrooms: isCommercial ? 1 : (bedroomValue ?? 1),
       storeys: storeyValue,
       postcodeDistrict: postcodeDistrict.trim().toUpperCase(),
-      garage: isFlat ? undefined : garage,
+      garage: isFlatLike || isCommercial ? undefined : garage,
       renewableEnergy,
-      basementIncluded: isFlat ? undefined : basementIncluded,
+      basementIncluded: isFlatLike || isCommercial ? undefined : basementIncluded,
     };
 
-    if (isBlockOfFlats) {
+    if (supportsMultiUnit) {
       const unitsValue = parseNumber(numberOfUnits);
-
-      if (!unitsValue || unitsValue < 2) {
-        setError("Block of flats must include at least 2 units");
+      if (unitsValue !== null && unitsValue > 0 && unitsValue < 2) {
+        setError("Multi-unit developments must include at least 2 units");
         return null;
       }
 
-      input.numberOfUnits = unitsValue;
+      if (unitsValue !== null && unitsValue >= 2) {
+        input.numberOfUnits = unitsValue;
+      }
       input.numberOfStoreys = storeyValue;
       input.liftIncluded = liftIncluded;
       input.commercialGroundFloor = commercialGroundFloor;
     }
 
-    if (isHmo) {
+    if (enableRentalLayout) {
       const lettableRoomsValue = parseNumber(numberOfLettableRooms);
 
       if (!lettableRoomsValue || lettableRoomsValue < 3) {
-        setError("HMOs require at least 3 lettable rooms");
+        setError("Rental layout requires at least 3 lettable rooms");
         return null;
       }
 
@@ -289,10 +311,10 @@ export default function NewBuildPage() {
     }
 
     if (isCommercial) {
-      input.commercialType = commercialType;
+      input.commercialType = getCommercialTypeForPropertyType(propertyType);
       input.fitOutLevel = fitOutLevel;
       input.disabledAccess = disabledAccess;
-      input.extractionSystem = extractionSystem;
+      input.extractionSystem = supportsExtraction ? extractionSystem : false;
 
       const parkingValue = parseNumber(parkingSpaces);
       if (parkingValue !== null) {
@@ -336,8 +358,8 @@ export default function NewBuildPage() {
     setEnSuitePerRoom(Boolean(input.enSuitePerRoom));
     setCommunalKitchen(input.communalKitchen ?? true);
     setFireEscapeRequired(Boolean(input.fireEscapeRequired));
+    setEnableRentalLayout(Boolean(input.numberOfLettableRooms));
 
-    setCommercialType(input.commercialType ?? "office");
     setFitOutLevel(input.fitOutLevel ?? "cat_a");
     setDisabledAccess(Boolean(input.disabledAccess));
     setExtractionSystem(Boolean(input.extractionSystem));
@@ -392,7 +414,7 @@ export default function NewBuildPage() {
   }
 
   function handleReset() {
-    setPropertyType("detached");
+    setPropertyType(PropertyType.DETACHED_HOUSE);
     setSpec("standard");
     setTotalAreaM2("120");
     setBedrooms("3");
@@ -412,8 +434,8 @@ export default function NewBuildPage() {
     setEnSuitePerRoom(false);
     setCommunalKitchen(true);
     setFireEscapeRequired(false);
+    setEnableRentalLayout(false);
 
-    setCommercialType("office");
     setFitOutLevel("cat_a");
     setDisabledAccess(false);
     setExtractionSystem(false);
@@ -570,7 +592,7 @@ export default function NewBuildPage() {
                 </div>
               ) : null}
 
-              {!isBlockOfFlats ? (
+              {!supportsMultiUnit ? (
                 <div className="space-y-2">
                   <Label htmlFor="new-build-storeys">Storeys</Label>
                   <Input
@@ -604,11 +626,11 @@ export default function NewBuildPage() {
               </div>
             </div>
 
-            {isBlockOfFlats ? (
+            {supportsMultiUnit ? (
               <Card className="border border-border/60">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Block of flats
+                    Multi-unit details
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -617,10 +639,10 @@ export default function NewBuildPage() {
                     <Input
                       id="new-build-units"
                       type="number"
-                      min={2}
+                      min={0}
                       max={200}
                       step={1}
-                      placeholder="e.g. 6"
+                      placeholder="Optional, e.g. 6"
                       value={numberOfUnits}
                       onChange={(event) => setNumberOfUnits(event.target.value)}
                     />
@@ -661,8 +683,8 @@ export default function NewBuildPage() {
                         setCommercialGroundFloor(event.target.checked)
                       }
                     />
-                    <span>
-                      Commercial ground floor{" "}
+                      <span>
+                      Mixed-use ground floor{" "}
                       <span className="text-xs text-muted-foreground">
                         (retail/office on ground floor)
                       </span>
@@ -672,20 +694,40 @@ export default function NewBuildPage() {
               </Card>
             ) : null}
 
-            {isHmo ? (
+            {!isCommercial ? (
               <Card className="border border-border/60">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">
-                    HMO details
+                    Rental layout (optional)
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="grid gap-4 sm:grid-cols-2">
+                  <label className="flex items-start gap-2 text-sm sm:col-span-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 rounded border-muted-foreground/30 text-primary focus:ring-primary"
+                      checked={enableRentalLayout}
+                      onChange={(event) =>
+                        setEnableRentalLayout(event.target.checked)
+                      }
+                    />
+                    <span>
+                      Include rental layout assumptions
+                      <span className="text-xs text-muted-foreground">
+                        {" "}
+                        (fire safety, licensing, utility metering)
+                      </span>
+                    </span>
+                  </label>
+
+                  {enableRentalLayout ? (
+                    <>
                   <div className="space-y-2">
-                    <Label htmlFor="new-build-hmo-rooms">
+                    <Label htmlFor="new-build-rental-rooms">
                       Number of lettable rooms
                     </Label>
                     <Input
-                      id="new-build-hmo-rooms"
+                      id="new-build-rental-rooms"
                       type="number"
                       min={3}
                       max={20}
@@ -748,6 +790,8 @@ export default function NewBuildPage() {
                       </span>
                     </span>
                   </label>
+                    </>
+                  ) : null}
                 </CardContent>
               </Card>
             ) : null}
@@ -762,23 +806,11 @@ export default function NewBuildPage() {
                 <CardContent className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Commercial type</Label>
-                    <Select
-                      value={commercialType}
-                      onValueChange={(value) =>
-                        setCommercialType(value as CommercialType)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select commercial type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COMMERCIAL_TYPES.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      readOnly
+                      value={PROPERTY_LABELS[propertyType]}
+                      aria-readonly="true"
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -822,7 +854,7 @@ export default function NewBuildPage() {
                     </span>
                   </label>
 
-                  {commercialType === "restaurant" ? (
+                  {supportsExtraction ? (
                     <label className="flex items-start gap-2 text-sm">
                       <input
                         type="checkbox"
@@ -875,7 +907,7 @@ export default function NewBuildPage() {
 
               {showOptions ? (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {!isFlat ? (
+                  {!isFlatLike && !isCommercial ? (
                     <label className="flex items-start gap-2 text-sm">
                       <input
                         type="checkbox"
@@ -899,7 +931,7 @@ export default function NewBuildPage() {
                     <span>Renewable energy (solar/ASHP)</span>
                   </label>
 
-                  {!isFlat ? (
+                  {!isFlatLike && !isCommercial ? (
                     <label className="flex items-start gap-2 text-sm">
                       <input
                         type="checkbox"

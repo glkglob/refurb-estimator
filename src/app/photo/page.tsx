@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiClient";
 import type { QuotePdfInput } from "@/lib/generateQuotePdf";
+import type { PropertyType } from "@/lib/propertyType";
 import type { EstimateInput, EstimateResult, Region } from "@/lib/types";
 
 const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
@@ -39,7 +40,7 @@ const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
 
 type PhotoEstimateResponse = {
   aiAnalysis: {
-    propertyType: string;
+    propertyType: PropertyType;
     totalAreaM2: number;
     condition: string;
     finishLevel: string;
@@ -155,7 +156,7 @@ export default function PhotoPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
     aiAnalysis: {
-      propertyType: string;
+      propertyType: PropertyType;
       totalAreaM2: number;
       condition: string;
       finishLevel: string;

@@ -5,6 +5,7 @@ import {
   saveScenario,
   ScenarioLimitExceededError
 } from "./storage";
+import { PropertyType } from "./propertyType";
 import type { Scenario } from "./types";
 
 function buildScenario(id: string, name = `Scenario ${id}`): Scenario {
@@ -15,7 +16,7 @@ function buildScenario(id: string, name = `Scenario ${id}`): Scenario {
     input: {
       region: "London",
       projectType: "refurb",
-      propertyType: "flat",
+      propertyType: PropertyType.FLAT_APARTMENT,
       totalAreaM2: 60,
       condition: "fair",
       finishLevel: "standard"

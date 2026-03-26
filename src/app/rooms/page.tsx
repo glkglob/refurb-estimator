@@ -29,6 +29,7 @@ import { applyEditorActionsToRoomsState } from "@/lib/assistant/roomsActions";
 import { defaultCostLibrary } from "@/lib/costLibrary";
 import { saveScenario } from "@/lib/dataService";
 import { estimateRooms } from "@/lib/estimator";
+import { PropertyType } from "@/lib/propertyType";
 import type { SharedEstimateSnapshot } from "@/lib/share";
 import { ScenarioLimitExceededError } from "@/lib/storage";
 import type {
@@ -208,7 +209,7 @@ export default function RoomsPage() {
     return {
       region,
       projectType: "refurb",
-      propertyType: "rooms",
+      propertyType: PropertyType.FLAT_APARTMENT,
       totalAreaM2,
       condition,
       finishLevel: "standard",

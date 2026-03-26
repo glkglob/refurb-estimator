@@ -1,5 +1,6 @@
 import { defaultCostLibrary } from "./costLibrary";
 import { estimateProject, estimateRooms } from "./estimator";
+import { PropertyType } from "./propertyType";
 import type { EstimateInput, RoomInput } from "./types";
 
 describe("estimateProject", () => {
@@ -7,7 +8,7 @@ describe("estimateProject", () => {
     const input: EstimateInput = {
       region: "NorthWest",
       projectType: "refurb",
-      propertyType: "flat",
+      propertyType: PropertyType.FLAT_APARTMENT,
       totalAreaM2: 50,
       condition: "fair",
       finishLevel: "budget"
@@ -20,7 +21,7 @@ describe("estimateProject", () => {
     const budgetNorthWest: EstimateInput = {
       region: "NorthWest",
       projectType: "refurb",
-      propertyType: "flat",
+      propertyType: PropertyType.FLAT_APARTMENT,
       totalAreaM2: 50,
       condition: "fair",
       finishLevel: "budget"
@@ -28,7 +29,7 @@ describe("estimateProject", () => {
     const premiumLondon: EstimateInput = {
       region: "London",
       projectType: "refurb",
-      propertyType: "terrace",
+      propertyType: PropertyType.TERRACED_HOUSE,
       totalAreaM2: 100,
       condition: "poor",
       finishLevel: "premium"
@@ -45,7 +46,7 @@ describe("estimateProject", () => {
     const input: EstimateInput = {
       region: "WestMidlands",
       projectType: "refurb",
-      propertyType: "semi",
+      propertyType: PropertyType.SEMI_DETACHED_HOUSE,
       totalAreaM2: 75,
       condition: "fair",
       finishLevel: "standard"
@@ -59,7 +60,7 @@ describe("estimateProject", () => {
     const input: EstimateInput = {
       region: "WestMidlands",
       projectType: "refurb",
-      propertyType: "flat",
+      propertyType: PropertyType.FLAT_APARTMENT,
       totalAreaM2: 0,
       condition: "fair",
       finishLevel: "standard"
@@ -73,7 +74,7 @@ describe("estimateProject", () => {
     const input: EstimateInput = {
       region: "WestMidlands",
       projectType: "refurb",
-      propertyType: "flat",
+      propertyType: PropertyType.FLAT_APARTMENT,
       totalAreaM2: -10,
       condition: "fair",
       finishLevel: "standard"
@@ -87,7 +88,7 @@ describe("estimateProject", () => {
     const input: EstimateInput = {
       region: "SouthEast",
       projectType: "refurb",
-      propertyType: "detached",
+      propertyType: PropertyType.DETACHED_HOUSE,
       totalAreaM2: 120,
       condition: "fair",
       finishLevel: "standard"
@@ -104,7 +105,7 @@ describe("estimateProject", () => {
     const input: EstimateInput = {
       region: "Scotland",
       projectType: "refurb",
-      propertyType: "terraced",
+      propertyType: PropertyType.TERRACED_HOUSE,
       totalAreaM2: 88,
       condition: "good",
       finishLevel: "standard"

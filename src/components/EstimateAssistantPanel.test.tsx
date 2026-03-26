@@ -8,6 +8,7 @@ import {
   requestAssistantResponse
 } from "@/lib/assistant/client";
 import { applyEditorActionsToNewBuildInput } from "@/lib/assistant/newBuildActions";
+import { PropertyType } from "@/lib/propertyType";
 import type { NewBuildInput, NewBuildResult } from "@/lib/types";
 
 jest.mock("@/lib/assistant/client", () => ({
@@ -23,7 +24,7 @@ const mockedRequestAssistantResponse = requestAssistantResponse as jest.MockedFu
 >;
 
 const BASE_INPUT: NewBuildInput = {
-  propertyType: "detached",
+  propertyType: PropertyType.DETACHED_HOUSE,
   spec: "standard",
   totalAreaM2: 120,
   bedrooms: 3,
@@ -45,7 +46,7 @@ const BASE_RESULT: NewBuildResult = {
   feesPercent: 8,
   region: "YorkshireAndTheHumber",
   metadata: {
-    propertyType: "detached",
+    propertyType: PropertyType.DETACHED_HOUSE,
     spec: "standard",
     bedrooms: 3,
     storeys: 2,

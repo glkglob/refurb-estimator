@@ -3,9 +3,10 @@ import { validateJsonRequest } from "@/lib/validate";
 import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 import { parseJson } from "@/lib/ai/utils";
 import { aiClient, PRICING_MODEL } from "@/lib/ai/client";
+import { PropertyType } from "@/lib/propertyType";
 
 const pricingAgentRequestSchema = z.object({
-  propertyType: z.string().trim().min(2).max(120),
+  propertyType: z.nativeEnum(PropertyType),
   location: z.string().trim().min(2).max(160),
   floorAreaM2: z.coerce.number().positive().max(10_000),
   condition: z.enum(["poor", "fair", "good"]),

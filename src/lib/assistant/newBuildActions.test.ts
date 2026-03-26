@@ -1,9 +1,10 @@
 import { applyEditorActionsToNewBuildInput } from "./newBuildActions";
 import type { AssistantAction } from "./schemas";
+import { PropertyType } from "@/lib/propertyType";
 import type { NewBuildInput } from "@/lib/types";
 
 const BASE_INPUT: NewBuildInput = {
-  propertyType: "detached",
+  propertyType: PropertyType.DETACHED_HOUSE,
   spec: "standard",
   totalAreaM2: 120,
   bedrooms: 3,

@@ -16,6 +16,7 @@ import {
   Sparkles,
   UserCircle,
   Wallet,
+  Wrench,
   X
 } from "lucide-react";
 import Link from "next/link";
@@ -38,7 +39,8 @@ const calculatorNavItems = [
 ] as const;
 
 const developmentNavItems = [
-  { href: "/development", label: "Development Appraisal", icon: "Building2" }
+  { href: "/development", label: "Development Appraisal", icon: "Building2" },
+  { href: "/tradespeople", label: "Tradespeople", icon: "Wrench" }
 ] as const;
 
 const planningNavItems = [
@@ -63,7 +65,8 @@ const iconMap = {
   UserCircle,
   Images,
   Sparkles,
-  Palette
+  Palette,
+  Wrench
 };
 
 function SidebarContent({

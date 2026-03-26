@@ -4,6 +4,7 @@ import { MapPin, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import ContractorEnquiryForm from "@/components/tradespeople/ContractorEnquiryForm";
 import { listPublicTradespeople } from "@/lib/supabase/profiles-db";
 
 const TRADE_SPECIALTY_OPTIONS = [
@@ -69,6 +70,8 @@ export default async function TradespeoplePage({ searchParams }: PageProps) {
           Browse verified professionals and compare portfolios before requesting quotes.
         </p>
       </header>
+
+      <ContractorEnquiryForm />
 
       <Card>
         <CardContent className="p-4">

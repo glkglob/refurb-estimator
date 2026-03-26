@@ -52,7 +52,9 @@ describe("TradespeoplePage", () => {
     expect(
       screen.getByText(/The trades directory is temporarily unavailable\./i)
     ).toBeInTheDocument();
-    expect(screen.getByText(/No public tradespeople matched your filters\./i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/No public tradespeople matched your filters\./i)
+    ).not.toBeInTheDocument();
   });
 
   test("renders standard empty state when directory lookup succeeds with no rows", async () => {

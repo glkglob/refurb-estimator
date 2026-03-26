@@ -4,6 +4,9 @@ import { parseJson } from "@/lib/ai/utils";
 import { getRequestId, jsonError, jsonSuccess, logError } from "@/lib/api-route";
 import {
   AssistantRequestSchema,
+  type AppMode,
+  type AssistantAction,
+  type AssistantAgent,
   type ChatAssistantResponse,
   type EstimateEditorResponse,
   type ProjectCopilotResponse
@@ -14,6 +17,7 @@ import {
   getSystemPrompt,
   sanitizeAssistantActionsWithReport
 } from "@/lib/assistant/runtime";
+import { recordServerTelemetryEvent } from "@/lib/telemetry/server";
 import { validateJsonRequest } from "@/lib/validate";
 
 const ASSISTANT_MODEL =
@@ -49,6 +53,36 @@ const EMPTY_EDITOR_ACTION: EstimateEditorResponse["actions"][number] = {
   type: "none",
   reason: "No supported action could be safely applied."
 };
+
+type AssistantTelemetryProperties = {
+  agent: AssistantAgent;
+  mode: AppMode;
+  trigger: "user_input" | "auto_followup" | "system";
+  message_length: number;
+  actions_count: number;
+  none_reason?: string;
+  dropped_fields_count: number;
+  dropped_actions_count: number;
+  had_recalculate: boolean;
+  timestamp_ms: number;
+};
+
+function hasRecalculateAction(actions: AssistantAction[]): boolean {
+  return actions.some((action) => action.type === "recalculate");
+}
+
+function emitAssistantTelemetry(
+  eventName: string,
+  properties: Omit<AssistantTelemetryProperties, "timestamp_ms">
+): void {
+  void recordServerTelemetryEvent({
+    eventName,
+    properties: {
+      ...properties,
+      timestamp_ms: Date.now()
+    }
+  });
+}
 
 function normalizeChatResponse(
   response: ChatAssistantResponse,
@@ -204,17 +238,16 @@ export async function POST(request: Request) {
       }
 
       if (shouldLogSampledTelemetry) {
-        console.warn(
-          JSON.stringify({
-            level: "info",
-            route: "assistant-chat-sampled",
-            requestId,
-            agent: assistantRequest.agent,
-            mode: assistantRequest.mode,
-            droppedFieldCount: normalized.droppedFields.length,
-            droppedActionCount: normalized.droppedActions.length
-          })
-        );
+        emitAssistantTelemetry("assistant.chat_replied", {
+          agent: assistantRequest.agent,
+          mode: assistantRequest.mode,
+          trigger: "user_input",
+          message_length: assistantRequest.message.length,
+          actions_count: normalized.response.actions.length,
+          dropped_fields_count: normalized.droppedFields.length,
+          dropped_actions_count: normalized.droppedActions.length,
+          had_recalculate: hasRecalculateAction(normalized.response.actions)
+        });
       }
 
       return jsonSuccess(normalized.response, requestId);
@@ -241,16 +274,27 @@ export async function POST(request: Request) {
       }
 
       if (shouldLogSampledTelemetry) {
-        console.warn(
-          JSON.stringify({
-            level: "info",
-            route: "assistant-chat-sampled",
-            requestId,
+        const noneReason = normalized.response.actions.find((action) => action.type === "none")?.reason;
+        const hasStateAction = normalized.response.actions.some(
+          (action) =>
+            action.type === "update_fields" || action.type === "add_room" || action.type === "remove_room"
+        );
+
+        emitAssistantTelemetry(
+          hasStateAction
+            ? "assistant.editor_actions_proposed"
+            : "assistant.editor_none_returned",
+          {
             agent: assistantRequest.agent,
             mode: assistantRequest.mode,
-            droppedFieldCount: normalized.droppedFields.length,
-            droppedActionCount: normalized.droppedActions.length
-          })
+            trigger: "user_input",
+            message_length: assistantRequest.message.length,
+            actions_count: normalized.response.actions.length,
+            ...(noneReason ? { none_reason: noneReason } : {}),
+            dropped_fields_count: normalized.droppedFields.length,
+            dropped_actions_count: normalized.droppedActions.length,
+            had_recalculate: hasRecalculateAction(normalized.response.actions)
+          }
         );
       }
 
@@ -277,17 +321,31 @@ export async function POST(request: Request) {
     }
 
     if (shouldLogSampledTelemetry) {
-      console.warn(
-        JSON.stringify({
-          level: "info",
-          route: "assistant-chat-sampled",
-          requestId,
+      const copilotActions = normalized.response.suggestedActions ?? [];
+
+      emitAssistantTelemetry("assistant.copilot_suggestion_shown", {
+        agent: assistantRequest.agent,
+        mode: assistantRequest.mode,
+        trigger: "user_input",
+        message_length: assistantRequest.message.length,
+        actions_count: copilotActions.length,
+        dropped_fields_count: normalized.droppedFields.length,
+        dropped_actions_count: normalized.droppedActions.length,
+        had_recalculate: hasRecalculateAction(copilotActions)
+      });
+
+      if (normalized.droppedFields.length > 0 || normalized.droppedActions.length > 0) {
+        emitAssistantTelemetry("assistant.copilot_suggested_actions_dropped", {
           agent: assistantRequest.agent,
           mode: assistantRequest.mode,
-          droppedFieldCount: normalized.droppedFields.length,
-          droppedActionCount: normalized.droppedActions.length
-        })
-      );
+          trigger: "user_input",
+          message_length: assistantRequest.message.length,
+          actions_count: copilotActions.length,
+          dropped_fields_count: normalized.droppedFields.length,
+          dropped_actions_count: normalized.droppedActions.length,
+          had_recalculate: hasRecalculateAction(copilotActions)
+        });
+      }
     }
 
     return jsonSuccess(normalized.response, requestId);

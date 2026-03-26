@@ -24,6 +24,10 @@ import {
 } from "@/components/ui/table";
 import { apiFetch } from "@/lib/apiClient";
 import type { QuotePdfInput } from "@/lib/generateQuotePdf";
+import {
+  PROPERTY_TYPE_DISPLAY_ORDER,
+  type PropertyType
+} from "@/lib/propertyType";
 
 type PricingCondition = "poor" | "fair" | "good";
 
@@ -47,16 +51,6 @@ type PricingAgentResponse = {
 const MAX_PHOTOS = 3;
 const SUPPORTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
-
-const PROPERTY_TYPES = [
-  "Terraced house",
-  "Semi-detached house",
-  "Detached house",
-  "Flat/Apartment",
-  "Bungalow",
-  "Commercial unit",
-  "Other"
-] as const;
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-GB", {
@@ -99,7 +93,9 @@ function fileToDataUrl(file: File): Promise<string> {
 
 export default function AiPricingPage() {
   const uploadRef = useRef<HTMLInputElement | null>(null);
-  const [propertyType, setPropertyType] = useState<string>(PROPERTY_TYPES[0]);
+  const [propertyType, setPropertyType] = useState<PropertyType>(
+    PROPERTY_TYPE_DISPLAY_ORDER[0]
+  );
   const [location, setLocation] = useState<string>("");
   const [floorAreaM2, setFloorAreaM2] = useState<string>("");
   const [condition, setCondition] = useState<PricingCondition>("fair");
@@ -120,14 +116,13 @@ export default function AiPricingPage() {
   const canSubmit = useMemo(() => {
     const parsedArea = Number(floorAreaM2);
     return (
-      propertyType.trim().length > 0 &&
       location.trim().length > 0 &&
       scope.trim().length > 0 &&
       Number.isFinite(parsedArea) &&
       parsedArea > 0 &&
       !isSubmitting
     );
-  }, [floorAreaM2, isSubmitting, location, propertyType, scope]);
+  }, [floorAreaM2, isSubmitting, location, scope]);
 
   function setPhotoFiles(nextFiles: File[]) {
     setErrorMessage(null);
@@ -276,12 +271,15 @@ export default function AiPricingPage() {
                 <label className="text-sm font-medium text-foreground" htmlFor="propertyType">
                   Property type
                 </label>
-                <Select value={propertyType} onValueChange={setPropertyType}>
+                <Select
+                  value={propertyType}
+                  onValueChange={(value) => setPropertyType(value as PropertyType)}
+                >
                   <SelectTrigger id="propertyType" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PROPERTY_TYPES.map((item) => (
+                    {PROPERTY_TYPE_DISPLAY_ORDER.map((item) => (
                       <SelectItem key={item} value={item}>
                         {item}
                       </SelectItem>

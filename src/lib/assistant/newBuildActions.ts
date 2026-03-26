@@ -1,5 +1,6 @@
 import type { NewBuildInput } from "@/lib/types";
 import type { AssistantAction } from "@/lib/assistant/schemas";
+import { inferPropertyTypeFromText } from "@/lib/propertyType";
 
 type NewBuildField = keyof NewBuildInput;
 
@@ -35,6 +36,30 @@ const EDITABLE_NEW_BUILD_FIELDS: ReadonlySet<NewBuildField> = new Set([
   "parkingSpaces"
 ]);
 
+const NEW_BUILD_SPECS: ReadonlyArray<NewBuildInput["spec"]> = [
+  "basic",
+  "standard",
+  "premium"
+];
+
+const COMMERCIAL_TYPES: ReadonlyArray<NonNullable<NewBuildInput["commercialType"]>> = [
+  "office",
+  "retail",
+  "industrial",
+  "leisure",
+  "healthcare"
+];
+
+const FIT_OUT_LEVELS: ReadonlyArray<NonNullable<NewBuildInput["fitOutLevel"]>> = [
+  "shell_only",
+  "cat_a",
+  "cat_b"
+];
+
+function isOneOf<T extends string>(value: string, allowed: ReadonlyArray<T>): value is T {
+  return allowed.includes(value as T);
+}
+
 function parseFiniteNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -50,10 +75,13 @@ function parseFiniteNumber(value: unknown): number | null {
 
 function coerceNewBuildFieldValue(field: NewBuildField, value: unknown): NewBuildInput[NewBuildField] | null {
   switch (field) {
-    case "propertyType":
-      return typeof value === "string" ? (value as NewBuildInput["propertyType"]) : null;
+    case "propertyType": {
+      return inferPropertyTypeFromText(value);
+    }
     case "spec":
-      return typeof value === "string" ? (value as NewBuildInput["spec"]) : null;
+      return typeof value === "string" && isOneOf(value, NEW_BUILD_SPECS)
+        ? value
+        : null;
     case "totalAreaM2":
     case "bedrooms":
     case "storeys":
@@ -78,9 +106,13 @@ function coerceNewBuildFieldValue(field: NewBuildField, value: unknown): NewBuil
     case "extractionSystem":
       return typeof value === "boolean" ? value : null;
     case "commercialType":
-      return typeof value === "string" ? (value as NewBuildInput["commercialType"]) : null;
+      return typeof value === "string" && isOneOf(value, COMMERCIAL_TYPES)
+        ? value
+        : null;
     case "fitOutLevel":
-      return typeof value === "string" ? (value as NewBuildInput["fitOutLevel"]) : null;
+      return typeof value === "string" && isOneOf(value, FIT_OUT_LEVELS)
+        ? value
+        : null;
     default:
       return null;
   }

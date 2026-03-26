@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PropertyType } from "./propertyType";
 import type {
   Condition,
   CostCategory,
@@ -7,7 +8,6 @@ import type {
   FinishLevel,
   NewBuildCategory,
   NewBuildInput,
-  NewBuildPropertyType,
   NewBuildResult,
   NewBuildSpec,
   Region,
@@ -59,7 +59,7 @@ const roomInputSchema = z.object({
 const estimateInputSchema = z.object({
   region: regionSchema,
   projectType: z.enum(["refurb", "new_build"]),
-  propertyType: z.string().min(1),
+  propertyType: z.nativeEnum(PropertyType),
   totalAreaM2: z.number().positive(),
   condition: conditionSchema,
   finishLevel: finishLevelSchema,
@@ -101,16 +101,7 @@ const newBuildCategorySchema = z.enum([
   "professional_fees",
 ]) satisfies z.ZodType<NewBuildCategory>;
 
-const newBuildPropertyTypeSchema = z.enum([
-  "flat",
-  "terraced",
-  "semi-detached",
-  "detached",
-  "bungalow",
-  "hmo",
-  "block_of_flats",
-  "commercial",
-]) satisfies z.ZodType<NewBuildPropertyType>;
+const newBuildPropertyTypeSchema = z.nativeEnum(PropertyType);
 
 const newBuildSpecSchema = z.enum(["basic", "standard", "premium"]) satisfies z.ZodType<NewBuildSpec>;
 
@@ -132,7 +123,9 @@ const newBuildInputSchema = z.object({
   enSuitePerRoom: z.boolean().optional(),
   communalKitchen: z.boolean().optional(),
   fireEscapeRequired: z.boolean().optional(),
-  commercialType: z.enum(["office", "retail", "warehouse", "restaurant"]).optional(),
+  commercialType: z
+    .enum(["office", "retail", "industrial", "leisure", "healthcare"])
+    .optional(),
   fitOutLevel: z.enum(["shell_only", "cat_a", "cat_b"]).optional(),
   disabledAccess: z.boolean().optional(),
   extractionSystem: z.boolean().optional(),
@@ -177,7 +170,9 @@ const newBuildResultSchema = z.object({
     costPerLettableRoom: z
       .object({ low: z.number(), typical: z.number(), high: z.number() })
       .optional(),
-    commercialType: z.enum(["office", "retail", "warehouse", "restaurant"]).optional(),
+    commercialType: z
+      .enum(["office", "retail", "industrial", "leisure", "healthcare"])
+      .optional(),
     fitOutLevel: z.enum(["shell_only", "cat_a", "cat_b"]).optional(),
   }),
 }) satisfies z.ZodType<NewBuildResult>;

@@ -7,6 +7,7 @@ import { ReadableStream, TransformStream, WritableStream } from "stream/web";
 import NewBuildPage from "./page";
 import { calculateNewBuild } from "@/lib/newBuildEstimator";
 import { aiClient } from "@/lib/ai/client";
+import { PropertyType } from "@/lib/propertyType";
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn() })
@@ -104,7 +105,7 @@ describe("NewBuildPage assistant journey", () => {
 
   test("applies sanitized editor actions and recalculates when user asks for a cheaper resale-safe option", async () => {
     const standardInput = {
-      propertyType: "detached",
+      propertyType: PropertyType.DETACHED_HOUSE,
       spec: "standard",
       totalAreaM2: 120,
       bedrooms: 3,

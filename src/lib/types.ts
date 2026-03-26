@@ -1,3 +1,5 @@
+import type { PropertyType } from "./propertyType";
+
 export type Region =
   | "London"
   | "SouthEast"
@@ -69,7 +71,7 @@ export type CostCategory =
 export type EstimateInput = {
   region: Region;
   projectType: ProjectType;
-  propertyType: string;
+  propertyType: PropertyType;
   totalAreaM2: number;
   condition: Condition;
   finishLevel: FinishLevel;
@@ -173,20 +175,12 @@ export type NewBuildCategory =
   | "contingency"
   | "professional_fees";
 
-export type NewBuildPropertyType =
-  | "flat"
-  | "terraced"
-  | "semi-detached"
-  | "detached"
-  | "bungalow"
-  | "hmo"
-  | "block_of_flats"
-  | "commercial";
+export type NewBuildPropertyType = PropertyType;
 
 export type NewBuildSpec = "basic" | "standard" | "premium";
 
 export type NewBuildInput = {
-  propertyType: NewBuildPropertyType;
+  propertyType: PropertyType;
   spec: NewBuildSpec;
   totalAreaM2: number;
   bedrooms: number;
@@ -203,7 +197,7 @@ export type NewBuildInput = {
   enSuitePerRoom?: boolean;
   communalKitchen?: boolean;
   fireEscapeRequired?: boolean;
-  commercialType?: "office" | "retail" | "warehouse" | "restaurant";
+  commercialType?: "office" | "retail" | "industrial" | "leisure" | "healthcare";
   fitOutLevel?: "shell_only" | "cat_a" | "cat_b";
   disabledAccess?: boolean;
   extractionSystem?: boolean;
@@ -232,7 +226,7 @@ export type NewBuildResult = {
   feesPercent: number;
   region: Region;
   metadata: {
-    propertyType: NewBuildPropertyType;
+    propertyType: PropertyType;
     spec: NewBuildSpec;
     bedrooms: number;
     storeys: number;
@@ -242,7 +236,7 @@ export type NewBuildResult = {
     costPerUnit?: { low: number; typical: number; high: number };
     numberOfLettableRooms?: number;
     costPerLettableRoom?: { low: number; typical: number; high: number };
-    commercialType?: "office" | "retail" | "warehouse" | "restaurant";
+    commercialType?: "office" | "retail" | "industrial" | "leisure" | "healthcare";
     fitOutLevel?: "shell_only" | "cat_a" | "cat_b";
   };
 };

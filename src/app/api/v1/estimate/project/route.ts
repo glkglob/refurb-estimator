@@ -20,6 +20,7 @@ import {
   getFallbackPostcodeDistrict,
   inferPropertyCategory
 } from "@/lib/enhancedEstimator";
+import { PropertyType } from "@/lib/propertyType";
 import { requireRole } from "@/lib/rbac";
 import { AuthError, handleAuthError } from "@/lib/supabase/auth-helpers";
 import { validateJsonRequest } from "@/lib/validate";
@@ -74,7 +75,7 @@ const ADDITIONAL_FEATURE_VALUES: AdditionalFeature[] = [
 
 type EstimateProjectRequestBody = {
   region: Region;
-  propertyType: string;
+  propertyType: PropertyType;
   totalAreaM2: number;
   condition: Condition;
   finishLevel: FinishLevel;
@@ -88,7 +89,7 @@ type EstimateProjectRequestBody = {
 
 const estimateProjectSchema = z.object({
   region: z.enum(REGION_VALUES),
-  propertyType: z.string().trim().min(1, "Property type is required"),
+  propertyType: z.nativeEnum(PropertyType),
   totalAreaM2: z.coerce.number().positive("Area must be greater than zero"),
   condition: z.enum(CONDITION_VALUES),
   finishLevel: z.enum(FINISH_LEVEL_VALUES),

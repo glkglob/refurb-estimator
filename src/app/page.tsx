@@ -8,9 +8,11 @@ import { useEffect, useState } from "react";
 import AuthBanner from "@/components/AuthBanner";
 import EstimateResultsFallback from "@/components/EstimateResultsFallback";
 import EstimateForm from "@/components/EstimateForm";
+import ScenarioLimitPromptDialog from "@/components/ScenarioLimitPromptDialog";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import TrustBanner from "@/components/TrustBanner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +27,7 @@ import {
 import { exportToCsv } from "@/lib/exportCsv";
 import type { QuotePdfInput } from "@/lib/generateQuotePdf";
 import { shareOrCopy } from "@/lib/share";
+import { ScenarioLimitExceededError } from "@/lib/storage";
 import type { EstimateInput, EstimateResult, Scenario } from "@/lib/types";
 
 const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
@@ -38,6 +41,7 @@ export default function HomePage() {
   const [result, setResult] = useState<EstimateResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isScenarioLimitPromptOpen, setIsScenarioLimitPromptOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { toast } = useToast();
@@ -115,6 +119,11 @@ export default function HomePage() {
       });
     } catch (error) {
       setIsSaveModalOpen(false);
+
+      if (error instanceof ScenarioLimitExceededError) {
+        setIsScenarioLimitPromptOpen(true);
+        return;
+      }
 
       toast({
         title: "Scenario saved locally",
@@ -219,6 +228,38 @@ export default function HomePage() {
       <TrustBanner />
 
       <div className="grid gap-4 sm:grid-cols-2">
+        <Card className="border-primary/40 bg-primary/5 sm:col-span-2">
+          <CardHeader className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle>Development Appraisal</CardTitle>
+              <Badge variant="secondary">Pro feature — free during beta</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Run full deal viability checks with SDLT, finance, margin targets, and BRRR
+              refinance outputs.
+            </p>
+          </CardHeader>
+          <CardFooter>
+            <Button asChild>
+              <Link href="/development">Open Development Appraisal →</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <Card className="border-primary/30 bg-primary/5 sm:col-span-2">
+          <CardHeader className="space-y-2">
+            <CardTitle>Find Tradespeople</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Browse verified contractors and send one enquiry to get matched locally.
+            </p>
+          </CardHeader>
+          <CardFooter>
+            <Button asChild variant="outline">
+              <Link href="/tradespeople">Open tradespeople directory →</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Loft conversion</CardTitle>
@@ -372,6 +413,10 @@ export default function HomePage() {
         onClose={() => setIsSaveModalOpen(false)}
         onSave={handleSaveScenario}
         isSaving={isSaving}
+      />
+      <ScenarioLimitPromptDialog
+        isOpen={isScenarioLimitPromptOpen}
+        onOpenChange={setIsScenarioLimitPromptOpen}
       />
     </section>
   );

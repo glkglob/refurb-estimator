@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-const PROTECTED_ROUTES: string[] = ["/scenarios", "/budget"];
+// Routes with progressive disclosure are intentionally not hard-redirected to auth.
+const PROTECTED_ROUTES: string[] = [];
 const PUBLIC_ROUTES = [
   "/",
   "/rooms",

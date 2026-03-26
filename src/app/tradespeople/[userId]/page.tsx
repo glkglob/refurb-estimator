@@ -52,15 +52,59 @@ export default async function TradespersonProfilePage({ params, searchParams }: 
   const showAllGallery = resolvedSearchParams.view === "all";
   const galleryLimit = showAllGallery ? 24 : 8;
 
-  const profile = await getPublicProfile(userId);
-  if (!profile) {
+  let profile: Awaited<ReturnType<typeof getPublicProfile>> = null;
+  let galleryItems: Awaited<ReturnType<typeof getPublicGalleryByUser>>["data"] = [];
+  let galleryTotal = 0;
+  let isDirectoryUnavailable = false;
+
+  try {
+    profile = await getPublicProfile(userId);
+  } catch (error) {
+    isDirectoryUnavailable = true;
+    console.error(
+      "[TradespersonProfilePage] Unable to load trades profile. Showing fallback state.",
+      error
+    );
+  }
+
+  if (!isDirectoryUnavailable && !profile) {
     notFound();
   }
 
-  const { data: galleryItems, total: galleryTotal } = await getPublicGalleryByUser(userId, {
-    page: 1,
-    limit: galleryLimit
-  });
+  if (!isDirectoryUnavailable && profile) {
+    try {
+      const galleryResult = await getPublicGalleryByUser(userId, {
+        page: 1,
+        limit: galleryLimit
+      });
+      galleryItems = galleryResult.data;
+      galleryTotal = galleryResult.total;
+    } catch (error) {
+      isDirectoryUnavailable = true;
+      console.error(
+        "[TradespersonProfilePage] Unable to load trades gallery. Showing fallback state.",
+        error
+      );
+    }
+  }
+
+  if (isDirectoryUnavailable || !profile) {
+    return (
+      <section className="space-y-6">
+        <Card>
+          <CardContent className="space-y-3 p-6">
+            <h1 className="text-2xl font-semibold text-foreground">Tradesperson profile</h1>
+            <p className="text-sm text-muted-foreground">
+              This profile is temporarily unavailable. Please try again shortly.
+            </p>
+            <Button variant="outline" asChild>
+              <Link href="/tradespeople">Back to directory</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </section>
+    );
+  }
 
   let isAuthenticated = false;
   try {

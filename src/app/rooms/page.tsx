@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Plus } from "lucide-react";
 
 import AuthBanner from "@/components/AuthBanner";
+import EstimateAssistantPanel from "@/components/EstimateAssistantPanel";
 import ScenarioLimitPromptDialog from "@/components/ScenarioLimitPromptDialog";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import ShareEstimateModal from "@/components/ShareEstimateModal";
@@ -23,6 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import type { AssistantAction } from "@/lib/assistant/schemas";
+import { applyEditorActionsToRoomsState } from "@/lib/assistant/roomsActions";
 import { defaultCostLibrary } from "@/lib/costLibrary";
 import { saveScenario } from "@/lib/dataService";
 import { estimateRooms } from "@/lib/estimator";
@@ -148,6 +151,28 @@ export default function RoomsPage() {
       return prev.filter((room) => room.id !== id);
     });
 
+    markShouldScroll();
+  }
+
+  function handleApplyAssistantEditorActions(actions: AssistantAction[]): void {
+    const applied = applyEditorActionsToRoomsState(
+      {
+        region,
+        condition,
+        rooms,
+        nextRoomId
+      },
+      actions
+    );
+
+    if (applied.changedFields.length === 0 || !applied.shouldRecalculate) {
+      return;
+    }
+
+    setRegion(applied.nextState.region);
+    setCondition(applied.nextState.condition);
+    setRooms(applied.nextState.rooms);
+    setNextRoomId(applied.nextState.nextRoomId);
     markShouldScroll();
   }
 
@@ -502,6 +527,13 @@ export default function RoomsPage() {
           <EstimateResults result={calculation.result} />
 
           <ValueUpliftCard refurbCost={calculation.result.totalTypical} />
+
+          <EstimateAssistantPanel
+            mode="rooms"
+            estimateInput={estimateInput}
+            estimateResult={calculation.result}
+            onApplyEditorActions={handleApplyAssistantEditorActions}
+          />
         </div>
       ) : null}
 

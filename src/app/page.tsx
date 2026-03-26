@@ -10,6 +10,8 @@ import EstimateResultsFallback from "@/components/EstimateResultsFallback";
 import EstimateForm from "@/components/EstimateForm";
 import ScenarioLimitPromptDialog from "@/components/ScenarioLimitPromptDialog";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
+import TestimonialsSection from "@/components/TestimonialsSection";
+import TrustBanner from "@/components/TrustBanner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -223,6 +225,8 @@ export default function HomePage() {
         Enter your property details below and click Calculate to get an instant estimate.
       </p>
 
+      <TrustBanner />
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="border-primary/40 bg-primary/5 sm:col-span-2">
           <CardHeader className="space-y-2">
@@ -401,6 +405,8 @@ export default function HomePage() {
           <EstimateResults result={result} />
         </div>
       ) : null}
+
+      <TestimonialsSection />
 
       <SaveScenarioModal
         isOpen={isSaveModalOpen}

@@ -9,25 +9,25 @@ type Testimonial = {
 
 const TESTIMONIALS: Testimonial[] = [
   {
-    name: "Sarah T.",
+    name: "Marcus J.",
+    location: "Leeds",
+    projectType: "Property Investor",
+    quote:
+      "As a property investor, the development appraisal tool is a game-changer. Being able to quickly run deal viability checks, model a BRRR strategy with realistic regional refurb costs, and instantly export the breakdown to PDF has saved me hours of spreadsheet work.",
+  },
+  {
+    name: "Emma W.",
+    location: "London",
+    projectType: "Homeowner",
+    quote:
+      "We were planning a wrap-around extension and had absolutely no idea where to start with our budget. The estimator gave us a solid baseline in seconds, and the room-by-room breakdown helped us understand exactly where our money was going before we even approached builders.",
+  },
+  {
+    name: "David L.",
     location: "Manchester",
-    projectType: "Victorian terrace refurb",
+    projectType: "Landlord",
     quote:
-      "The estimate was within 5% of contractor quotes and helped me set a realistic budget before starting.",
-  },
-  {
-    name: "James R.",
-    location: "Bristol",
-    projectType: "Kitchen and bathroom upgrade",
-    quote:
-      "Regional pricing and category breakdowns made it easy to compare options and avoid overspending early.",
-  },
-  {
-    name: "Priya M.",
-    location: "Birmingham",
-    projectType: "Buy-to-let refresh",
-    quote:
-      "I used it to pressure-test two scopes in minutes. Clear outputs and genuinely useful as a first pass.",
+      "I use this app to pressure-test different scopes for my buy-to-let properties. Being able to save different scenarios and compare the 'Low' versus 'High' finish levels makes it incredibly easy to see which renovation strategy yields the best return on investment.",
   },
 ];
 

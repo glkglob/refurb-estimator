@@ -137,7 +137,7 @@ export default function EstimateForm({ onSubmit, onValidationError }: EstimateFo
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div className="border-b border-border pb-4">
             <p className="mb-4 text-sm font-medium text-foreground">Property details</p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="region" className="text-foreground">
                   Region

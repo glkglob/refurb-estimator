@@ -98,7 +98,7 @@ export default function LoftPage() {
             <CardTitle>Inputs</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="conversion-type">Conversion type</Label>
                 <Select
@@ -148,7 +148,7 @@ export default function LoftPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="property-type">Property type (sets area)
                 </Label>
@@ -213,7 +213,7 @@ export default function LoftPage() {
                 step={1}
                 value={area}
                 onChange={(event) => setArea(Number(event.target.value))}
-                className="w-full accent-primary"
+                className="touch-range w-full accent-primary"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>15 m²</span>
@@ -221,7 +221,7 @@ export default function LoftPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
               <Button
                 type="button"
                 variant={ensuite ? "default" : "outline"}
@@ -254,7 +254,7 @@ export default function LoftPage() {
 
             {result ? (
               <div className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-3">
                   <SummaryCard title="Low" value={formatCurrency(result.totalLow)} />
                   <SummaryCard title="Typical" value={formatCurrency(result.totalTypical)} highlight />
                   <SummaryCard title="High" value={formatCurrency(result.totalHigh)} />

@@ -340,7 +340,7 @@ export default function DevelopmentAppraisalPage() {
           <CardHeader>
             <CardTitle>Acquisition</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="purchase-price">Purchase price (£)</Label>
               <Input
@@ -369,7 +369,7 @@ export default function DevelopmentAppraisalPage() {
           <CardHeader>
             <CardTitle>Build / Refurb Costs</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="build-costs">Build / refurb costs (£)</Label>
               <Input
@@ -448,7 +448,7 @@ export default function DevelopmentAppraisalPage() {
                   Include finance costs
                 </label>
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <Label htmlFor="loan-term">Loan term (months)</Label>
                     <Input
@@ -491,7 +491,7 @@ export default function DevelopmentAppraisalPage() {
           <CardHeader>
             <CardTitle>Sale</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="gdv">Gross Development Value (GDV) (£)</Label>
               <Input
@@ -618,7 +618,7 @@ export default function DevelopmentAppraisalPage() {
               <CardHeader>
                 <CardTitle>BRRR Refinance Check</CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
+              <CardContent className="grid gap-4 md:grid-cols-2">
                 <div>
                   <p className="text-sm text-muted-foreground">Refinance value (75% GDV)</p>
                   <p className="text-lg font-semibold">

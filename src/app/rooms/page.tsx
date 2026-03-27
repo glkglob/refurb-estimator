@@ -285,7 +285,7 @@ export default function RoomsPage() {
       <AuthBanner />
 
       <Card>
-        <CardContent className="grid grid-cols-1 gap-4 pt-6 md:grid-cols-3">
+        <CardContent className="grid grid-cols-1 gap-4 pt-6 md:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-1">
             <Label htmlFor="rooms-region">Region</Label>
             <Select

@@ -170,9 +170,7 @@ export default function DashboardHomePage() {
         </Card>
         <Card className="p-4">
           <p className="text-sm text-muted-foreground">Saved Estimates</p>
-          <p className="mt-2 font-mono text-2xl text-primary">
-            {isLoading ? "…" : scenarioCount}
-          </p>
+          <p className="mt-2 font-mono text-2xl text-primary">{scenarioCount}</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2">
@@ -183,9 +181,7 @@ export default function DashboardHomePage() {
               </Badge>
             ) : null}
           </div>
-          <p className="mt-2 font-mono text-2xl text-primary">
-            {isLoading ? "…" : unreadCount}
-          </p>
+          <p className="mt-2 font-mono text-2xl text-primary">{unreadCount}</p>
         </Card>
       </div>
 

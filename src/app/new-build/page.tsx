@@ -520,7 +520,7 @@ export default function NewBuildPage() {
       <Card>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Property type</Label>
                 <Select
@@ -633,7 +633,7 @@ export default function NewBuildPage() {
                     Multi-unit details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-2">
+                <CardContent className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="new-build-units">Number of units</Label>
                     <Input
@@ -701,7 +701,7 @@ export default function NewBuildPage() {
                     Rental layout (optional)
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-2">
+                <CardContent className="grid gap-4 md:grid-cols-2">
                   <label className="flex items-start gap-2 text-sm sm:col-span-2">
                     <input
                       type="checkbox"
@@ -803,7 +803,7 @@ export default function NewBuildPage() {
                     Commercial details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-2">
+                <CardContent className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Commercial type</Label>
                     <Input
@@ -906,7 +906,7 @@ export default function NewBuildPage() {
               </Button>
 
               {showOptions ? (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   {!isFlatLike && !isCommercial ? (
                     <label className="flex items-start gap-2 text-sm">
                       <input

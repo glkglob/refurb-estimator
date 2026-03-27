@@ -107,7 +107,7 @@ export default function NewBuildResults({ result }: NewBuildResultsProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p className="whitespace-nowrap text-2xl font-semibold font-mono">
+              <p className="text-xl font-semibold font-mono sm:text-2xl">
                 <CurrencyDisplay amount={card.total} />
               </p>
               <p className="text-sm text-muted-foreground">

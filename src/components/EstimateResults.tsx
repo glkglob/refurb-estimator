@@ -100,30 +100,35 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row">
-        {summaryCards.map((card) => (
-          <Card key={card.label} className={card.className}>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
-                {card.label}
-                {card.recommended ? (
-                  <Badge variant="secondary" className="ml-2 text-[10px]">
-                    Recommended
-                  </Badge>
-                ) : null}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-xl font-semibold font-mono sm:text-2xl">
-                <CurrencyDisplay amount={card.total} />
-              </p>
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Cost per m²:</span>{" "}
-                <CurrencyDisplay amount={card.perM2} /> <span className="font-mono">/m²</span>
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="overflow-x-auto">
+        <div className="flex snap-x snap-mandatory gap-4 md:overflow-visible">
+          {summaryCards.map((card) => (
+            <Card
+              key={card.label}
+              className={`${card.className} min-w-[280px] snap-start md:min-w-0`}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center text-sm font-medium text-muted-foreground">
+                  {card.label}
+                  {card.recommended ? (
+                    <Badge variant="secondary" className="ml-2 text-[10px]">
+                      Recommended
+                    </Badge>
+                  ) : null}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-xl font-semibold font-mono sm:text-2xl">
+                  <CurrencyDisplay amount={card.total} />
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Cost per m²:</span>{" "}
+                  <CurrencyDisplay amount={card.perM2} /> <span className="font-mono">/m²</span>
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
 
       <Card className="bp-card-border bg-card">

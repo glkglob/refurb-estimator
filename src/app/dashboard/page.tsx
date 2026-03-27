@@ -157,11 +157,7 @@ export default function DashboardHomePage() {
         </Card>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Profile Views</p>
-          <p className="mt-2 text-base font-medium text-foreground">Coming soon</p>
-        </Card>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <Card className="p-4">
           <p className="text-sm text-muted-foreground">Gallery Items</p>
           <p className="mt-2 font-mono text-2xl text-primary">
@@ -170,9 +166,7 @@ export default function DashboardHomePage() {
         </Card>
         <Card className="p-4">
           <p className="text-sm text-muted-foreground">Saved Estimates</p>
-          <p className="mt-2 font-mono text-2xl text-primary">
-            {isLoading ? "…" : scenarioCount}
-          </p>
+          <p className="mt-2 font-mono text-2xl text-primary">{scenarioCount}</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2">
@@ -183,9 +177,7 @@ export default function DashboardHomePage() {
               </Badge>
             ) : null}
           </div>
-          <p className="mt-2 font-mono text-2xl text-primary">
-            {isLoading ? "…" : unreadCount}
-          </p>
+          <p className="mt-2 font-mono text-2xl text-primary">{unreadCount}</p>
         </Card>
       </div>
 

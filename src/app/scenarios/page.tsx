@@ -298,7 +298,7 @@ export default function ScenariosPage() {
             <CardTitle>Scenario Cost Comparison</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto pr-4">
               <BarChart
                 data={scenarioCostChartData}
                 index="name"
@@ -318,7 +318,7 @@ export default function ScenariosPage() {
             <CardTitle>Investment Analysis</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto pr-4">
               <BarChart
                 data={investmentChartData}
                 index="name"

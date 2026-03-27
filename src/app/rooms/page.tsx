@@ -285,7 +285,7 @@ export default function RoomsPage() {
       <AuthBanner />
 
       <Card>
-        <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-3">
+        <CardContent className="grid grid-cols-1 gap-4 pt-6 md:grid-cols-3">
           <div className="space-y-1">
             <Label htmlFor="rooms-region">Region</Label>
             <Select
@@ -382,7 +382,7 @@ export default function RoomsPage() {
               </CardHeader>
 
               <CardContent>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="space-y-1">
                     <Label>Room type</Label>
                     <Select
@@ -432,7 +432,7 @@ export default function RoomsPage() {
 
                   <div className="space-y-1">
                     <Label>Intensity</Label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                       {INTENSITY_OPTIONS.map((intensity) => {
                         const isActive = room.intensity === intensity;
 

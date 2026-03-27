@@ -11,7 +11,6 @@ import {
   LayoutDashboard,
   LayoutGrid,
   LogOut,
-  Menu,
   Palette,
   Sparkles,
   UserCircle,
@@ -23,10 +22,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch, isApiFetchError } from "@/lib/apiClient";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { VisuallyHidden } from "radix-ui";
+import { SheetClose } from "@/components/ui/sheet";
 
 const calculatorNavItems = [
   { href: "/", label: "Quick Estimate", icon: "Calculator" },
@@ -52,14 +50,6 @@ const dashboardItems = [
   { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { href: "/dashboard/profile", label: "My Profile", icon: "UserCircle" },
   { href: "/dashboard/gallery", label: "My Gallery", icon: "Images" }
-] as const;
-
-const mobilePrimaryNavItems = [
-  { href: "/", label: "Quick Estimate", icon: "Calculator" },
-  { href: "/photo", label: "AI Estimate", icon: "Camera" },
-  { href: "/development", label: "Dev Appraisal", icon: "Building2" },
-  { href: "/scenarios", label: "Scenarios", icon: "GitCompare" },
-  { href: "/tradespeople", label: "Tradespeople", icon: "Wrench" }
 ] as const;
 
 const iconMap = {
@@ -360,64 +350,17 @@ export default function Sidebar() {
         />
       </aside>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 flex border-t border-[var(--border)] bg-[#0A1420] pb-[env(safe-area-inset-bottom)] md:hidden">
-        <nav aria-label="Mobile bottom navigation" className="flex min-h-16 flex-1 items-stretch">
-          {mobilePrimaryNavItems.map((item) => {
-            const Icon = iconMap[item.icon];
-            const isActive = isPathActive(pathname, item.href);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex min-h-16 flex-1 flex-col items-center justify-center gap-1 px-1 text-center text-[0.6875rem] leading-tight",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                )}
-              >
-                <Icon className="size-4" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
-          <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              className="min-h-16 flex-1 rounded-none px-1 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              aria-label="Open more navigation options"
-            >
-              <span className="flex flex-col items-center justify-center gap-1 text-[0.6875rem] leading-tight">
-                <Menu className="size-4" />
-                <span>More</span>
-              </span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent
-            side="bottom"
-            className="max-h-[85vh] rounded-t-xl border-t border-[var(--border)] bg-[#0A1420] p-0"
-          >
-            <VisuallyHidden.Root>
-              <SheetTitle>Navigation menu</SheetTitle>
-              <SheetDescription>Site navigation and user account options</SheetDescription>
-            </VisuallyHidden.Root>
-            <div className="max-h-[85vh] overflow-y-auto">
-              <SidebarContent
-                pathname={pathname}
-                authLoading={authLoading}
-                user={user}
-                unreadCount={displayedUnreadCount}
-                onSignOut={handleSignOut}
-                onNavigate={handleNavigate}
-                useSheetClose
-              />
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
+      <MobileBottomNav pathname={pathname} isOpen={isOpen} onOpenChange={setIsOpen}>
+        <SidebarContent
+          pathname={pathname}
+          authLoading={authLoading}
+          user={user}
+          unreadCount={displayedUnreadCount}
+          onSignOut={handleSignOut}
+          onNavigate={handleNavigate}
+          useSheetClose
+        />
+      </MobileBottomNav>
     </>
   );
 }

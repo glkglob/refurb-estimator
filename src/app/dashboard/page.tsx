@@ -157,11 +157,7 @@ export default function DashboardHomePage() {
         </Card>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Profile Views</p>
-          <p className="mt-2 text-base font-medium text-foreground">Coming soon</p>
-        </Card>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <Card className="p-4">
           <p className="text-sm text-muted-foreground">Gallery Items</p>
           <p className="mt-2 font-mono text-2xl text-primary">

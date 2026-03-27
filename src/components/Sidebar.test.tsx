@@ -46,6 +46,7 @@ describe("Sidebar", () => {
     const mobileNav = screen.getByLabelText("Mobile bottom navigation");
     const activeDestination = within(mobileNav).getByRole("link", { name: "Dev Appraisal" });
 
-    expect(activeDestination.className).toContain("text-primary");
+    expect(activeDestination.className).toContain("text-white");
+    expect(activeDestination.className).toContain("bg-primary/15");
   });
 });

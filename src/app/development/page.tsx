@@ -518,7 +518,9 @@ export default function DevelopmentAppraisalPage() {
               <Input
                 id="agent-fee"
                 type="number"
-                min="0"
+                min="0.5"
+                max="5"
+                step="0.1"
                 value={formState.estateAgentFeePercent}
                 onChange={(event) => updateField("estateAgentFeePercent", event.target.value)}
               />

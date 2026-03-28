@@ -1,8 +1,16 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { Pencil } from "lucide-react";
 import AdditionalCostsPanel from "@/components/AdditionalCostsPanel";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
-import dynamic from "next/dynamic";
+import RefineCategoryPanel, {
+  type RefineCategorySavePayload
+} from "@/components/RefineCategoryPanel";
 import TermTooltip from "@/components/TermTooltip";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -12,10 +20,19 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import type { EstimateResult } from "@/lib/types";
+import { REFINE_SCOPE, type RefineScopeCategory } from "@/lib/refineData";
+import type { Condition, EstimateResult, FinishLevel } from "@/lib/types";
 
 type EstimateResultsProps = {
   result: EstimateResult;
+  condition?: Condition;
+  finishLevel?: FinishLevel;
+};
+
+type RefinedCategoryRow = EstimateResult["categories"][number] & {
+  refined: boolean;
+  refineCategory: RefineScopeCategory | null;
+  refinement?: RefineCategorySavePayload;
 };
 
 const DonutChart = dynamic(
@@ -41,40 +58,151 @@ const CHART_COLORS = [
   "amber"
 ];
 
-export default function EstimateResults({ result }: EstimateResultsProps) {
-  const gbpFormatter = new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency: "GBP",
-    maximumFractionDigits: 0
-  });
+function toRefineScopeCategory(category: string): RefineScopeCategory | null {
+  if (category in REFINE_SCOPE) {
+    return category as RefineScopeCategory;
+  }
+
+  return null;
+}
+
+function applyRefinementToCategory(
+  category: EstimateResult["categories"][number],
+  refinement: RefineCategorySavePayload | undefined
+): Pick<EstimateResult["categories"][number], "low" | "typical" | "high"> {
+  if (!refinement) {
+    return {
+      low: category.low,
+      typical: category.typical,
+      high: category.high
+    };
+  }
+
+  const refinedTypical = Math.max(0, refinement.refinedTotal);
+
+  if (category.typical <= 0) {
+    return {
+      low: refinedTypical,
+      typical: refinedTypical,
+      high: refinedTypical
+    };
+  }
+
+  const multiplier = refinedTypical / category.typical;
+  return {
+    low: Math.max(0, Math.round(category.low * multiplier)),
+    typical: refinedTypical,
+    high: Math.max(0, Math.round(category.high * multiplier))
+  };
+}
+
+export default function EstimateResults({
+  result,
+  condition = "fair",
+  finishLevel = "standard"
+}: EstimateResultsProps) {
+  const [activeRefineCategory, setActiveRefineCategory] = useState<RefineScopeCategory | null>(null);
+  const [refinements, setRefinements] = useState<
+    Partial<Record<RefineScopeCategory, RefineCategorySavePayload>>
+  >({});
+
+  const gbpFormatter = useMemo(() => {
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: "GBP",
+      maximumFractionDigits: 0
+    });
+  }, []);
+
+  const refinedCategories = useMemo<RefinedCategoryRow[]>(() => {
+    return result.categories.map((category) => {
+      const refineCategory = toRefineScopeCategory(category.category);
+      const refinement = refineCategory ? refinements[refineCategory] : undefined;
+      const applied = applyRefinementToCategory(category, refinement);
+
+      return {
+        ...category,
+        ...applied,
+        refined: Boolean(refinement),
+        refinement,
+        refineCategory
+      };
+    });
+  }, [refinements, result.categories]);
+
+  const refinedTotals = useMemo(() => {
+    return refinedCategories.reduce(
+      (accumulator, category) => {
+        return {
+          low: accumulator.low + category.low,
+          typical: accumulator.typical + category.typical,
+          high: accumulator.high + category.high
+        };
+      },
+      { low: 0, typical: 0, high: 0 }
+    );
+  }, [refinedCategories]);
+
+  const estimatedAreaM2 = useMemo(() => {
+    if (result.costPerM2.typical > 0) {
+      return result.totalTypical / result.costPerM2.typical;
+    }
+
+    return 0;
+  }, [result.costPerM2.typical, result.totalTypical]);
+
+  const refinedCostPerM2 = useMemo(() => {
+    if (estimatedAreaM2 <= 0) {
+      return {
+        low: result.costPerM2.low,
+        typical: result.costPerM2.typical,
+        high: result.costPerM2.high
+      };
+    }
+
+    return {
+      low: refinedTotals.low / estimatedAreaM2,
+      typical: refinedTotals.typical / estimatedAreaM2,
+      high: refinedTotals.high / estimatedAreaM2
+    };
+  }, [estimatedAreaM2, refinedTotals.high, refinedTotals.low, refinedTotals.typical, result.costPerM2.high, result.costPerM2.low, result.costPerM2.typical]);
 
   const summaryCards = [
     {
       label: "Low",
-      total: result.totalLow,
-      perM2: result.costPerM2.low,
+      total: refinedTotals.low,
+      perM2: refinedCostPerM2.low,
       className: "flex-1 border-l-4 border-l-emerald-400 shadow-sm"
     },
     {
       label: "Typical",
-      total: result.totalTypical,
-      perM2: result.costPerM2.typical,
+      total: refinedTotals.typical,
+      perM2: refinedCostPerM2.typical,
       className: "flex-1 border-l-4 border-l-primary bg-primary/5 shadow-md",
       recommended: true
     },
     {
       label: "High",
-      total: result.totalHigh,
-      perM2: result.costPerM2.high,
+      total: refinedTotals.high,
+      perM2: refinedCostPerM2.high,
       className: "flex-1 border-l-4 border-l-amber-400 shadow-sm"
     }
   ];
-  const donutData = result.categories
+
+  const donutData = refinedCategories
     .filter((category) => category.typical > 0)
     .map((category) => ({
       name: category.category.charAt(0).toUpperCase() + category.category.slice(1),
       value: category.typical
     }));
+
+  function handleSaveRefinement(payload: RefineCategorySavePayload): void {
+    setRefinements((previous) => ({
+      ...previous,
+      [payload.categoryName]: payload
+    }));
+    setActiveRefineCategory(null);
+  }
 
   function renderCategoryLabel(category: string) {
     if (category === "contingency") {
@@ -143,7 +271,7 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
               index="name"
               colors={CHART_COLORS}
               valueFormatter={(value) => gbpFormatter.format(value)}
-              label={gbpFormatter.format(result.totalTypical)}
+              label={gbpFormatter.format(refinedTotals.typical)}
               showLabel
               showTooltip
               className="h-56 md:h-72 [&_.tremor-base]:bg-transparent [&_[role='tooltip']]:border-border [&_[role='tooltip']]:bg-card [&_[role='tooltip']]:text-foreground"
@@ -188,7 +316,7 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {result.categories.map((category, index) => (
+              {refinedCategories.map((category, index) => (
                 <TableRow
                   key={category.category}
                   className={
@@ -196,14 +324,32 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
                   }
                 >
                   <TableCell className="px-4 font-medium">
-                    {renderCategoryLabel(category.category)}
+                    <div className="flex items-center justify-between gap-2">
+                      <span>{renderCategoryLabel(category.category)}</span>
+                      {category.refineCategory ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`Refine ${category.category} category`}
+                          onClick={() => setActiveRefineCategory(category.refineCategory)}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      ) : null}
+                    </div>
                   </TableCell>
                   <TableCell className="px-4">
                     <CurrencyDisplay amount={category.low} />
                   </TableCell>
                   <TableCell className="px-4">
-                    <span className="font-medium">
+                    <span className="inline-flex items-center gap-2 font-medium">
                       <CurrencyDisplay amount={category.typical} />
+                      {category.refined ? (
+                        <Badge className="border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                          Refined
+                        </Badge>
+                      ) : null}
                     </span>
                   </TableCell>
                   <TableCell className="px-4">
@@ -215,7 +361,19 @@ export default function EstimateResults({ result }: EstimateResultsProps) {
           </Table>
         </CardContent>
       </Card>
-          <AdditionalCostsPanel buildCost={result.totalTypical} />
-</section>
+
+      <AdditionalCostsPanel buildCost={refinedTotals.typical} />
+
+      {activeRefineCategory ? (
+        <RefineCategoryPanel
+          categoryName={activeRefineCategory}
+          autoEstimate={refinedCategories.find((category) => category.category === activeRefineCategory)?.typical ?? 0}
+          condition={condition}
+          finishLevel={finishLevel}
+          onSave={handleSaveRefinement}
+          onClose={() => setActiveRefineCategory(null)}
+        />
+      ) : null}
+    </section>
   );
 }

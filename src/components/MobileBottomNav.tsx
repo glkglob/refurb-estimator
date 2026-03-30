@@ -6,8 +6,7 @@ import {
   Camera,
   GitCompare,
   Menu,
-  type LucideIcon,
-  Wrench
+  type LucideIcon
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -30,11 +29,10 @@ type MobileBottomNavProps = {
 };
 
 const mobilePrimaryNavItems: readonly MobileNavItem[] = [
-  { href: "/", label: "Quick Estimate", icon: Calculator },
-  { href: "/photo", label: "AI Estimate", icon: Camera },
-  { href: "/development", label: "Dev Appraisal", icon: Building2 },
-  { href: "/scenarios", label: "Scenarios", icon: GitCompare },
-  { href: "/tradespeople", label: "Tradespeople", icon: Wrench }
+  { href: "/", label: "Estimate", icon: Calculator },
+  { href: "/photo", label: "AI Photo", icon: Camera },
+  { href: "/development", label: "Development", icon: Building2 },
+  { href: "/scenarios", label: "Scenarios", icon: GitCompare }
 ] as const;
 
 function isPathActive(pathname: string, href: string): boolean {
@@ -64,7 +62,7 @@ export default function MobileBottomNav({
               href={item.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "relative flex min-h-16 min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 px-1 text-center text-[0.6875rem] leading-tight transition-[background-color,color,transform] duration-200 ease-out motion-reduce:transition-none active:scale-[0.98] active:-translate-y-px focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1420]",
+                "relative flex min-h-16 min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 px-1 text-center text-xs leading-tight transition-[background-color,color,transform] duration-200 ease-out motion-reduce:transition-none active:scale-[0.98] active:-translate-y-px focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1420]",
                 isActive
                   ? "bg-primary/15 font-semibold text-white"
                   : "text-slate-300/90 hover:bg-white/5 hover:text-white"
@@ -95,7 +93,7 @@ export default function MobileBottomNav({
             aria-label="Open more navigation options"
             aria-expanded={isOpen}
           >
-            <span className="flex max-w-full flex-col items-center justify-center gap-1 text-[0.6875rem] leading-tight">
+            <span className="flex max-w-full flex-col items-center justify-center gap-1 text-xs leading-tight">
               <Menu className="size-4" />
               <span className="whitespace-normal">More</span>
             </span>

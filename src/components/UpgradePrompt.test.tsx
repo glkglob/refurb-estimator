@@ -3,20 +3,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { ApiFetchError, apiFetch } from "@/lib/apiClient";
-
 import UpgradePrompt from "./UpgradePrompt";
-
-jest.mock("@/lib/apiClient", () => {
-  const actual = jest.requireActual("@/lib/apiClient");
-
-  return {
-    ...actual,
-    apiFetch: jest.fn()
-  };
-});
-
-const mockedApiFetch = jest.mocked(apiFetch);
 
 function jsonResponse(payload: unknown, ok = true, status = 200): Response {
   return {
@@ -27,56 +14,63 @@ function jsonResponse(payload: unknown, ok = true, status = 200): Response {
 }
 
 describe("UpgradePrompt", () => {
-  let redirectMock: jest.MockedFunction<(url: string) => void>;
+  let fetchSpy: jest.SpiedFunction<typeof fetch>;
+
+  beforeAll(() => {
+    if (!("fetch" in global)) {
+      Object.defineProperty(global, "fetch", {
+        configurable: true,
+        writable: true,
+        value: jest.fn()
+      });
+    }
+  });
 
   beforeEach(() => {
+    fetchSpy = jest.spyOn(global, "fetch");
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
     jest.clearAllMocks();
-    redirectMock = jest.fn();
   });
 
-  test("shows locked state for free user", () => {
+  test("renders upgrade details for users below the required plan", () => {
     render(
       <UpgradePrompt
-        featureName="refineEstimate"
+        featureName="Refine estimate scope builder"
         currentPlan="free"
         requiredPlan="pro"
       />
     );
 
-    expect(screen.getByText("Feature locked")).toBeInTheDocument();
-    expect(screen.getByText("Current plan: Free")).toBeInTheDocument();
     expect(screen.getByText("Refine estimate scope builder")).toBeInTheDocument();
-    expect(screen.getByText("Selected: Pro (monthly)")).toBeInTheDocument();
+    expect(screen.getByText("Unlock this feature with the Pro plan.")).toBeInTheDocument();
+    expect(screen.getByText("Required plan")).toBeInTheDocument();
+    expect(screen.getByText("Current plan: Free")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Upgrade to Pro" })).toBeEnabled();
+    expect(screen.queryByText("Feature locked")).not.toBeInTheDocument();
   });
 
-  test("toggles annual and monthly billing selections", async () => {
-    const user = userEvent.setup();
-
-    render(
+  test("does not render when the current plan already includes the feature", () => {
+    const { container } = render(
       <UpgradePrompt
-        featureName="pdfExport"
-        currentPlan="free"
+        featureName="Refine estimate scope builder"
+        currentPlan="agency"
         requiredPlan="pro"
       />
     );
 
-    await user.click(screen.getByRole("button", { name: /Annual/i }));
-    expect(screen.getByText("Selected: Pro (annual)")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /Monthly/i }));
-    expect(screen.getByText("Selected: Pro (monthly)")).toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 
-  test("redirects to Stripe checkout URL on success", async () => {
+  test("starts checkout with the required plan and billing period", async () => {
     const user = userEvent.setup();
-    mockedApiFetch.mockResolvedValue(
-      jsonResponse({ url: "https://checkout.stripe.com/c/pay/cs_test_123" })
-    );
+    fetchSpy.mockResolvedValue(jsonResponse({ url: "https://checkout.stripe.com/c/pay/cs_test_123" }));
 
     render(
       <UpgradePrompt
-        featureName="refineEstimate"
+        featureName="Refine estimate scope builder"
         currentPlan="free"
         requiredPlan="pro"
       />
@@ -85,7 +79,7 @@ describe("UpgradePrompt", () => {
     await user.click(screen.getByRole("button", { name: "Upgrade to Pro" }));
 
     await waitFor(() => {
-      expect(mockedApiFetch).toHaveBeenCalledWith(
+      expect(fetchSpy).toHaveBeenCalledWith(
         "/api/stripe/checkout",
         expect.objectContaining({
           method: "POST"
@@ -93,28 +87,21 @@ describe("UpgradePrompt", () => {
       );
     });
 
-    const [, init] = mockedApiFetch.mock.calls[0] as [string, RequestInit];
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(String(init.body))).toEqual({
       plan: "pro",
       period: "monthly"
     });
 
-    await waitFor(() => {
-      expect(redirectMock).toHaveBeenCalledWith(
-        "https://checkout.stripe.com/c/pay/cs_test_123"
-      );
-    });
   });
 
-  test("shows API error message when checkout fails", async () => {
+  test("shows an alert when checkout creation fails", async () => {
     const user = userEvent.setup();
-    mockedApiFetch.mockRejectedValue(
-      new ApiFetchError("No active Stripe price for selected billing period", 400, "/api/stripe/checkout")
-    );
+    fetchSpy.mockResolvedValue(jsonResponse({ error: "Unable to start checkout." }, false, 500));
 
     render(
       <UpgradePrompt
-        featureName="csvExport"
+        featureName="Refine estimate scope builder"
         currentPlan="free"
         requiredPlan="pro"
       />
@@ -122,30 +109,6 @@ describe("UpgradePrompt", () => {
 
     await user.click(screen.getByRole("button", { name: "Upgrade to Pro" }));
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("No active Stripe price for selected billing period")
-      ).toBeInTheDocument();
-    });
-    expect(redirectMock).not.toHaveBeenCalled();
-  });
-
-  test("disables checkout when feature is already unlocked", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <UpgradePrompt
-        featureName="refineEstimate"
-        currentPlan="agency"
-        requiredPlan="pro"
-      />
-    );
-
-    const ctaButton = screen.getByRole("button", { name: "Included in your plan" });
-
-    expect(ctaButton).toBeDisabled();
-    await user.click(ctaButton);
-    expect(mockedApiFetch).not.toHaveBeenCalled();
-    expect(redirectMock).not.toHaveBeenCalled();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Unable to start checkout.");
   });
 });

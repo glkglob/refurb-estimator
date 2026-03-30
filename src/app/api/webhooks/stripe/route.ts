@@ -65,6 +65,13 @@ function getPlanSelectionFromSubscription(subscription: Stripe.Subscription): {
   return null;
 }
 
+function getSubscriptionCurrentPeriodEnd(
+  subscription: Stripe.Subscription,
+): number | null {
+  const periodEnd = subscription.items.data[0]?.current_period_end;
+  return typeof periodEnd === "number" && Number.isFinite(periodEnd) ? periodEnd : null;
+}
+
 async function updateProfilePlanByUserId(
   userId: string,
   update: ProfilePlanUpdate,
@@ -120,7 +127,7 @@ async function handleCheckoutSessionCompleted(
     if (selection) {
       plan = selection.plan;
       period = selection.period;
-      expiresAt = toIsoFromUnix(subscription.current_period_end);
+      expiresAt = toIsoFromUnix(getSubscriptionCurrentPeriodEnd(subscription));
     }
   }
 
@@ -164,7 +171,7 @@ async function handleSubscriptionChanged(
   await updateProfilePlanByCustomerId(customerId, {
     plan: selection.plan,
     plan_period: selection.period,
-    plan_expires_at: toIsoFromUnix(subscription.current_period_end),
+    plan_expires_at: toIsoFromUnix(getSubscriptionCurrentPeriodEnd(subscription)),
   });
 }
 

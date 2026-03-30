@@ -25,7 +25,10 @@ const quoteCategorySchema = z.object({
   category: z.string(),
   low: z.number(),
   typical: z.number(),
-  high: z.number()
+  high: z.number(),
+  refined: z.boolean().optional(),
+  scopeItems: z.array(z.string()).optional(),
+  notes: z.string().optional()
 });
 
 const quotePdfInputSchema = z.object({

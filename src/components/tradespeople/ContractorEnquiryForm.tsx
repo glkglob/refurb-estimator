@@ -45,6 +45,8 @@ export default function ContractorEnquiryForm() {
   useEffect(() => {
     const prefilledPostcode = searchParams.get("postcode");
     const prefilledEstimate = toNumericString(searchParams.get("estimate"));
+    const prefilledCategory = searchParams.get("category");
+    const prefilledNotes = searchParams.get("notes");
 
     if (prefilledPostcode && postcode.length === 0) {
       setPostcode(prefilledPostcode.trim().toUpperCase());
@@ -52,6 +54,14 @@ export default function ContractorEnquiryForm() {
 
     if (prefilledEstimate && estimateTotal.length === 0) {
       setEstimateTotal(prefilledEstimate);
+    }
+
+    if (prefilledCategory && projectType.length === 0) {
+      setProjectType(prefilledCategory.trim());
+    }
+
+    if (prefilledNotes && message.length === 0) {
+      setMessage(prefilledNotes.trim());
     }
   }, [searchParams, postcode.length, estimateTotal.length]);
 

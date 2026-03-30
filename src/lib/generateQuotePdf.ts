@@ -16,6 +16,9 @@ export type QuotePdfInput = {
     low: number;
     typical: number;
     high: number;
+    refined?: boolean;
+    scopeItems?: string[];
+    notes?: string;
   }>;
 
   totalLow: number;
@@ -69,11 +72,15 @@ type CurrencyRow = {
   low: number;
   typical: number;
   high: number;
+  refined?: boolean;
+  scopeItems?: string[];
+  notes?: string;
 };
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
 const MARGIN = 40;
+const SCOPE_INDENT = MARGIN + 12;
 const FOOTER_RESERVED_HEIGHT = 90;
 
 const COLORS = {
@@ -81,6 +88,7 @@ const COLORS = {
   darkText: rgb(0.1, 0.1, 0.1),
   mediumGrey: rgb(0.4, 0.4, 0.4),
   lightGrey: rgb(0.95, 0.95, 0.95),
+  amber: rgb(0.86, 0.56, 0.1),
   white: rgb(1, 1, 1),
 };
 
@@ -563,6 +571,9 @@ export async function generateQuotePdf(
       low: item.low,
       typical: item.typical,
       high: item.high,
+      refined: item.refined,
+      scopeItems: item.scopeItems?.filter((scopeItem) => scopeItem.trim().length > 0),
+      notes: item.notes,
     })),
     ...(input.additionalFeatures ?? []).map((item) => ({
       label: titleCase(item.label),
@@ -573,6 +584,7 @@ export async function generateQuotePdf(
   ];
 
   const rowHeight = 16;
+  const scopeTextWidth = PAGE_WIDTH - MARGIN - SCOPE_INDENT;
 
   rows.forEach((row, index) => {
     ensureSpace(rowHeight + 2);
@@ -599,34 +611,92 @@ export async function generateQuotePdf(
       y: rowY,
     });
 
+    const lowText = formatCurrencyGBP(row.low);
+    const typicalText = formatCurrencyGBP(row.typical);
+    const highText = formatCurrencyGBP(row.high);
+
+    const lowX = MARGIN + tableCategoryWidth + 4;
+    const typicalX = MARGIN + tableCategoryWidth + tableValueWidth + 4;
+    const highX = MARGIN + tableCategoryWidth + tableValueWidth * 2 + 4;
+
     drawText({
-      text: formatCurrencyGBP(row.low),
+      text: lowText,
       size: FONT_SIZES.table,
       font: fontRegular,
       color: COLORS.darkText,
-      x: MARGIN + tableCategoryWidth + 4,
+      x: lowX,
       y: rowY,
     });
 
     drawText({
-      text: formatCurrencyGBP(row.typical),
+      text: typicalText,
       size: FONT_SIZES.table,
       font: fontRegular,
       color: COLORS.darkText,
-      x: MARGIN + tableCategoryWidth + tableValueWidth + 4,
+      x: typicalX,
       y: rowY,
     });
 
     drawText({
-      text: formatCurrencyGBP(row.high),
+      text: highText,
       size: FONT_SIZES.table,
       font: fontRegular,
       color: COLORS.darkText,
-      x: MARGIN + tableCategoryWidth + tableValueWidth * 2 + 4,
+      x: highX,
       y: rowY,
     });
+
+    if (row.refined === true) {
+      drawText({
+        text: " (Refined)",
+        size: FONT_SIZES.table,
+        font: fontRegular,
+        color: COLORS.amber,
+        x: typicalX + fontRegular.widthOfTextAtSize(typicalText, FONT_SIZES.table) + 2,
+        y: rowY,
+      });
+    }
 
     cursorY -= rowHeight + 2;
+
+    for (const scopeItem of row.scopeItems ?? []) {
+      const scopeLines = wrapText(`• ${scopeItem}`, FONT_SIZES.small, fontRegular, scopeTextWidth);
+
+      for (const scopeLine of scopeLines) {
+        ensureSpace(FONT_SIZES.small + 3);
+        drawText({
+          text: scopeLine,
+          size: FONT_SIZES.small,
+          font: fontRegular,
+          color: COLORS.mediumGrey,
+          x: SCOPE_INDENT,
+          y: cursorY,
+        });
+        cursorY -= FONT_SIZES.small + 3;
+      }
+    }
+
+    const trimmedNotes = row.notes?.trim();
+    if (trimmedNotes) {
+      const noteLines = wrapText(`Note: ${trimmedNotes}`, FONT_SIZES.small, fontRegular, scopeTextWidth);
+
+      for (const noteLine of noteLines) {
+        ensureSpace(FONT_SIZES.small + 3);
+        drawText({
+          text: noteLine,
+          size: FONT_SIZES.small,
+          font: fontRegular,
+          color: COLORS.mediumGrey,
+          x: SCOPE_INDENT,
+          y: cursorY,
+        });
+        cursorY -= FONT_SIZES.small + 3;
+      }
+    }
+
+    if ((row.scopeItems?.length ?? 0) > 0 || trimmedNotes) {
+      cursorY -= 2;
+    }
   });
 
   cursorY -= 6;

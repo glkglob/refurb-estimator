@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -287,7 +287,7 @@ export default function RefineCategoryPanel({
     </div>
   );
 
-  function renderPanelContent(): JSX.Element {
+  function renderPanelContent(): React.ReactElement {
     return (
       <div className="space-y-5">
         <section className="space-y-2">

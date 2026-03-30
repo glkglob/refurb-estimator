@@ -40,7 +40,6 @@ describe("UpgradePrompt", () => {
         featureName="refineEstimate"
         currentPlan="free"
         requiredPlan="pro"
-        onRedirect={redirectMock}
       />
     );
 
@@ -59,7 +58,6 @@ describe("UpgradePrompt", () => {
         featureName="pdfExport"
         currentPlan="free"
         requiredPlan="pro"
-        onRedirect={redirectMock}
       />
     );
 
@@ -81,7 +79,6 @@ describe("UpgradePrompt", () => {
         featureName="refineEstimate"
         currentPlan="free"
         requiredPlan="pro"
-        onRedirect={redirectMock}
       />
     );
 
@@ -120,7 +117,6 @@ describe("UpgradePrompt", () => {
         featureName="csvExport"
         currentPlan="free"
         requiredPlan="pro"
-        onRedirect={redirectMock}
       />
     );
 
@@ -142,7 +138,6 @@ describe("UpgradePrompt", () => {
         featureName="refineEstimate"
         currentPlan="agency"
         requiredPlan="pro"
-        onRedirect={redirectMock}
       />
     );
 

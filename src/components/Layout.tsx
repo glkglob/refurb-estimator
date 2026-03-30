@@ -9,7 +9,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="flex min-h-screen bg-background text-foreground bp-grid">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col pb-20 md:ml-[240px] md:pb-0">
+      <div className="flex min-w-0 flex-1 flex-col pb-mobile-nav md:ml-[240px] md:pb-0">
         <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
           {children}
         </main>

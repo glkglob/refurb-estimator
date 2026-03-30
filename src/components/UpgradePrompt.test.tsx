@@ -37,8 +37,8 @@ describe("UpgradePrompt", () => {
   test("shows locked state for free user", () => {
     render(
       <UpgradePrompt
-        feature="refineEstimate"
-        userPlan="free"
+        featureName="refineEstimate"
+        currentPlan="free"
         requiredPlan="pro"
         onRedirect={redirectMock}
       />
@@ -56,8 +56,8 @@ describe("UpgradePrompt", () => {
 
     render(
       <UpgradePrompt
-        feature="pdfExport"
-        userPlan="free"
+        featureName="pdfExport"
+        currentPlan="free"
         requiredPlan="pro"
         onRedirect={redirectMock}
       />
@@ -78,8 +78,8 @@ describe("UpgradePrompt", () => {
 
     render(
       <UpgradePrompt
-        feature="refineEstimate"
-        userPlan="free"
+        featureName="refineEstimate"
+        currentPlan="free"
         requiredPlan="pro"
         onRedirect={redirectMock}
       />
@@ -117,8 +117,8 @@ describe("UpgradePrompt", () => {
 
     render(
       <UpgradePrompt
-        feature="csvExport"
-        userPlan="free"
+        featureName="csvExport"
+        currentPlan="free"
         requiredPlan="pro"
         onRedirect={redirectMock}
       />
@@ -139,8 +139,8 @@ describe("UpgradePrompt", () => {
 
     render(
       <UpgradePrompt
-        feature="refineEstimate"
-        userPlan="agency"
+        featureName="refineEstimate"
+        currentPlan="agency"
         requiredPlan="pro"
         onRedirect={redirectMock}
       />

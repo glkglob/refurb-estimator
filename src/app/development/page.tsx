@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AlertTriangle, ChevronDown, Share2 } from "lucide-react";
 import AuthGate from "@/components/AuthGate";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
 import EstimateAssistantPanel from "@/components/EstimateAssistantPanel";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +28,9 @@ import {
 } from "@/lib/developmentAppraisal";
 import type { AssistantAction } from "@/lib/assistant/schemas";
 import { applyEditorActionsToDevelopmentInput } from "@/lib/assistant/developmentActions";
+import { type Plan, requirePlan } from "@/lib/plans";
 import { shareOrCopy } from "@/lib/share";
+import { createClientSafely } from "@/lib/supabase/client";
 
 type FormState = {
   purchasePrice: string;
@@ -128,19 +131,102 @@ function formatPercent(value: number): string {
   return `${value.toFixed(2)}%`;
 }
 
+type AuthState = "checking" | "authenticated" | "unauthenticated";
+
+function resolvePlan(value: unknown): Plan {
+  if (value === "free" || value === "pro" || value === "agency") {
+    return value;
+  }
+
+  return "free";
+}
+
 export default function DevelopmentAppraisalPage() {
   const { toast } = useToast();
+  const supabase = useMemo(() => createClientSafely(), []);
 
   const [formState, setFormState] = useState<FormState>(DEFAULT_FORM_STATE);
   const [result, setResult] = useState<AppraisalResult | null>(null);
   const [inputSnapshot, setInputSnapshot] = useState<AppraisalInput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showFinance, setShowFinance] = useState(true);
+  const [authState, setAuthState] = useState<AuthState>(
+    supabase ? "checking" : "authenticated"
+  );
+  const [userPlan, setUserPlan] = useState<Plan>("free");
 
   const viabilityMeta = useMemo(
     () => (result ? VIABILITY_META[result.viability] : null),
     [result]
   );
+  const hasDevelopmentAccess = requirePlan("pro", userPlan);
+
+  useEffect(() => {
+    if (!supabase) {
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadAccessState() {
+      const {
+        data: { user },
+        error: userError
+      } = await supabase.auth.getUser();
+
+      if (!isActive) {
+        return;
+      }
+
+      if (userError || !user) {
+        setAuthState("unauthenticated");
+        setUserPlan("free");
+        return;
+      }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!isActive) {
+        return;
+      }
+
+      if (profileError) {
+        setUserPlan("free");
+        setAuthState("authenticated");
+        return;
+      }
+
+      const planValue =
+        profileData && typeof profileData === "object" && "plan" in profileData
+          ? profileData.plan
+          : undefined;
+
+      setUserPlan(resolvePlan(planValue));
+      setAuthState("authenticated");
+    }
+
+    void loadAccessState();
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange(() => {
+      if (!isActive) {
+        return;
+      }
+
+      setAuthState("checking");
+      void loadAccessState();
+    });
+
+    return () => {
+      isActive = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]): void {
     setFormState((prev) => ({ ...prev, [key]: value }));
@@ -300,12 +386,134 @@ export default function DevelopmentAppraisalPage() {
     }
   }
 
+  const resultsSection =
+    result && viabilityMeta ? (
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Badge variant="outline" className={viabilityMeta.className}>
+            {viabilityMeta.label}
+          </Badge>
+          <Button type="button" variant="outline" onClick={() => void handleShare()}>
+            <Share2 className="mr-2 size-4" />
+            Share this appraisal
+          </Button>
+        </div>
+
+        {inputSnapshot ? (
+          <EstimateAssistantPanel
+            mode="development"
+            estimateInput={inputSnapshot}
+            estimateResult={result}
+            onApplyEditorActions={handleApplyAssistantEditorActions}
+          />
+        ) : null}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="overflow-x-auto p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="px-4">Metric</TableHead>
+                  <TableHead className="px-4">Value</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="px-4 font-medium">Total costs</TableCell>
+                  <TableCell className="px-4">
+                    <CurrencyDisplay amount={result.totalCosts} />
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="px-4 font-medium">GDV</TableCell>
+                  <TableCell className="px-4">
+                    <CurrencyDisplay amount={inputSnapshot?.grossDevelopmentValue ?? 0} />
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="px-4 font-medium">Gross profit</TableCell>
+                  <TableCell className="px-4">
+                    <CurrencyDisplay amount={result.grossProfit} />
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="px-4 font-medium">Margin %</TableCell>
+                  <TableCell className="px-4 font-mono">
+                    {formatPercent(result.grossProfitPercent)}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="px-4 font-medium">ROC %</TableCell>
+                  <TableCell className="px-4 font-mono">
+                    {formatPercent(result.returnOnCost)}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>BRRR Refinance Check</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div>
+              <p className="text-sm text-muted-foreground">Refinance value (75% GDV)</p>
+              <p className="text-lg font-semibold">
+                <CurrencyDisplay amount={result.brrr.refinanceValueAt75Percent} />
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Equity released</p>
+              <p className="text-lg font-semibold">
+                <CurrencyDisplay amount={result.brrr.equityReleased} />
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <details>
+              <summary className="cursor-pointer font-medium">
+                Full cost breakdown
+              </summary>
+              <div className="mt-4 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="px-4">Cost item</TableHead>
+                      <TableHead className="px-4">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {COST_BREAKDOWN_ROWS.map((row) => (
+                      <TableRow key={row.key}>
+                        <TableCell className="px-4 font-medium">{row.label}</TableCell>
+                        <TableCell className="px-4">
+                          <CurrencyDisplay amount={result.costBreakdown[row.key]} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </details>
+          </CardContent>
+        </Card>
+      </section>
+    ) : null;
+
   return (
     <section className="space-y-6">
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-3xl font-semibold tracking-tight">Development Appraisal</h1>
-          <Badge variant="secondary">Pro feature — free during beta</Badge>
+          <Badge variant="secondary">Pro plan feature</Badge>
         </div>
         <p className="text-sm text-muted-foreground">
           Model acquisition, build, finance, and sale assumptions to assess development viability.
@@ -544,129 +752,22 @@ export default function DevelopmentAppraisalPage() {
       ) : null}
 
       {result && viabilityMeta ? (
-        <AuthGate
-          featureName="Development Appraisal"
-          featureDescription={`Pro feature — free during beta. Preview status: ${viabilityMeta.label}. Sign in to unlock exact totals, margin, ROC, and BRRR values.`}
-        >
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Badge variant="outline" className={viabilityMeta.className}>
-                {viabilityMeta.label}
-              </Badge>
-              <Button type="button" variant="outline" onClick={() => void handleShare()}>
-                <Share2 className="mr-2 size-4" />
-                Share this appraisal
-              </Button>
-            </div>
-
-            {inputSnapshot ? (
-              <EstimateAssistantPanel
-                mode="development"
-                estimateInput={inputSnapshot}
-                estimateResult={result}
-                onApplyEditorActions={handleApplyAssistantEditorActions}
-              />
-            ) : null}
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="overflow-x-auto p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="px-4">Metric</TableHead>
-                      <TableHead className="px-4">Value</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="px-4 font-medium">Total costs</TableCell>
-                      <TableCell className="px-4">
-                        <CurrencyDisplay amount={result.totalCosts} />
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="px-4 font-medium">GDV</TableCell>
-                      <TableCell className="px-4">
-                        <CurrencyDisplay amount={inputSnapshot?.grossDevelopmentValue ?? 0} />
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="px-4 font-medium">Gross profit</TableCell>
-                      <TableCell className="px-4">
-                        <CurrencyDisplay amount={result.grossProfit} />
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="px-4 font-medium">Margin %</TableCell>
-                      <TableCell className="px-4 font-mono">
-                        {formatPercent(result.grossProfitPercent)}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="px-4 font-medium">ROC %</TableCell>
-                      <TableCell className="px-4 font-mono">
-                        {formatPercent(result.returnOnCost)}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>BRRR Refinance Check</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Refinance value (75% GDV)</p>
-                  <p className="text-lg font-semibold">
-                    <CurrencyDisplay amount={result.brrr.refinanceValueAt75Percent} />
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Equity released</p>
-                  <p className="text-lg font-semibold">
-                    <CurrencyDisplay amount={result.brrr.equityReleased} />
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <details>
-                  <summary className="cursor-pointer font-medium">
-                    Full cost breakdown
-                  </summary>
-                  <div className="mt-4 overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="px-4">Cost item</TableHead>
-                          <TableHead className="px-4">Amount</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {COST_BREAKDOWN_ROWS.map((row) => (
-                          <TableRow key={row.key}>
-                            <TableCell className="px-4 font-medium">{row.label}</TableCell>
-                            <TableCell className="px-4">
-                              <CurrencyDisplay amount={result.costBreakdown[row.key]} />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </details>
-              </CardContent>
-            </Card>
-          </section>
-        </AuthGate>
+        authState !== "authenticated" ? (
+          <AuthGate
+            featureName="Development Appraisal"
+            featureDescription={`Preview status: ${viabilityMeta.label}. Sign in to unlock exact totals, margin, ROC, and BRRR values.`}
+          >
+            {resultsSection}
+          </AuthGate>
+        ) : hasDevelopmentAccess ? (
+          resultsSection
+        ) : (
+          <UpgradePrompt
+            featureName="Development Appraisal"
+            requiredPlan="pro"
+            currentPlan={userPlan}
+          />
+        )
       ) : null}
     </section>
   );

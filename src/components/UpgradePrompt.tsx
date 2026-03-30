@@ -19,6 +19,7 @@ type UpgradePromptProps = {
   feature: keyof PlanFeatures;
   userPlan: Plan;
   requiredPlan: Plan;
+  onRedirect?: (url: string) => void;
 };
 
 type CheckoutSessionResponse = {
@@ -85,7 +86,8 @@ async function parseCheckoutResponse(response: Response): Promise<CheckoutSessio
 export default function UpgradePrompt({
   feature,
   userPlan,
-  requiredPlan
+  requiredPlan,
+  onRedirect
 }: UpgradePromptProps): React.ReactElement {
   const [period, setPeriod] = useState<PlanPeriod>("monthly");
   const [isLoading, setIsLoading] = useState(false);
@@ -141,7 +143,11 @@ export default function UpgradePrompt({
         throw new Error("Checkout URL was not returned by the server.");
       }
 
-      window.location.assign(payload.url);
+      if (onRedirect) {
+        onRedirect(payload.url);
+      } else {
+        window.location.assign(payload.url);
+      }
     } catch (error: unknown) {
       if (isApiFetchError(error)) {
         setErrorMessage(error.message);

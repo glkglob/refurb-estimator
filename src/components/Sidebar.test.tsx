@@ -30,11 +30,16 @@ describe("Sidebar", () => {
 
     const mobileNav = screen.getByLabelText("Mobile bottom navigation");
 
-    expect(within(mobileNav).getByRole("link", { name: "Quick Estimate" })).toBeInTheDocument();
-    expect(within(mobileNav).getByRole("link", { name: "AI Estimate" })).toBeInTheDocument();
-    expect(within(mobileNav).getByRole("link", { name: "Dev Appraisal" })).toBeInTheDocument();
+    expect(within(mobileNav).getAllByRole("link")).toHaveLength(4);
+    expect(within(mobileNav).getByRole("link", { name: "Estimate" })).toBeInTheDocument();
+    expect(within(mobileNav).getByRole("link", { name: "AI Photo" })).toBeInTheDocument();
+    expect(within(mobileNav).getByRole("link", { name: "Development" })).toBeInTheDocument();
     expect(within(mobileNav).getByRole("link", { name: "Scenarios" })).toBeInTheDocument();
-    expect(within(mobileNav).getByRole("link", { name: "Tradespeople" })).toBeInTheDocument();
+
+    expect(within(mobileNav).queryByRole("link", { name: "Quick Estimate" })).not.toBeInTheDocument();
+    expect(within(mobileNav).queryByRole("link", { name: "AI Estimate" })).not.toBeInTheDocument();
+    expect(within(mobileNav).queryByRole("link", { name: "Dev Appraisal" })).not.toBeInTheDocument();
+
     expect(screen.getByRole("button", { name: "Open more navigation options" })).toBeInTheDocument();
   });
 
@@ -44,7 +49,7 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     const mobileNav = screen.getByLabelText("Mobile bottom navigation");
-    const activeDestination = within(mobileNav).getByRole("link", { name: "Dev Appraisal" });
+    const activeDestination = within(mobileNav).getByRole("link", { name: "Development" });
 
     expect(activeDestination.className).toContain("text-white");
     expect(activeDestination.className).toContain("bg-primary/15");

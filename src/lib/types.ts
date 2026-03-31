@@ -1,18 +1,18 @@
 import type { PropertyType } from "./propertyType";
 
 export type Region =
-  | "London"
-  | "SouthEast"
-  | "EastOfEngland"
-  | "EastMidlands"
-  | "WestMidlands"
-  | "SouthWest"
-  | "NorthWest"
-  | "NorthEast"
-  | "YorkshireAndTheHumber"
-  | "Scotland"
-  | "Wales"
-  | "NorthernIreland";
+  | "london"
+  | "south_east"
+  | "east_of_england"
+  | "east_midlands"
+  | "west_midlands"
+  | "south_west"
+  | "north_west"
+  | "north_east"
+  | "yorkshire_and_humber"
+  | "scotland"
+  | "wales"
+  | "northern_ireland";
 
 export type FinishLevel = "budget" | "standard" | "premium";
 

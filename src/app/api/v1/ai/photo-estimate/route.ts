@@ -4,8 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
   Condition,
   EstimateInput,
-  FinishLevel,
-  Region
+  FinishLevel
 } from "@/lib/types";
 import {
   calculateEnhancedEstimate,
@@ -19,11 +18,12 @@ import {
 } from "@/lib/propertyType";
 import { validateJsonRequest } from "@/lib/validate";
 import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
+import { isRegion, type Region } from "@/lib/domain/region";
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
-const DEFAULT_REGION: Region = "WestMidlands";
+const DEFAULT_REGION: Region = "west_midlands";
 const DEFAULT_CONDITION: Condition = "fair";
 const DEFAULT_FINISH_LEVEL: FinishLevel = "standard";
 const SUPPORTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -37,7 +37,7 @@ const SYSTEM_PROMPT = `You are a UK property refurbishment expert and chartered 
   "totalAreaM2": number — estimated gross internal area in square metres,
   "condition": "string — one of: poor, fair, good",
   "finishLevel": "string — one of: budget, standard, premium — estimate what finish level the refurb would target",
-  "region": "string — one of: London, SouthEast, Midlands, North, Scotland, Wales — infer from any visible clues (architecture style, signage, street furniture, brickwork), or null if uncertain",
+  "region": "string — one of: london, south_east, south_west, east_of_england, west_midlands, east_midlands, yorkshire_and_humber, north_west, north_east, scotland, wales, northern_ireland — infer from visible clues, or null if uncertain",
   "confidence": "string — one of: high, medium, low — your overall confidence in the analysis",
   "notes": "string — brief explanation of your reasoning (2-4 sentences)"
 }
@@ -69,20 +69,7 @@ Rules:
 - Always explain in notes how you arrived at the area estimate
 - You may also receive optional user hints (bedrooms, approximate area, postcode). Treat these as supporting context and combine with visual evidence from all provided photos.`;
 
-const REGION_VALUES: Region[] = [
-  "London",
-  "SouthEast",
-  "EastOfEngland",
-  "EastMidlands",
-  "WestMidlands",
-  "SouthWest",
-  "NorthWest",
-  "NorthEast",
-  "YorkshireAndTheHumber",
-  "Scotland",
-  "Wales",
-  "NorthernIreland"
-];
+
 const CONDITION_VALUES: Condition[] = ["poor", "fair", "good"];
 const FINISH_LEVEL_VALUES: FinishLevel[] = ["budget", "standard", "premium"];
 const CONFIDENCE_VALUES = ["high", "medium", "low"] as const;
@@ -125,9 +112,6 @@ type AiAnalysisResponse = {
 
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
-function isRegion(value: unknown): value is Region {
-  return typeof value === "string" && REGION_VALUES.includes(value as Region);
-}
 
 function isCondition(value: unknown): value is Condition {
   return typeof value === "string" && CONDITION_VALUES.includes(value as Condition);

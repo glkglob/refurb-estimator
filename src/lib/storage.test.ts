@@ -14,7 +14,7 @@ function buildScenario(id: string, name = `Scenario ${id}`): Scenario {
     id,
     name,
     input: {
-      region: "London",
+      region: "london",
       projectType: "refurb",
       propertyType: PropertyType.FLAT_APARTMENT,
       totalAreaM2: 60,

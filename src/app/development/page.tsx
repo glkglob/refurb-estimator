@@ -5,7 +5,7 @@ import { AlertTriangle, ChevronDown, Share2 } from "lucide-react";
 import AuthGate from "@/components/AuthGate";
 import CurrencyDisplay from "@/components/CurrencyDisplay";
 import EstimateAssistantPanel from "@/components/EstimateAssistantPanel";
-import UpgradePrompt from "@/components/UpgradePrompt";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -763,7 +763,6 @@ export default function DevelopmentAppraisalPage() {
           resultsSection
         ) : (
           <UpgradePrompt
-            featureName="Development Appraisal"
             requiredPlan="pro"
             currentPlan={userPlan}
           />

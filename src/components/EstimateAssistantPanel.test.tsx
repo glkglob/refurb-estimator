@@ -44,7 +44,7 @@ const BASE_RESULT: NewBuildResult = {
   adjustments: [],
   contingencyPercent: 5,
   feesPercent: 8,
-  region: "YorkshireAndTheHumber",
+  region: "yorkshire_and_humber",
   metadata: {
     propertyType: PropertyType.DETACHED_HOUSE,
     spec: "standard",

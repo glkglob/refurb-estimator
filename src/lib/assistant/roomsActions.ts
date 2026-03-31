@@ -1,5 +1,10 @@
+import {
+  isRegion,
+  type Region,
+} from "@/lib/domain/region";
 import type { AssistantAction } from "@/lib/assistant/schemas";
-import type { Condition, Region, RoomInput, RoomType } from "@/lib/types";
+import type { Condition, RoomInput, RoomType } from "@/lib/types";
+
 
 type RoomsAssistantState = {
   region: Region;
@@ -14,21 +19,6 @@ type ApplyRoomsActionsResult = {
   shouldRecalculate: boolean;
   noneReason: string | null;
 };
-
-const REGION_VALUES: ReadonlySet<Region> = new Set([
-  "London",
-  "SouthEast",
-  "EastOfEngland",
-  "EastMidlands",
-  "WestMidlands",
-  "SouthWest",
-  "NorthWest",
-  "NorthEast",
-  "YorkshireAndTheHumber",
-  "Scotland",
-  "Wales",
-  "NorthernIreland"
-]);
 
 const CONDITION_VALUES: ReadonlySet<Condition> = new Set(["poor", "fair", "good"]);
 const ROOM_TYPE_VALUES: ReadonlySet<RoomType> = new Set([
@@ -144,7 +134,7 @@ export function applyEditorActionsToRoomsState(
     }
 
     for (const [field, value] of Object.entries(action.fields)) {
-      if (field === "region" && REGION_VALUES.has(value as Region)) {
+      if (field === "region" && isRegion(value)) {
         if (nextState.region !== value) {
           nextState.region = value as Region;
           changedFieldSet.add("region");

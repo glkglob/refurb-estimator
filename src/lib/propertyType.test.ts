@@ -66,7 +66,7 @@ describe("shared snapshot schema propertyType", () => {
     const payload = {
       kind: "rooms",
       input: {
-        region: "London",
+        region: "london",
         projectType: "refurb",
         propertyType: PropertyType.DETACHED_HOUSE,
         totalAreaM2: 95,

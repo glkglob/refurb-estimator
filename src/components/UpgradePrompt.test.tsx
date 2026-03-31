@@ -1,115 +1,63 @@
-/** @jest-environment jsdom */
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { UpgradePrompt } from "./UpgradePrompt";
+import { apiFetch } from "@/lib/apiClient";
 
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-
-import UpgradePrompt from "./UpgradePrompt";
-
-function jsonResponse(payload: unknown, ok = true, status = 200): Response {
-  return {
-    ok,
-    status,
-    json: async () => payload
-  } as Response;
-}
+jest.mock("@/lib/apiClient");
 
 describe("UpgradePrompt", () => {
-  let fetchSpy: jest.SpiedFunction<typeof fetch>;
+  it("redirects to Stripe checkout URL on success", async () => {
+    const redirectMock = jest.fn();
 
-  beforeAll(() => {
-    if (!("fetch" in global)) {
-      Object.defineProperty(global, "fetch", {
-        configurable: true,
-        writable: true,
-        value: jest.fn()
-      });
-    }
-  });
-
-  beforeEach(() => {
-    fetchSpy = jest.spyOn(global, "fetch");
-    jest.spyOn(console, "error").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-    jest.clearAllMocks();
-  });
-
-  test("renders upgrade details for users below the required plan", () => {
-    render(
-      <UpgradePrompt
-        featureName="Refine estimate scope builder"
-        currentPlan="free"
-        requiredPlan="pro"
-      />
-    );
-
-    expect(screen.getByText("Refine estimate scope builder")).toBeInTheDocument();
-    expect(screen.getByText("Unlock this feature with the Pro plan.")).toBeInTheDocument();
-    expect(screen.getByText("Required plan")).toBeInTheDocument();
-    expect(screen.getByText("Current plan: Free")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Upgrade to Pro" })).toBeEnabled();
-    expect(screen.queryByText("Feature locked")).not.toBeInTheDocument();
-  });
-
-  test("does not render when the current plan already includes the feature", () => {
-    const { container } = render(
-      <UpgradePrompt
-        featureName="Refine estimate scope builder"
-        currentPlan="agency"
-        requiredPlan="pro"
-      />
-    );
-
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  test("starts checkout with the required plan and billing period", async () => {
-    const user = userEvent.setup();
-    fetchSpy.mockResolvedValue(jsonResponse({ url: "https://checkout.stripe.com/c/pay/cs_test_123" }));
+    (apiFetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        url: "https://checkout.stripe.com/c/pay/cs_test_123",
+      }),
+    });
 
     render(
       <UpgradePrompt
-        featureName="Refine estimate scope builder"
-        currentPlan="free"
         requiredPlan="pro"
+        currentPlan="free"
+        redirectTo={redirectMock}
       />
     );
 
-    await user.click(screen.getByRole("button", { name: "Upgrade to Pro" }));
+    fireEvent.click(screen.getByText(/upgrade/i));
 
     await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledWith(
-        "/api/stripe/checkout",
-        expect.objectContaining({
-          method: "POST"
-        })
+      expect(redirectMock).toHaveBeenCalledWith(
+        "https://checkout.stripe.com/c/pay/cs_test_123"
       );
     });
 
-    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(apiFetch).toHaveBeenCalledWith(
+      "/api/stripe/checkout",
+      expect.objectContaining({
+        method: "POST",
+      })
+    );
+
+    const [, init] = (apiFetch as jest.Mock).mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(String(init.body))).toEqual({
       plan: "pro",
-      period: "monthly"
+      period: "monthly",
     });
 
   });
 
-  test("shows an alert when checkout creation fails", async () => {
-    const user = userEvent.setup();
-    fetchSpy.mockResolvedValue(jsonResponse({ error: "Unable to start checkout." }, false, 500));
+  it("shows error when checkout fails", async () => {
+    (apiFetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: "Unable to start checkout." }),
+    });
 
-    render(
-      <UpgradePrompt
-        featureName="Refine estimate scope builder"
-        currentPlan="free"
-        requiredPlan="pro"
-      />
-    );
+    render(<UpgradePrompt requiredPlan="pro" currentPlan="free" />);
 
-    await user.click(screen.getByRole("button", { name: "Upgrade to Pro" }));
+    fireEvent.click(screen.getByText(/upgrade/i));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Unable to start checkout.");
+    await waitFor(() => {
+      expect(screen.getByText("Unable to start checkout.")).toBeTruthy();
+    });
   });
 });

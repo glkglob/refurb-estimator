@@ -9,18 +9,18 @@ import type { EnhancedEstimateInput } from "./types";
 describe("enhancedEstimator", () => {
   describe("postcodeToRegion", () => {
     const postcodeCases: Array<[string, string]> = [
-      ["SW1A", "London"],
-      ["RG1", "SouthEast"],
-      ["CB1", "EastOfEngland"],
-      ["NG1", "EastMidlands"],
-      ["B1", "WestMidlands"],
-      ["BS1", "SouthWest"],
-      ["L1", "NorthWest"],
-      ["NE1", "NorthEast"],
-      ["LS1", "YorkshireAndTheHumber"],
-      ["EH1", "Scotland"],
-      ["CF10", "Wales"],
-      ["BT1", "NorthernIreland"],
+      ["SW1A", "london"],
+      ["RG1", "south_east"],
+      ["CB1", "east_of_england"],
+      ["NG1", "east_midlands"],
+      ["B1", "west_midlands"],
+      ["BS1", "south_west"],
+      ["L1", "north_west"],
+      ["NE1", "north_east"],
+      ["LS1", "yorkshire_and_humber"],
+      ["EH1", "scotland"],
+      ["CF10", "wales"],
+      ["BT1", "northern_ireland"],
     ];
 
     it.each(postcodeCases)("maps %s to %s", (postcode, expectedRegion) => {
@@ -28,15 +28,15 @@ describe("enhancedEstimator", () => {
     });
 
     it("normalizes spacing and casing", () => {
-      expect(postcodeToRegion(" sw1a ")).toBe("London");
-      expect(postcodeToRegion("l1")).toBe("NorthWest");
-      expect(postcodeToRegion("ne1")).toBe("NorthEast");
+      expect(postcodeToRegion(" sw1a ")).toBe("london");
+      expect(postcodeToRegion("l1")).toBe("north_west");
+      expect(postcodeToRegion("ne1")).toBe("north_east");
     });
 
     it("supports full postcodes when outward code is present", () => {
-      expect(postcodeToRegion("SW1A 1AA")).toBe("London");
-      expect(postcodeToRegion("L1 8JQ")).toBe("NorthWest");
-      expect(postcodeToRegion("EH1 1YZ")).toBe("Scotland");
+      expect(postcodeToRegion("SW1A 1AA")).toBe("london");
+      expect(postcodeToRegion("L1 8JQ")).toBe("north_west");
+      expect(postcodeToRegion("EH1 1YZ")).toBe("scotland");
     });
   });
 
@@ -46,7 +46,7 @@ describe("enhancedEstimator", () => {
       input: EnhancedEstimateInput;
     }> = [
       {
-        region: "London",
+        region: "london",
         input: {
           propertyCategory: "flat",
           postcodeDistrict: "SW1A",
@@ -56,7 +56,7 @@ describe("enhancedEstimator", () => {
         },
       },
       {
-        region: "SouthEast",
+        region: "south_east",
         input: {
           propertyCategory: "semi-detached",
           postcodeDistrict: "RG1",
@@ -66,7 +66,7 @@ describe("enhancedEstimator", () => {
         },
       },
       {
-        region: "EastOfEngland",
+        region: "east_of_england",
         input: {
           propertyCategory: "terraced",
           postcodeDistrict: "CB1",
@@ -76,7 +76,7 @@ describe("enhancedEstimator", () => {
         },
       },
       {
-        region: "EastMidlands",
+        region: "east_midlands",
         input: {
           propertyCategory: "detached",
           postcodeDistrict: "NG1",
@@ -86,7 +86,7 @@ describe("enhancedEstimator", () => {
         },
       },
       {
-        region: "WestMidlands",
+        region: "west_midlands",
         input: {
           propertyCategory: "bungalow",
           postcodeDistrict: "B1",
@@ -96,7 +96,7 @@ describe("enhancedEstimator", () => {
         },
       },
       {
-        region: "SouthWest",
+        region: "south_west",
         input: {
           propertyCategory: "terraced",
           postcodeDistrict: "BS1",
@@ -106,7 +106,7 @@ describe("enhancedEstimator", () => {
         },
       },
       {
-        region: "NorthWest",
+        region: "north_west",
         input: {
           propertyCategory: "terraced",
           postcodeDistrict: "L1",
@@ -116,7 +116,7 @@ describe("enhancedEstimator", () => {
         },
       },
       {
-        region: "NorthEast",
+        region: "north_east",
         input: {
           propertyCategory: "flat",
           postcodeDistrict: "NE1",
@@ -126,7 +126,7 @@ describe("enhancedEstimator", () => {
         },
       },
       {
-        region: "YorkshireAndTheHumber",
+        region: "yorkshire_and_humber",
         input: {
           propertyCategory: "semi-detached",
           postcodeDistrict: "LS1",
@@ -136,7 +136,7 @@ describe("enhancedEstimator", () => {
         },
       },
       {
-        region: "Scotland",
+        region: "scotland",
         input: {
           propertyCategory: "flat",
           postcodeDistrict: "EH1",
@@ -146,7 +146,7 @@ describe("enhancedEstimator", () => {
         },
       },
       {
-        region: "Wales",
+        region: "wales",
         input: {
           propertyCategory: "detached",
           postcodeDistrict: "CF10",
@@ -156,7 +156,7 @@ describe("enhancedEstimator", () => {
         },
       },
       {
-        region: "NorthernIreland",
+        region: "northern_ireland",
         input: {
           propertyCategory: "semi-detached",
           postcodeDistrict: "BT1",
@@ -236,7 +236,7 @@ describe("enhancedEstimator", () => {
 
       const result = calculateEnhancedEstimate(input);
 
-      expect(result.region).toBe("London");
+      expect(result.region).toBe("london");
       expect(result.contingencyPercent).toBe(10);
       expect(result.feesPercent).toBe(8);
 

@@ -578,7 +578,7 @@ async function main() {
 
   // 3. Build Qdrant points
   const points = PROPERTIES.map((property, index) => {
-    const { text, ...payload } = property;
+    const { text: _text, ...payload } = property;
     return {
       id: index + 1,
       vector: allEmbeddings[index],

@@ -56,18 +56,18 @@ const supportedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const maxBytes = 20 * 1024 * 1024;
 const maxPhotos = 3;
 const regions: Region[] = [
-  "London",
-  "SouthEast",
-  "EastOfEngland",
-  "EastMidlands",
-  "WestMidlands",
-  "SouthWest",
-  "NorthWest",
-  "NorthEast",
-  "YorkshireAndTheHumber",
-  "Scotland",
-  "Wales",
-  "NorthernIreland"
+  "london",
+  "south_east",
+  "east_of_england",
+  "east_midlands",
+  "west_midlands",
+  "south_west",
+  "north_west",
+  "north_east",
+  "yorkshire_and_humber",
+  "scotland",
+  "wales",
+  "northern_ireland"
 ];
 
 
@@ -129,7 +129,22 @@ async function resizeToDataUrl(file: File): Promise<string> {
 }
 
 function labelForRegion(region: Region): string {
-  return region === "SouthEast" ? "South East" : region;
+  const REGION_LABELS: Record<string, string> = {
+  london: "London",
+  south_east: "South East",
+  south_west: "South West",
+  east_of_england: "East of England",
+  west_midlands: "West Midlands",
+  east_midlands: "East Midlands",
+  yorkshire_and_humber: "Yorkshire and the Humber",
+  north_west: "North West",
+  north_east: "North East",
+  scotland: "Scotland",
+  wales: "Wales",
+  northern_ireland: "Northern Ireland",
+};
+
+return REGION_LABELS[region] ?? region;;
 }
 
 function confidenceBadgeClass(confidence: string): string {
@@ -637,7 +652,7 @@ export default function PhotoPage() {
 
       {result ? (
         <div id="photo-results" className="space-y-4">
-          <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card">
+          <Card className="border-primary/30 bg-linear-to-br from-primary/10 via-card to-card">
             <CardHeader>
               <CardTitle className="text-lg">AI Analysis</CardTitle>
             </CardHeader>

@@ -17,7 +17,7 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     name: "Emma W.",
-    location: "London",
+    location: "london",
     projectType: "Homeowner",
     quote:
       "We were planning a wrap-around extension and had absolutely no idea where to start with our budget. The estimator gave us a solid baseline in seconds, and the room-by-room breakdown helped us understand exactly where our money was going before we even approached builders.",

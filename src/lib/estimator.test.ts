@@ -6,7 +6,7 @@ import type { EstimateInput, RoomInput } from "./types";
 describe("estimateProject", () => {
   test("Budget NorthWest flat: 50m² gives typical ≈ £57,960", () => {
     const input: EstimateInput = {
-      region: "NorthWest",
+      region: "north_west",
       projectType: "refurb",
       propertyType: PropertyType.FLAT_APARTMENT,
       totalAreaM2: 50,
@@ -19,7 +19,7 @@ describe("estimateProject", () => {
 
   test("Premium London terrace totals are significantly higher than budget NorthWest case", () => {
     const budgetNorthWest: EstimateInput = {
-      region: "NorthWest",
+      region: "north_west",
       projectType: "refurb",
       propertyType: PropertyType.FLAT_APARTMENT,
       totalAreaM2: 50,
@@ -27,7 +27,7 @@ describe("estimateProject", () => {
       finishLevel: "budget"
     };
     const premiumLondon: EstimateInput = {
-      region: "London",
+      region: "london",
       projectType: "refurb",
       propertyType: PropertyType.TERRACED_HOUSE,
       totalAreaM2: 100,
@@ -44,7 +44,7 @@ describe("estimateProject", () => {
 
   test("Standard WestMidlands baseline: 75m² gives typical £135,000 with no multiplier distortion", () => {
     const input: EstimateInput = {
-      region: "WestMidlands",
+      region: "west_midlands",
       projectType: "refurb",
       propertyType: PropertyType.SEMI_DETACHED_HOUSE,
       totalAreaM2: 75,
@@ -58,7 +58,7 @@ describe("estimateProject", () => {
 
   test("Zero area throws 'Area must be greater than zero'", () => {
     const input: EstimateInput = {
-      region: "WestMidlands",
+      region: "west_midlands",
       projectType: "refurb",
       propertyType: PropertyType.FLAT_APARTMENT,
       totalAreaM2: 0,
@@ -72,7 +72,7 @@ describe("estimateProject", () => {
 
   test("Negative area throws 'Area must be greater than zero'", () => {
     const input: EstimateInput = {
-      region: "WestMidlands",
+      region: "west_midlands",
       projectType: "refurb",
       propertyType: PropertyType.FLAT_APARTMENT,
       totalAreaM2: -10,
@@ -86,7 +86,7 @@ describe("estimateProject", () => {
 
   test("Category sum check: categories typical sum equals totalTypical within £1", () => {
     const input: EstimateInput = {
-      region: "SouthEast",
+      region: "south_east",
       projectType: "refurb",
       propertyType: PropertyType.DETACHED_HOUSE,
       totalAreaM2: 120,
@@ -103,7 +103,7 @@ describe("estimateProject", () => {
 
   test("Cost per m² check: typical equals totalTypical / totalAreaM2 within £1", () => {
     const input: EstimateInput = {
-      region: "Scotland",
+      region: "scotland",
       projectType: "refurb",
       propertyType: PropertyType.TERRACED_HOUSE,
       totalAreaM2: 88,
@@ -120,11 +120,11 @@ describe("estimateProject", () => {
 
 describe("estimateRooms", () => {
   const londonFair = {
-    region: "London" as const,
+    region: "london" as const,
     condition: "fair" as const
   };
-  const westMidlandsFair = {
-    region: "WestMidlands" as const,
+  const westmidlandsFair = {
+    region: "west_midlands" as const,
     condition: "fair" as const
   };
   const fullRooms: RoomInput[] = [
@@ -234,7 +234,7 @@ describe("estimateRooms", () => {
         finishLevel: "standard"
       }
     ];
-    const result = estimateRooms(rooms, westMidlandsFair, defaultCostLibrary);
+    const result = estimateRooms(rooms, westmidlandsFair, defaultCostLibrary);
     expect(result.totalTypical).toBeCloseTo(6500, 6);
   });
 
@@ -248,7 +248,7 @@ describe("estimateRooms", () => {
         finishLevel: "standard"
       }
     ];
-    const result = estimateRooms(rooms, westMidlandsFair, defaultCostLibrary);
+    const result = estimateRooms(rooms, westmidlandsFair, defaultCostLibrary);
     const populatedCategories = result.categories.filter((category) => category.typical > 0);
     expect(populatedCategories.length).toBeGreaterThanOrEqual(5);
   });
@@ -263,7 +263,7 @@ describe("estimateRooms", () => {
         finishLevel: "standard"
       }
     ];
-    expect(() => estimateRooms(rooms, westMidlandsFair, defaultCostLibrary)).toThrow(
+    expect(() => estimateRooms(rooms, westmidlandsFair, defaultCostLibrary)).toThrow(
       "Room area cannot exceed 500m²"
     );
   });

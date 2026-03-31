@@ -35,32 +35,18 @@ import { ScenarioLimitExceededError } from "@/lib/storage";
 import type {
   Condition,
   EstimateInput,
-  Region,
   RoomInput,
   RoomType,
   Scenario,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { REGION_VALUES, type Region } from "@/lib/domain/region";
 
 const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
   ssr: false,
   loading: () => <div className="h-72 animate-pulse rounded-lg bg-muted" />,
 });
 
-const REGION_VALUES: Region[] = [
-  "London",
-  "SouthEast",
-  "EastOfEngland",
-  "EastMidlands",
-  "WestMidlands",
-  "SouthWest",
-  "NorthWest",
-  "NorthEast",
-  "YorkshireAndTheHumber",
-  "Scotland",
-  "Wales",
-  "NorthernIreland",
-];
 
 const CONDITIONS: Condition[] = ["poor", "fair", "good"];
 
@@ -106,7 +92,7 @@ export default function RoomsPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [region, setRegion] = useState<Region>("EastMidlands");
+  const [region, setRegion] = useState<Region>("east_midlands");
   const [condition, setCondition] = useState<Condition>("fair");
   const [contractorPostcode, setContractorPostcode] = useState("");
   const [rooms, setRooms] = useState<RoomInput[]>(INITIAL_ROOMS);

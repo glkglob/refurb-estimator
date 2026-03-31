@@ -24,7 +24,7 @@ describe("loftEstimator", () => {
     expect(result.totalTypical).toBe(19000);
     expect(result.totalHigh).toBe(21860);
     expect(result.costPerM2).toEqual({ low: 855, typical: 950, high: 1093 });
-    expect(result.region).toBe("WestMidlands");
+    expect(result.region).toBe("west_midlands");
   });
 
   it("applies ensuite add-on as a flat amount", () => {
@@ -57,7 +57,7 @@ describe("loftEstimator", () => {
     const londonInput = { ...baseInput, postcodeDistrict: "SW1A" };
     const result = calculateLoftEstimate(londonInput);
 
-    expect(result.region).toBe("London");
+    expect(result.region).toBe("london");
     expect(result.totalTypical).toBe(25650); // 19,000 * 1.35
     expect(result.totalLow).toBe(23085); // 17,100 * 1.35 -> 23,085
     expect(result.totalHigh).toBe(29511); // 21,860 * 1.35 -> 29,511

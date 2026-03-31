@@ -16,18 +16,18 @@ import type {
 } from "./types";
 
 const regionSchema = z.enum([
-  "London",
-  "SouthEast",
-  "EastOfEngland",
-  "EastMidlands",
-  "WestMidlands",
-  "SouthWest",
-  "NorthWest",
-  "NorthEast",
-  "YorkshireAndTheHumber",
-  "Scotland",
-  "Wales",
-  "NorthernIreland",
+  "london",
+  "south_east",
+  "east_of_england",
+  "east_midlands",
+  "west_midlands",
+  "south_west",
+  "north_west",
+  "north_east",
+  "yorkshire_and_humber",
+  "scotland",
+  "wales",
+  "northern_ireland",
 ]) satisfies z.ZodType<Region>;
 
 const finishLevelSchema = z.enum(["budget", "standard", "premium"]) satisfies z.ZodType<FinishLevel>;

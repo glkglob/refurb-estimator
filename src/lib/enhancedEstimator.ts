@@ -105,18 +105,18 @@ const walesAreas = new Set(["CF", "LD", "LL", "NP", "SA", "SY"]);
 const northernIrelandAreas = new Set(["BT"]);
 
 const REGION_POSTCODE_FALLBACK: Record<Region, string> = {
-  London: "SW1A",
-  SouthEast: "GU1",
-  SouthWest: "BS1",
-  EastOfEngland: "CB1",
-  EastMidlands: "LE1",
-  WestMidlands: "B1",
-  NorthWest: "M1",
-  NorthEast: "NE1",
-  YorkshireAndTheHumber: "LS1",
-  Scotland: "EH1",
-  Wales: "CF10",
-  NorthernIreland: "BT1"
+  london: "SW1A",
+  south_east: "GU1",
+  south_west: "BS1",
+  east_of_england: "CB1",
+  east_midlands: "LE1",
+  west_midlands: "B1",
+  north_west: "M1",
+  north_east: "NE1",
+  yorkshire_and_humber: "LS1",
+  scotland: "EH1",
+  wales: "CF10",
+  northern_ireland: "BT1"
 };
 
 function emptyTierAmounts(): TierAmounts {
@@ -182,19 +182,19 @@ function toRoundedCategoryBreakdown(
 
 export function postcodeToRegion(postcodeDistrict: string): Region {
   const area = extractPostcodeArea(postcodeDistrict);
-  if (londonAreas.has(area)) return "London";
-  if (southEastAreas.has(area)) return "SouthEast";
-  if (southWestAreas.has(area)) return "SouthWest";
-  if (eastOfEnglandAreas.has(area)) return "EastOfEngland";
-  if (eastMidlandsAreas.has(area)) return "EastMidlands";
-  if (westMidlandsAreas.has(area)) return "WestMidlands";
-  if (northWestAreas.has(area)) return "NorthWest";
-  if (northEastAreas.has(area)) return "NorthEast";
-  if (yorkshireAndTheHumberAreas.has(area)) return "YorkshireAndTheHumber";
-  if (scotlandAreas.has(area)) return "Scotland";
-  if (walesAreas.has(area)) return "Wales";
-  if (northernIrelandAreas.has(area)) return "NorthernIreland";
-  return "London";
+  if (londonAreas.has(area)) return "london";
+  if (southEastAreas.has(area)) return "south_east";
+  if (southWestAreas.has(area)) return "south_west";
+  if (eastOfEnglandAreas.has(area)) return "east_of_england";
+  if (eastMidlandsAreas.has(area)) return "east_midlands";
+  if (westMidlandsAreas.has(area)) return "west_midlands";
+  if (northWestAreas.has(area)) return "north_west";
+  if (northEastAreas.has(area)) return "north_east";
+  if (yorkshireAndTheHumberAreas.has(area)) return "yorkshire_and_humber";
+  if (scotlandAreas.has(area)) return "scotland";
+  if (walesAreas.has(area)) return "wales";
+  if (northernIrelandAreas.has(area)) return "northern_ireland";
+  return "london";
 }
 
 export function getFallbackPostcodeDistrict(region: Region): string {

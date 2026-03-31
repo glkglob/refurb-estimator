@@ -10,25 +10,11 @@ import type {
   Condition,
   EstimateInput,
   FinishLevel,
-  Region
 } from "@/lib/types";
 import type { AuthenticatedUser } from "@/lib/supabase/auth-helpers";
 import type { ProfileUpdateInput } from "@/lib/platform-types";
+import { isRegion, type Region } from "@/lib/domain/region";
 
-const REGION_VALUES: Region[] = [
-   "London",
-  "SouthEast",
-  "EastOfEngland",
-  "EastMidlands",
-  "WestMidlands",
-  "SouthWest",
-  "NorthWest",
-  "NorthEast",
-  "YorkshireAndTheHumber",
-  "Scotland",
-  "Wales",
-  "NorthernIreland"
-];
 const CONDITION_VALUES: Condition[] = ["poor", "fair", "good"];
 const FINISH_LEVEL_VALUES: FinishLevel[] = ["budget", "standard", "premium"];
 
@@ -77,7 +63,7 @@ function toGraphQLError(error: unknown): GraphQLError {
 }
 
 function ensureRegion(value: string): Region {
-  if (REGION_VALUES.includes(value as Region)) {
+  if (isRegion(value)) {
     return value as Region;
   }
 

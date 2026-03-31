@@ -25,7 +25,7 @@ describe("applyEditorActionsToRoomsState", () => {
       {
         type: "update_fields",
         fields: {
-          region: "London",
+          region: "london",
           condition: "good",
           "rooms[0].areaM2": 12,
           "rooms[1].finishLevel": "premium"
@@ -35,7 +35,7 @@ describe("applyEditorActionsToRoomsState", () => {
 
     const applied = applyEditorActionsToRoomsState(
       {
-        region: "EastMidlands",
+        region: "east_midlands",
         condition: "fair",
         rooms: BASE_ROOMS,
         nextRoomId: 3
@@ -43,7 +43,7 @@ describe("applyEditorActionsToRoomsState", () => {
       actions
     );
 
-    expect(applied.nextState.region).toBe("London");
+    expect(applied.nextState.region).toBe("london");
     expect(applied.nextState.condition).toBe("good");
     expect(applied.nextState.rooms[0]?.areaM2).toBe(12);
     expect(applied.nextState.rooms[1]?.finishLevel).toBe("premium");
@@ -67,7 +67,7 @@ describe("applyEditorActionsToRoomsState", () => {
 
     const applied = applyEditorActionsToRoomsState(
       {
-        region: "EastMidlands",
+        region: "east_midlands",
         condition: "fair",
         rooms: BASE_ROOMS,
         nextRoomId: 3
@@ -92,7 +92,7 @@ describe("applyEditorActionsToRoomsState", () => {
 
     const applied = applyEditorActionsToRoomsState(
       {
-        region: "EastMidlands",
+        region: "east_midlands",
         condition: "fair",
         rooms: BASE_ROOMS,
         nextRoomId: 3

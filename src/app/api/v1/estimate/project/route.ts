@@ -12,7 +12,6 @@ import type {
   FinishLevel,
   PropertyCategory,
   RenovationScope,
-  Region
 } from "@/lib/types";
 import {
   calculateEnhancedEstimate,
@@ -24,54 +23,28 @@ import { PropertyType } from "@/lib/propertyType";
 import { requireRole } from "@/lib/rbac";
 import { AuthError, handleAuthError } from "@/lib/supabase/auth-helpers";
 import { validateJsonRequest } from "@/lib/validate";
+import { REGION_VALUES, type Region } from "@/lib/domain/region";
 
 const ROUTE_TAG = "api/v1/estimate/project";
 
-const REGION_VALUES: Region[] = [
-  "London",
-  "SouthEast",
-  "EastOfEngland",
-  "EastMidlands",
-  "WestMidlands",
-  "SouthWest",
-  "NorthWest",
-  "NorthEast",
-  "YorkshireAndTheHumber",
-  "Scotland",
-  "Wales",
-  "NorthernIreland"
-];
-const CONDITION_VALUES: Condition[] = ["poor", "fair", "good"];
-const FINISH_LEVEL_VALUES: FinishLevel[] = ["budget", "standard", "premium"];
-const PROPERTY_CATEGORY_VALUES: PropertyCategory[] = [
-  "flat",
-  "terraced",
-  "semi-detached",
-  "detached",
-  "bungalow",
-  "hmo",
-  "commercial"
-];
-const RENOVATION_SCOPE_VALUES: RenovationScope[] = [
-  "cosmetic",
-  "standard",
-  "full",
-  "structural"
-];
-const ADDITIONAL_FEATURE_VALUES: AdditionalFeature[] = [
-  "loft_conversion",
-  "extension_single_storey",
-  "extension_double_storey",
-  "basement_conversion",
-  "new_roof",
-  "full_rewire",
-  "new_boiler",
-  "underfloor_heating",
-  "solar_panels",
-  "new_windows_throughout",
-  "garden_landscaping",
-  "driveway"
-];
+
+const CONDITION_VALUES = ["poor","fair","good"] as const;
+const FINISH_LEVEL_VALUES = ["budget","standard","premium"] as const;
+
+const PROPERTY_CATEGORY_VALUES = [
+  "flat","terraced","semi-detached","detached","bungalow","hmo","commercial"
+] as const;
+
+const RENOVATION_SCOPE_VALUES = [
+  "cosmetic","standard","full","structural"
+] as const;
+
+const ADDITIONAL_FEATURE_VALUES = [
+  "loft_conversion","extension_single_storey","extension_double_storey",
+  "basement_conversion","new_roof","full_rewire","new_boiler",
+  "underfloor_heating","solar_panels","new_windows_throughout",
+  "garden_landscaping","driveway"
+] as const;
 
 type EstimateProjectRequestBody = {
   region: Region;
@@ -102,54 +75,42 @@ const estimateProjectSchema = z.object({
 });
 
 function isPropertyCategory(value: unknown): value is PropertyCategory {
-  return (
-    typeof value === "string" &&
-    PROPERTY_CATEGORY_VALUES.includes(value as PropertyCategory)
-  );
+  return typeof value === "string" &&
+    (PROPERTY_CATEGORY_VALUES as readonly string[]).includes(value);
 }
 
 function isRenovationScope(value: unknown): value is RenovationScope {
-  return (
-    typeof value === "string" &&
-    RENOVATION_SCOPE_VALUES.includes(value as RenovationScope)
-  );
+  return typeof value === "string" &&
+    (RENOVATION_SCOPE_VALUES as readonly string[]).includes(value);
 }
 
 function parseAdditionalFeatures(value: unknown): AdditionalFeature[] | null {
-  if (!Array.isArray(value)) {
-    return null;
-  }
+  if (!Array.isArray(value)) return null;
+
   const features = value.filter(
     (item): item is AdditionalFeature =>
       typeof item === "string" &&
-      ADDITIONAL_FEATURE_VALUES.includes(item as AdditionalFeature)
+      (ADDITIONAL_FEATURE_VALUES as readonly string[]).includes(item)
   );
+
   return features.length === value.length ? features : null;
 }
 
 function parseYearBuilt(value: unknown): number | undefined {
-  if (value === undefined || value === null || value === "") {
-    return undefined;
-  }
+  if (value === undefined || value === null || value === "") return undefined;
   const parsed = Number(value);
-  if (!Number.isInteger(parsed)) {
-    return undefined;
-  }
-  return parsed;
+  return Number.isInteger(parsed) ? parsed : undefined;
 }
 
 function parseListedBuilding(value: unknown): boolean | undefined {
-  if (typeof value === "boolean") {
-    return value;
-  }
+  if (typeof value === "boolean") return value;
+
   if (typeof value === "string") {
-    if (value.toLowerCase() === "true") {
-      return true;
-    }
-    if (value.toLowerCase() === "false") {
-      return false;
-    }
+    const v = value.toLowerCase();
+    if (v === "true") return true;
+    if (v === "false") return false;
   }
+
   return undefined;
 }
 
@@ -162,38 +123,38 @@ export async function POST(request: Request) {
     const parsedBody = await validateJsonRequest(request, estimateProjectSchema, {
       errorMessage: "Invalid project estimate payload"
     });
+
     if (!parsedBody.success) {
       return parsedBody.response;
     }
+
     const body = parsedBody.data as EstimateProjectRequestBody;
-
-    const propertyType = body.propertyType;
-
-    const totalAreaM2 = body.totalAreaM2;
 
     const estimateInput: EstimateInput = {
       region: body.region,
       projectType: "refurb",
-      propertyType,
-      totalAreaM2,
+      propertyType: body.propertyType,
+      totalAreaM2: body.totalAreaM2,
       condition: body.condition,
       finishLevel: body.finishLevel
     };
 
     const postcodeDistrict =
-      typeof body.postcodeDistrict === "string" && body.postcodeDistrict.trim().length > 0
+      typeof body.postcodeDistrict === "string" &&
+      body.postcodeDistrict.trim().length > 0
         ? body.postcodeDistrict.trim().toUpperCase()
         : getFallbackPostcodeDistrict(body.region);
 
     const propertyCategory = isPropertyCategory(body.propertyCategory)
       ? body.propertyCategory
-      : inferPropertyCategory(propertyType);
+      : inferPropertyCategory(body.propertyType);
 
     const renovationScope = isRenovationScope(body.renovationScope)
       ? body.renovationScope
       : conditionToRenovationScope(body.condition);
 
     const additionalFeatures = parseAdditionalFeatures(body.additionalFeatures);
+
     if (Array.isArray(body.additionalFeatures) && additionalFeatures === null) {
       return jsonError("Invalid additionalFeatures", requestId, 400);
     }
@@ -204,7 +165,7 @@ export async function POST(request: Request) {
     const estimateResult = calculateEnhancedEstimate({
       propertyCategory,
       postcodeDistrict,
-      totalAreaM2,
+      totalAreaM2: body.totalAreaM2,
       renovationScope,
       qualityTier: body.finishLevel,
       additionalFeatures: additionalFeatures ?? [],
@@ -212,11 +173,8 @@ export async function POST(request: Request) {
       listedBuilding
     });
 
-    return jsonSuccess(
-      {
-        estimateInput,
-        estimateResult
-      }, requestId);
+    return jsonSuccess({ estimateInput, estimateResult }, requestId);
+
   } catch (error) {
     if (error instanceof AuthError) {
       return handleAuthError(error);
@@ -224,7 +182,9 @@ export async function POST(request: Request) {
 
     const message =
       error instanceof Error ? error.message : "Failed to estimate project";
+
     logError(ROUTE_TAG, requestId, error);
+
     return jsonError(message, requestId, 400);
   }
 }

@@ -12,18 +12,18 @@ export const defaultCostLibrary: CostLibrary = {
     high: 2800
   },
   regionalMultipliers: {
-    London: 1.35,
-    SouthEast: 1.2,
-    EastOfEngland: 1.12,
-    EastMidlands: 0.98,
-    WestMidlands: 1.0,
-    SouthWest: 1.05,
-    NorthWest: 0.92,
-    NorthEast: 0.87,
-    YorkshireAndTheHumber: 0.9,
-    Scotland: 0.94,
-    Wales: 0.9,
-    NorthernIreland: 0.82
+    london: 1.35,
+    south_east: 1.2,
+    east_of_england: 1.12,
+    east_midlands: 0.98,
+    west_midlands: 1.0,
+    south_west: 1.05,
+    north_west: 0.92,
+    north_east: 0.87,
+    yorkshire_and_humber: 0.9,
+    scotland: 0.94,
+    wales: 0.9,
+    northern_ireland: 0.82
   },
   conditionMultipliers: {
     poor: 1.3,

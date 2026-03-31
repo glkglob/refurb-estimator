@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import DevelopmentAppraisalPage from "./page";
@@ -110,15 +110,19 @@ describe("DevelopmentAppraisalPage", () => {
     expect(screen.getByText("🟢 Viable")).toBeInTheDocument();
   });
 
-  test("marks core inputs as required", () => {
-    render(<DevelopmentAppraisalPage />);
+  test("marks core inputs as required", async () => {
+    await act(async () => {
+      render(<DevelopmentAppraisalPage />);
+    });
 
     expect(screen.getByLabelText(/Purchase price/i)).toBeRequired();
     expect(screen.getByLabelText(/Gross Development Value \(GDV\)/i)).toBeRequired();
   });
 
-  test("supports expanding and collapsing the optional finance section", () => {
-    render(<DevelopmentAppraisalPage />);
+  test("supports expanding and collapsing the optional finance section", async () => {
+    await act(async () => {
+      render(<DevelopmentAppraisalPage />);
+    });
 
     const summary = screen.getByText("Finance (optional)");
     const details = summary.closest("details");

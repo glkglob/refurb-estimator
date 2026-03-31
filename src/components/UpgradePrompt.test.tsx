@@ -28,6 +28,7 @@ describe("UpgradePrompt", () => {
 
   beforeEach(() => {
     fetchSpy = jest.spyOn(global, "fetch");
+    jest.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {

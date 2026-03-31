@@ -10,6 +10,37 @@ jest.mock("@/components/AuthGate", () => ({
   default: ({ children }: { children: ReactNode }) => <>{children}</>
 }));
 
+jest.mock("@/lib/supabase/client", () => {
+  const queryBuilder = {
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    maybeSingle: jest.fn().mockResolvedValue({
+      data: { plan: "pro" },
+      error: null
+    })
+  };
+
+  return {
+    __esModule: true,
+    createClientSafely: jest.fn(() => ({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: { id: "test-user-id" } },
+          error: null
+        }),
+        onAuthStateChange: jest.fn(() => ({
+          data: {
+            subscription: {
+              unsubscribe: jest.fn()
+            }
+          }
+        }))
+      },
+      from: jest.fn(() => queryBuilder)
+    }))
+  };
+});
+
 jest.mock("@/hooks/use-toast", () => ({
   useToast: () => ({ toast: jest.fn() })
 }));
@@ -137,10 +168,13 @@ describe("DevelopmentAppraisalPage", () => {
   });
 
   test("renders BRRR panel only after a successful calculation", async () => {
+    const user = userEvent.setup();
     render(<DevelopmentAppraisalPage />);
 
     expect(screen.queryByText("BRRR Refinance Check")).not.toBeInTheDocument();
 
+    await screen.findByText("Assumptions");
+    await setSimpleScenario(user, "128750");
     submitForm();
 
     expect(await screen.findByText("BRRR Refinance Check")).toBeInTheDocument();

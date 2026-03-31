@@ -63,7 +63,7 @@ export default function ContractorEnquiryForm() {
     if (prefilledNotes && message.length === 0) {
       setMessage(prefilledNotes.trim());
     }
-  }, [searchParams, postcode.length, estimateTotal.length]);
+  }, [searchParams, postcode.length, estimateTotal.length, projectType.length, message.length]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

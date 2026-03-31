@@ -29,9 +29,16 @@ const mockedGetPublicProfile = jest.mocked(getPublicProfile);
 const mockedGetPublicGalleryByUser = jest.mocked(getPublicGalleryByUser);
 
 describe("TradespersonProfilePage", () => {
+  let consoleErrorSpy: jest.SpyInstance;
+
   beforeEach(() => {
     mockedGetPublicProfile.mockReset();
     mockedGetPublicGalleryByUser.mockReset();
+    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
   });
 
   test("renders fallback state when profile lookup fails", async () => {

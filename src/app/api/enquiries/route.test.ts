@@ -42,8 +42,15 @@ function createRequest(body: unknown): Request {
 }
 
 describe("POST /api/enquiries", () => {
+  let consoleErrorSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
   });
 
   test("returns 400 when payload is invalid", async () => {

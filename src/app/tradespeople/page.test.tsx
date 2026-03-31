@@ -39,8 +39,15 @@ jest.mock("next/link", () => ({
 const mockedListPublicTradespeople = jest.mocked(listPublicTradespeople);
 
 describe("TradespeoplePage", () => {
+  let consoleErrorSpy: jest.SpyInstance;
+
   beforeEach(() => {
     mockedListPublicTradespeople.mockReset();
+    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
   });
 
   test("renders fallback state when directory lookup fails", async () => {

@@ -1,9 +1,31 @@
 /** @jest-environment jsdom */
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import DevelopmentAppraisalPage from "./page";
+
+const queryBuilder = {
+  select: jest.fn().mockReturnThis(),
+  eq: jest.fn().mockReturnThis(),
+  maybeSingle: jest.fn().mockResolvedValue({
+    data: { plan: "pro" },
+    error: null
+  })
+};
+
+const getUserMock = jest.fn().mockResolvedValue({
+  data: { user: { id: "test-user-id" } },
+  error: null
+});
+
+const onAuthStateChangeMock = jest.fn(() => ({
+  data: {
+    subscription: {
+      unsubscribe: jest.fn()
+    }
+  }
+}));
 
 jest.mock("@/components/AuthGate", () => ({
   __esModule: true,
@@ -11,30 +33,12 @@ jest.mock("@/components/AuthGate", () => ({
 }));
 
 jest.mock("@/lib/supabase/client", () => {
-  const queryBuilder = {
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    maybeSingle: jest.fn().mockResolvedValue({
-      data: { plan: "pro" },
-      error: null
-    })
-  };
-
   return {
     __esModule: true,
     createClientSafely: jest.fn(() => ({
       auth: {
-        getUser: jest.fn().mockResolvedValue({
-          data: { user: { id: "test-user-id" } },
-          error: null
-        }),
-        onAuthStateChange: jest.fn(() => ({
-          data: {
-            subscription: {
-              unsubscribe: jest.fn()
-            }
-          }
-        }))
+        getUser: getUserMock,
+        onAuthStateChange: onAuthStateChangeMock
       },
       from: jest.fn(() => queryBuilder)
     }))
@@ -91,10 +95,22 @@ function submitForm(): void {
   }
 }
 
+async function waitForAccessBootstrap(): Promise<void> {
+  await waitFor(() => {
+    expect(getUserMock).toHaveBeenCalled();
+    expect(queryBuilder.maybeSingle).toHaveBeenCalled();
+  });
+}
+
 describe("DevelopmentAppraisalPage", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   test("runs a minimum valid journey and renders assumptions, summary, and viability", async () => {
     const user = userEvent.setup();
     render(<DevelopmentAppraisalPage />);
+    await waitForAccessBootstrap();
 
     expect(screen.getByText("Assumptions")).toBeInTheDocument();
     expect(
@@ -111,18 +127,16 @@ describe("DevelopmentAppraisalPage", () => {
   });
 
   test("marks core inputs as required", async () => {
-    await act(async () => {
-      render(<DevelopmentAppraisalPage />);
-    });
+    render(<DevelopmentAppraisalPage />);
+    await waitForAccessBootstrap();
 
     expect(screen.getByLabelText(/Purchase price/i)).toBeRequired();
     expect(screen.getByLabelText(/Gross Development Value \(GDV\)/i)).toBeRequired();
   });
 
   test("supports expanding and collapsing the optional finance section", async () => {
-    await act(async () => {
-      render(<DevelopmentAppraisalPage />);
-    });
+    render(<DevelopmentAppraisalPage />);
+    await waitForAccessBootstrap();
 
     const summary = screen.getByText("Finance (optional)");
     const details = summary.closest("details");
@@ -144,6 +158,7 @@ describe("DevelopmentAppraisalPage", () => {
   test("renders the viable badge for scenarios at or above target margin", async () => {
     const user = userEvent.setup();
     render(<DevelopmentAppraisalPage />);
+    await waitForAccessBootstrap();
 
     await setSimpleScenario(user, "128750");
     submitForm();
@@ -154,6 +169,7 @@ describe("DevelopmentAppraisalPage", () => {
   test("renders the marginal badge for scenarios within 5% below target", async () => {
     const user = userEvent.setup();
     render(<DevelopmentAppraisalPage />);
+    await waitForAccessBootstrap();
 
     await setSimpleScenario(user, "121176.47");
     submitForm();
@@ -164,6 +180,7 @@ describe("DevelopmentAppraisalPage", () => {
   test("renders the unviable badge for scenarios more than 5% below target", async () => {
     const user = userEvent.setup();
     render(<DevelopmentAppraisalPage />);
+    await waitForAccessBootstrap();
 
     await setSimpleScenario(user, "120000");
     submitForm();
@@ -174,6 +191,7 @@ describe("DevelopmentAppraisalPage", () => {
   test("renders BRRR panel only after a successful calculation", async () => {
     const user = userEvent.setup();
     render(<DevelopmentAppraisalPage />);
+    await waitForAccessBootstrap();
 
     expect(screen.queryByText("BRRR Refinance Check")).not.toBeInTheDocument();
 

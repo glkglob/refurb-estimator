@@ -7,18 +7,20 @@ type LayoutProps = {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <div className="flex min-h-screen bg-background text-foreground bp-grid">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col pb-mobile-nav md:ml-[240px] md:pb-0">
-        <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="flex min-w-0 flex-1 flex-col pb-mobile-nav md:ml-64 md:pb-0">
+        <main className="flex-1">
           {children}
         </main>
-        <footer className="mt-auto border-t border-border bg-card/50 py-6">
-          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-            <p className="text-xs text-muted-foreground">
-              Estimates are indicative only, based on average UK refurbishment costs.
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">© 2026 Refurb Estimator</p>
+        
+        {/* Footer */}
+        <footer className="border-t border-border bg-card px-6 py-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="flex flex-col items-center justify-between gap-4 text-sm text-muted-foreground md:flex-row">
+              <p>Estimates are indicative only, based on average UK refurbishment costs.</p>
+              <p>&copy; 2026 Refurb Estimator. All rights reserved.</p>
+            </div>
           </div>
         </footer>
       </div>

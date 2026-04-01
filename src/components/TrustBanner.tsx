@@ -57,10 +57,23 @@ export default function TrustBanner() {
   );
 
   return (
-    <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-      <ul className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-2 sm:text-sm">
+    <div
+      style={{
+        backgroundColor: "#ffffcc",
+        border: "1px solid #808080",
+        borderTop: "2px solid #ffffff",
+        borderLeft: "2px solid #ffffff",
+        borderRight: "2px solid #808080",
+        borderBottom: "2px solid #808080",
+        padding: "4px 8px",
+        fontFamily: "Tahoma, Verdana, Arial, sans-serif",
+        fontSize: "11px",
+        color: "#000000",
+      }}
+    >
+      <ul className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
         {trustPoints.map((point) => (
-          <li key={point} className="font-medium">
+          <li key={point} style={{ fontWeight: "bold" }}>
             {point}
           </li>
         ))}

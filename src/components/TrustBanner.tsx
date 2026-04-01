@@ -1,5 +1,6 @@
 "use client";
 
+import { Home, Sparkles, MapPin, Shield } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -48,36 +49,25 @@ export default function TrustBanner() {
 
   const trustPoints = useMemo(
     () => [
-      `🏠 ${formatEstimateCount(estimateCount)} estimates generated`,
-      "⭐ AI-powered",
-      "🗺️ UK regional pricing",
-      "🔒 No login required",
+      { icon: Home, text: `${formatEstimateCount(estimateCount)} estimates generated` },
+      { icon: Sparkles, text: "AI-powered" },
+      { icon: MapPin, text: "UK regional pricing" },
+      { icon: Shield, text: "No login required" },
     ],
     [estimateCount],
   );
 
   return (
-    <div
-      style={{
-        backgroundColor: "#ffffcc",
-        border: "1px solid #808080",
-        borderTop: "2px solid #ffffff",
-        borderLeft: "2px solid #ffffff",
-        borderRight: "2px solid #808080",
-        borderBottom: "2px solid #808080",
-        padding: "4px 8px",
-        fontFamily: "Tahoma, Verdana, Arial, sans-serif",
-        fontSize: "11px",
-        color: "#000000",
-      }}
-    >
-      <ul className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
-        {trustPoints.map((point) => (
-          <li key={point} style={{ fontWeight: "bold" }}>
-            {point}
+    <ul className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:flex-wrap sm:gap-x-8 sm:gap-y-3">
+      {trustPoints.map((point) => {
+        const Icon = point.icon;
+        return (
+          <li key={point.text} className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Icon className="h-4 w-4 text-accent" />
+            <span className="font-medium">{point.text}</span>
           </li>
-        ))}
-      </ul>
-    </div>
+        );
+      })}
+    </ul>
   );
 }

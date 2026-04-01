@@ -1,9 +1,22 @@
 "use client";
 
-import type React from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { 
+  AlertTriangle, 
+  ArrowRight, 
+  Building2, 
+  Calculator, 
+  Camera, 
+  Download, 
+  FileText, 
+  LayoutGrid, 
+  Loader2, 
+  Save, 
+  Share2, 
+  Sparkles, 
+  Wrench 
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import AuthBanner from "@/components/AuthBanner";
@@ -13,6 +26,8 @@ import ScenarioLimitPromptDialog from "@/components/ScenarioLimitPromptDialog";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import TrustBanner from "@/components/TrustBanner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiClient";
 import { saveScenario } from "@/lib/dataService";
@@ -28,79 +43,51 @@ import { shareOrCopy } from "@/lib/share";
 import { ScenarioLimitExceededError } from "@/lib/storage";
 import type { EstimateInput, EstimateResult, Scenario } from "@/lib/types";
 
-const WIN_RAISED: React.CSSProperties = {
-  backgroundColor: "#d4d0c8",
-  borderTop: "2px solid #ffffff",
-  borderLeft: "2px solid #ffffff",
-  borderRight: "2px solid #808080",
-  borderBottom: "2px solid #808080",
-};
-
-function WinCard({
-  title,
-  badge,
-  description,
-  href,
-  btnLabel,
-  featured = false,
-  colSpan = false,
-}: {
-  title: string;
-  badge?: string;
-  description: string;
-  href: string;
-  btnLabel: string;
-  featured?: boolean;
-  colSpan?: boolean;
-}) {
-  return (
-    <div
-      className={colSpan ? "sm:col-span-2" : ""}
-      style={{
-        ...WIN_RAISED,
-        padding: "8px",
-        backgroundColor: featured ? "#c8d8f0" : "#d4d0c8",
-      }}
-    >
-      <div className="flex items-start justify-between gap-2 mb-1">
-        <span style={{ fontWeight: "bold", fontSize: "11px", color: "#000000" }}>{title}</span>
-        {badge ? (
-          <span
-            style={{
-              fontSize: "9px",
-              backgroundColor: "#000080",
-              color: "#ffffff",
-              padding: "1px 4px",
-              fontFamily: "Tahoma, Verdana, Arial, sans-serif",
-            }}
-          >
-            {badge}
-          </span>
-        ) : null}
-      </div>
-      <p style={{ fontSize: "11px", color: "#444444", marginBottom: "6px" }}>{description}</p>
-      <Link
-        href={href}
-        style={{
-          ...WIN_RAISED,
-          display: "inline-block",
-          padding: "2px 10px",
-          fontSize: "11px",
-          color: "#000000",
-          textDecoration: "none",
-          fontFamily: "Tahoma, Verdana, Arial, sans-serif",
-        }}
-      >
-        {btnLabel}
-      </Link>
-    </div>
-  );
-}
-
 const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
   ssr: false,
   loading: () => <EstimateResultsFallback />,
 });
+
+const tools = [
+  {
+    title: "Development Appraisal",
+    description: "Run full deal viability checks with SDLT, finance, and BRRR refinance outputs.",
+    href: "/development",
+    icon: Building2,
+    featured: true,
+    badge: "Pro - Free during beta",
+  },
+  {
+    title: "Find Tradespeople",
+    description: "Browse verified contractors and get matched locally.",
+    href: "/tradespeople",
+    icon: Wrench,
+  },
+  {
+    title: "AI Photo Estimate",
+    description: "Upload photos and get AI-powered renovation cost estimates.",
+    href: "/photo",
+    icon: Camera,
+  },
+  {
+    title: "New Build Calculator",
+    description: "Estimate build costs for new homes and developments.",
+    href: "/new-build",
+    icon: Building2,
+  },
+  {
+    title: "Loft Conversion",
+    description: "Calculate loft project costs with regional multipliers.",
+    href: "/loft",
+    icon: Calculator,
+  },
+  {
+    title: "Room-by-Room",
+    description: "Build detailed estimates with granular room breakdowns.",
+    href: "/rooms",
+    icon: LayoutGrid,
+  },
+];
 
 export default function HomePage() {
   const [formKey, setFormKey] = useState(0);
@@ -121,7 +108,6 @@ export default function HomePage() {
     if (!result) {
       return;
     }
-
     document.getElementById("results")?.scrollIntoView({ behavior: "smooth" });
   }, [result]);
 
@@ -285,143 +271,183 @@ export default function HomePage() {
   }
 
   return (
-    <section className="space-y-3" style={{ fontFamily: "Tahoma, Verdana, Arial, sans-serif", fontSize: "11px", color: "#000000" }}>
-      {/* Win2000-style page title bar */}
-      <div
-        className="flex items-center gap-2 px-3 py-2"
-        style={{
-          background: "linear-gradient(90deg, #0a246a 0%, #3a6ea5 60%, #a6caf0 100%)",
-          color: "#ffffff",
-        }}
-      >
-        <span
-          className="inline-flex h-5 w-5 items-center justify-center text-[10px] font-bold"
-          style={{ background: "#ffffff", color: "#0a246a", border: "1px solid #808080" }}
-        >
-          Q
-        </span>
-        <h1 className="text-[13px] font-bold text-white">Quick Estimate</h1>
-      </div>
-
-      <p style={{ color: "#000000", fontSize: "11px" }}>
-        Enter your property details below and click Calculate to get an instant estimate.
-      </p>
-
-      <TrustBanner />
-
-      {/* Calculator grid — Win2000 groupbox style */}
-      <div
-        style={{
-          border: "1px solid #808080",
-          backgroundColor: "#d4d0c8",
-          padding: "8px",
-          position: "relative",
-        }}
-      >
-        <span
-          style={{
-            position: "absolute",
-            top: "-8px",
-            left: "8px",
-            backgroundColor: "#d4d0c8",
-            padding: "0 4px",
-            fontSize: "11px",
-            fontWeight: "bold",
-            color: "#000000",
-          }}
-        >
-          Calculators &amp; Tools
-        </span>
-
-        <div className="grid gap-2 sm:grid-cols-2 mt-2">
-          {/* Development Appraisal — featured */}
-          <WinCard
-            title="Development Appraisal"
-            badge="Pro feature — free during beta"
-            description="Run full deal viability checks with SDLT, finance, margin targets, and BRRR refinance outputs."
-            href="/development"
-            btnLabel="Open Development Appraisal"
-            featured
-            colSpan
-          />
-
-          <WinCard
-            title="Find Tradespeople"
-            description="Browse verified contractors and send one enquiry to get matched locally."
-            href="/tradespeople"
-            btnLabel="Open Tradespeople Directory"
-            colSpan
-          />
-
-          <WinCard
-            title="Loft Conversion"
-            description="Band a loft project with regional multipliers and add-ons."
-            href="/loft"
-            btnLabel="Open Loft Calculator"
-          />
-
-          <WinCard
-            title="New Build"
-            description="Estimate build costs for new homes and developments."
-            href="/new-build"
-            btnLabel="Open Calculator"
-          />
-
-          <WinCard
-            title="Extensions"
-            description="Single/double storey rear, side return, and wrap-around extensions."
-            href="/extension"
-            btnLabel="Open Calculator"
-          />
-
-          <WinCard
-            title="Detailed Rooms"
-            description="Build a room-by-room estimate with a deeper breakdown."
-            href="/rooms"
-            btnLabel="Open Calculator"
-          />
-        </div>
-      </div>
-
-      <AuthBanner />
-
-      <div id="estimate-form">
-        <EstimateForm
-          key={formKey}
-          onSubmit={handleSubmit}
-          onValidationError={() =>
-            toast({
-              title: "Missing fields",
-              description: "Please fill in all required fields before calculating.",
-              variant: "destructive",
-            })
-          }
-        />
-      </div>
-
-      {submitError ? (
-        <div className="bp-warning flex items-start gap-2 px-3 py-2 text-[11px]">
-          <AlertTriangle className="mt-0.5 size-3 shrink-0" style={{ color: "#cc0000" }} />
-          <p style={{ color: "#cc0000" }}>{submitError}</p>
-        </div>
-      ) : null}
-
-      {result ? (
-        <div id="results" className="mt-4 space-y-3">
-          {lastInput ? (
-            <p style={{ color: "#000080", fontSize: "11px" }}>
-              Estimate for: {lastInput.totalAreaM2}m² {lastInput.propertyType} in{" "}
-              {lastInput.region}, {lastInput.condition} condition, {lastInput.finishLevel} finish
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-card to-background px-6 py-16 md:py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-col items-center text-center">
+            {/* Badge */}
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-accent/10 px-4 py-1.5 text-sm font-medium text-accent">
+              <Sparkles className="h-4 w-4" />
+              <span>AI-Powered Renovation Estimates</span>
+            </div>
+            
+            {/* Headline */}
+            <h1 className="mb-6 max-w-4xl font-serif text-4xl font-normal tracking-tight text-foreground md:text-6xl lg:text-7xl">
+              <span className="text-balance">Know your renovation costs</span>{" "}
+              <span className="text-muted-foreground">before you commit</span>
+            </h1>
+            
+            {/* Subheadline */}
+            <p className="mb-10 max-w-2xl text-lg text-muted-foreground md:text-xl">
+              Get accurate, region-specific refurbishment estimates for UK properties in seconds. 
+              Trusted by property investors, developers, and homeowners.
             </p>
-          ) : null}
+            
+            {/* CTA Button */}
+            <Button 
+              size="lg" 
+              className="h-12 gap-2 px-8 text-base font-medium"
+              onClick={() => document.getElementById("estimate-form")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Get Your Free Estimate
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </section>
 
-          <div className="flex flex-wrap gap-1">
-            {[
-              { label: "Save as Scenario", onClick: () => setIsSaveModalOpen(true), disabled: isSaving, loading: isSaving },
-              { label: "Download PDF", onClick: () => void handleDownloadPdf(), disabled: isGeneratingPdf, loading: isGeneratingPdf },
-              {
-                label: "Download CSV",
-                onClick: () =>
+      {/* Trust Banner */}
+      <section className="border-y border-border bg-card px-6 py-6">
+        <div className="mx-auto max-w-6xl">
+          <TrustBanner />
+        </div>
+      </section>
+
+      {/* Tools Section */}
+      <section className="px-6 py-16 md:py-20">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-10 text-center">
+            <h2 className="mb-3 font-serif text-3xl font-normal tracking-tight md:text-4xl">
+              Calculators &amp; Tools
+            </h2>
+            <p className="text-muted-foreground">
+              Everything you need to plan your property renovation with confidence.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {tools.map((tool) => {
+              const Icon = tool.icon;
+              return (
+                <Link key={tool.href} href={tool.href} className="group">
+                  <Card className={`h-full transition-all duration-200 hover:border-accent hover:shadow-lg ${tool.featured ? "border-accent bg-accent/5" : ""}`}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${tool.featured ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        {tool.badge && (
+                          <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
+                            {tool.badge}
+                          </span>
+                        )}
+                      </div>
+                      <CardTitle className="mt-4 text-lg font-medium">{tool.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <CardDescription className="text-sm leading-relaxed">
+                        {tool.description}
+                      </CardDescription>
+                      <div className="mt-4 flex items-center gap-1 text-sm font-medium text-accent opacity-0 transition-opacity group-hover:opacity-100">
+                        Open tool <ArrowRight className="h-3.5 w-3.5" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Auth Banner */}
+      <section className="px-6">
+        <div className="mx-auto max-w-6xl">
+          <AuthBanner />
+        </div>
+      </section>
+
+      {/* Estimate Form Section */}
+      <section id="estimate-form" className="scroll-mt-20 px-6 py-16 md:py-20">
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-10 text-center">
+            <h2 className="mb-3 font-serif text-3xl font-normal tracking-tight md:text-4xl">
+              Quick Estimate
+            </h2>
+            <p className="text-muted-foreground">
+              Enter your property details below to get an instant cost estimate.
+            </p>
+          </div>
+
+          <Card className="overflow-hidden">
+            <CardContent className="p-6 md:p-8">
+              <EstimateForm
+                key={formKey}
+                onSubmit={handleSubmit}
+                onValidationError={() =>
+                  toast({
+                    title: "Missing fields",
+                    description: "Please fill in all required fields before calculating.",
+                    variant: "destructive",
+                  })
+                }
+              />
+            </CardContent>
+          </Card>
+
+          {submitError && (
+            <div className="mt-6 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+              <p className="text-sm text-destructive">{submitError}</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Results Section */}
+      {result && (
+        <section id="results" className="scroll-mt-20 bg-card px-6 py-16 md:py-20">
+          <div className="mx-auto max-w-4xl">
+            <div className="mb-8 text-center">
+              <h2 className="mb-2 font-serif text-2xl font-normal tracking-tight md:text-3xl">
+                Your Estimate
+              </h2>
+              {lastInput && (
+                <p className="text-muted-foreground">
+                  {lastInput.totalAreaM2}m² {lastInput.propertyType} in {lastInput.region}
+                  <span className="mx-2">·</span>
+                  {lastInput.condition} condition
+                  <span className="mx-2">·</span>
+                  {lastInput.finishLevel} finish
+                </p>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mb-8 flex flex-wrap justify-center gap-3">
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => setIsSaveModalOpen(true)}
+                disabled={isSaving}
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save Scenario
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => void handleDownloadPdf()}
+                disabled={isGeneratingPdf}
+              >
+                {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                Download PDF
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() =>
                   exportToCsv(`${lastInput?.region.toLowerCase()}-estimate.csv`, [
                     ...result.categories.map((category) => ({
                       category: category.category,
@@ -435,43 +461,42 @@ export default function HomePage() {
                       typical: result.totalTypical,
                       high: result.totalHigh,
                     },
-                  ]),
-              },
-              { label: "Share", onClick: () => void handleShareEstimate() },
-              { label: "New Estimate", onClick: handleNewEstimate },
-            ].map(({ label, onClick, disabled, loading }) => (
-              <button
-                key={label}
-                type="button"
-                onClick={onClick}
-                disabled={disabled}
-                style={{
-                  backgroundColor: "#d4d0c8",
-                  borderTop: "2px solid #ffffff",
-                  borderLeft: "2px solid #ffffff",
-                  borderRight: "2px solid #808080",
-                  borderBottom: "2px solid #808080",
-                  color: "#000000",
-                  fontSize: "11px",
-                  fontFamily: "Tahoma, Verdana, Arial, sans-serif",
-                  padding: "3px 12px",
-                  cursor: disabled ? "not-allowed" : "default",
-                  opacity: disabled ? 0.6 : 1,
-                  minWidth: "80px",
-                }}
+                  ])
+                }
               >
-                {loading ? <Loader2 className="inline size-3 animate-spin mr-1" /> : null}
-                {label}
-              </button>
-            ))}
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => void handleShareEstimate()}
+              >
+                <Share2 className="h-4 w-4" />
+                Share
+              </Button>
+              <Button
+                variant="default"
+                className="gap-2"
+                onClick={handleNewEstimate}
+              >
+                New Estimate
+              </Button>
+            </div>
+
+            <EstimateResults result={result} />
           </div>
+        </section>
+      )}
 
-          <EstimateResults result={result} />
+      {/* Testimonials Section */}
+      <section className="px-6 py-16 md:py-20">
+        <div className="mx-auto max-w-6xl">
+          <TestimonialsSection />
         </div>
-      ) : null}
+      </section>
 
-      <TestimonialsSection />
-
+      {/* Modals */}
       <SaveScenarioModal
         isOpen={isSaveModalOpen}
         onClose={() => setIsSaveModalOpen(false)}
@@ -482,6 +507,6 @@ export default function HomePage() {
         isOpen={isScenarioLimitPromptOpen}
         onOpenChange={setIsScenarioLimitPromptOpen}
       />
-    </section>
+    </div>
   );
 }

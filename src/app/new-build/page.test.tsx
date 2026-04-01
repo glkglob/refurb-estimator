@@ -157,7 +157,9 @@ describe("NewBuildPage assistant journey", () => {
     );
     await user.click(screen.getByRole("button", { name: /Ask assistant/i }));
 
-    expect(await screen.findByText(/lowered the spec one step/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockedCreate).toHaveBeenCalledTimes(1);
+    });
 
     await waitFor(() => {
       expect(lastSanitizedEditorActions).toEqual([

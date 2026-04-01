@@ -1,24 +1,28 @@
 export class NextRequest extends Request {
-  constructor(input: RequestInfo | URL, init?: RequestInit) {
-    super(input, init);
-  }
-
   get nextUrl(): URL {
     return new URL(this.url);
   }
 }
 
-export class NextResponse extends Response {
-  static json(data: unknown, init: ResponseInit = {}): NextResponse {
-    const headers = new Headers(init.headers);
+type JsonResponseInit = {
+  status?: number;
+  headers?: HeadersInit;
+};
 
-    if (!headers.has("content-type")) {
-      headers.set("content-type", "application/json");
-    }
+type MockJsonResponse<T> = {
+  status: number;
+  headers: Headers;
+  json: () => Promise<T>;
+};
 
-    return new NextResponse(JSON.stringify(data), {
-      ...init,
+export const NextResponse = {
+  json<T>(data: T, init?: JsonResponseInit): MockJsonResponse<T> {
+    const headers = new Headers(init?.headers);
+
+    return {
+      status: init?.status ?? 200,
       headers,
-    });
+      json: async () => data
+    };
   }
-}
+};

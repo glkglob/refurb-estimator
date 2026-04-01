@@ -259,7 +259,7 @@ export default function EstimateResults({
         </div>
       </div>
 
-      <Card className="bp-card-border bg-card">
+      <Card>
         <CardHeader>
           <CardTitle>Cost Breakdown by Category</CardTitle>
         </CardHeader>

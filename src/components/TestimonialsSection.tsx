@@ -1,4 +1,5 @@
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Star } from "lucide-react";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 
 type Testimonial = {
   name: string;
@@ -17,7 +18,7 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     name: "Emma W.",
-    location: "london",
+    location: "London",
     projectType: "Homeowner",
     quote:
       "We were planning a wrap-around extension and had absolutely no idea where to start with our budget. The estimator gave us a solid baseline in seconds, and the room-by-room breakdown helped us understand exactly where our money was going before we even approached builders.",
@@ -27,43 +28,49 @@ const TESTIMONIALS: Testimonial[] = [
     location: "Manchester",
     projectType: "Landlord",
     quote:
-      "I use this app to pressure-test different scopes for my buy-to-let properties. Being able to save different scenarios and compare the 'Low' versus 'High' finish levels makes it incredibly easy to see which renovation strategy yields the best return on investment.",
+      "I use this app to pressure-test different scopes for my buy-to-let properties. Being able to save different scenarios and compare the low versus high finish levels makes it incredibly easy to see which renovation strategy yields the best return on investment.",
   },
 ];
 
 export default function TestimonialsSection() {
   return (
-    <section className="space-y-4" aria-labelledby="testimonials-heading">
-      <div className="space-y-1">
-        <h2 id="testimonials-heading" className="text-2xl font-semibold tracking-tight">
+    <section className="space-y-10" aria-labelledby="testimonials-heading">
+      <div className="text-center">
+        <h2 id="testimonials-heading" className="mb-3 font-serif text-3xl font-normal tracking-tight md:text-4xl">
           What early users say
         </h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground">
           Quick feedback from homeowners and investors using the estimator in beta.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3">
         {TESTIMONIALS.map((testimonial) => (
-          <Card key={testimonial.name} className="border-border/70 bg-card/80">
-            <CardHeader className="space-y-2 pb-2">
-              <p className="text-sm font-medium tracking-wide text-amber-400">★★★★★</p>
-              <CardTitle className="text-base">{testimonial.projectType}</CardTitle>
+          <Card key={testimonial.name} className="flex flex-col">
+            <CardHeader className="pb-4">
+              <div className="flex gap-0.5">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="h-4 w-4 fill-accent text-accent" />
+                ))}
+              </div>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="flex-1 pt-0">
+              <p className="mb-4 text-sm font-medium">{testimonial.projectType}</p>
               <blockquote className="text-sm leading-relaxed text-muted-foreground">
-                “{testimonial.quote}”
+                &ldquo;{testimonial.quote}&rdquo;
               </blockquote>
             </CardContent>
-            <CardFooter className="text-xs text-muted-foreground">
-              {testimonial.name} • {testimonial.location}
+            <CardFooter className="pt-4 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{testimonial.name}</span>
+              <span className="mx-2">·</span>
+              <span>{testimonial.location}</span>
             </CardFooter>
           </Card>
         ))}
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Early user testimonials. We’re building our Trustpilot profile — leave a review!
+      <p className="text-center text-sm text-muted-foreground">
+        Early user testimonials. We&apos;re building our Trustpilot profile — leave a review!
       </p>
     </section>
   );

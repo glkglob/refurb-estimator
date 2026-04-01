@@ -1,5 +1,6 @@
 "use client";
 
+import { Home, Sparkles, MapPin, Shield } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -48,23 +49,25 @@ export default function TrustBanner() {
 
   const trustPoints = useMemo(
     () => [
-      `🏠 ${formatEstimateCount(estimateCount)} estimates generated`,
-      "⭐ AI-powered",
-      "🗺️ UK regional pricing",
-      "🔒 No login required",
+      { icon: Home, text: `${formatEstimateCount(estimateCount)} estimates generated` },
+      { icon: Sparkles, text: "AI-powered" },
+      { icon: MapPin, text: "UK regional pricing" },
+      { icon: Shield, text: "No login required" },
     ],
     [estimateCount],
   );
 
   return (
-    <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-      <ul className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-2 sm:text-sm">
-        {trustPoints.map((point) => (
-          <li key={point} className="font-medium">
-            {point}
+    <ul className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:flex-wrap sm:gap-x-8 sm:gap-y-3">
+      {trustPoints.map((point) => {
+        const Icon = point.icon;
+        return (
+          <li key={point.text} className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Icon className="h-4 w-4 text-accent" />
+            <span className="font-medium">{point.text}</span>
           </li>
-        ))}
-      </ul>
-    </div>
+        );
+      })}
+    </ul>
   );
 }

@@ -6,73 +6,108 @@ import {
   Building2,
   Calculator,
   Camera,
+  ChevronRight,
   GitCompare,
   Images,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
+  Menu,
   Palette,
   Sparkles,
   UserCircle,
   Wallet,
-  Wrench
+  Wrench,
+  X
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch, isApiFetchError } from "@/lib/apiClient";
 import { createClient } from "@/lib/supabase/client";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import { Button } from "@/components/ui/button";
-import { SheetClose } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetClose, SheetTrigger } from "@/components/ui/sheet";
 
 const calculatorNavItems = [
-  { href: "/", label: "Quick Estimate", icon: "Calculator" },
-  { href: "/photo", label: "AI Estimate", icon: "Camera" },
-  { href: "/ai-pricing", label: "AI Pricing", icon: "Sparkles" },
-  { href: "/design-agent", label: "AI Design", icon: "Palette" },
-  { href: "/new-build", label: "New Build", icon: "Building2" },
-  { href: "/loft", label: "Loft", icon: "Calculator" },
-  { href: "/rooms", label: "Detailed Rooms", icon: "LayoutGrid" }
+  { href: "/", label: "Quick Estimate", icon: Calculator },
+  { href: "/photo", label: "AI Estimate", icon: Camera },
+  { href: "/ai-pricing", label: "AI Pricing", icon: Sparkles },
+  { href: "/design-agent", label: "AI Design", icon: Palette },
+  { href: "/new-build", label: "New Build", icon: Building2 },
+  { href: "/loft", label: "Loft Conversion", icon: Calculator },
+  { href: "/rooms", label: "Detailed Rooms", icon: LayoutGrid }
 ] as const;
 
 const developmentNavItems = [
-  { href: "/development", label: "Development Appraisal", icon: "Building2" },
-  { href: "/tradespeople", label: "Tradespeople", icon: "Wrench" }
+  { href: "/development", label: "Development Appraisal", icon: Building2 },
+  { href: "/tradespeople", label: "Tradespeople", icon: Wrench }
 ] as const;
 
 const planningNavItems = [
-  { href: "/scenarios", label: "Scenario Comparison", icon: "GitCompare" },
-  { href: "/budget", label: "Budget Tracker", icon: "Wallet" }
+  { href: "/scenarios", label: "Scenario Comparison", icon: GitCompare },
+  { href: "/budget", label: "Budget Tracker", icon: Wallet }
 ] as const;
 
 const dashboardItems = [
-  { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
-  { href: "/dashboard/profile", label: "My Profile", icon: "UserCircle" },
-  { href: "/dashboard/gallery", label: "My Gallery", icon: "Images" }
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard/profile", label: "My Profile", icon: UserCircle },
+  { href: "/dashboard/gallery", label: "My Gallery", icon: Images }
 ] as const;
-
-const iconMap = {
-  Calculator,
-  Camera,
-  Building2,
-  LayoutGrid,
-  GitCompare,
-  Wallet,
-  LayoutDashboard,
-  UserCircle,
-  Images,
-  Sparkles,
-  Palette,
-  Wrench
-};
 
 function isPathActive(pathname: string, href: string): boolean {
   if (href === "/") {
     return pathname === "/";
   }
-
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavSection({ 
+  title, 
+  items, 
+  pathname, 
+  onNavigate, 
+  requiresAuth = false, 
+  user 
+}: { 
+  title: string; 
+  items: readonly { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[];
+  pathname: string;
+  onNavigate?: () => void;
+  requiresAuth?: boolean;
+  user?: User | null;
+}) {
+  if (requiresAuth && !user) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-1">
+      <p className="px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        {title}
+      </p>
+      {items.map((item) => {
+        const Icon = item.icon;
+        const isActive = isPathActive(pathname, item.href);
+        
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+              isActive 
+                ? "bg-primary text-primary-foreground" 
+                : "text-foreground/80 hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="font-medium">{item.label}</span>
+            {isActive && <ChevronRight className="ml-auto h-4 w-4" />}
+          </Link>
+        );
+      })}
+    </div>
+  );
 }
 
 function SidebarContent({
@@ -81,8 +116,7 @@ function SidebarContent({
   user,
   unreadCount,
   onSignOut,
-  onNavigate,
-  useSheetClose = false
+  onNavigate
 }: {
   pathname: string;
   authLoading: boolean;
@@ -90,143 +124,100 @@ function SidebarContent({
   unreadCount: number;
   onSignOut: () => Promise<void>;
   onNavigate?: () => void;
-  useSheetClose?: boolean;
 }) {
-  function renderNavLink(
-    item: { href: string; label: string; icon: keyof typeof iconMap },
-    requiresAuth = false
-  ) {
-    if (requiresAuth && !user) {
-      return null;
-    }
-
-    const Icon = iconMap[item.icon];
-    const isActive = isPathActive(pathname, item.href);
-    const linkClassName = isActive
-      ? "flex items-center gap-2 rounded-r-md border-l-4 border-[var(--primary)] bg-sidebar-accent px-3 py-2 text-sm font-medium text-sidebar-primary"
-      : "flex items-center gap-2 rounded-r-md border-l-4 border-l-transparent px-3 py-2 text-sm text-sidebar-foreground hover:bg-[#1A2533] hover:text-[var(--primary)]";
-    const linkNode = (
-      <Link key={item.href} href={item.href} onClick={onNavigate} className={linkClassName}>
-        <Icon className="size-4" />
-        <span>{item.label}</span>
-      </Link>
-    );
-
-    if (useSheetClose) {
-      return (
-        <SheetClose asChild key={item.href}>
-          {linkNode}
-        </SheetClose>
-      );
-    }
-
-    return linkNode;
-  }
-
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-[var(--border)] px-4 py-4">
-        <Link href="/" onClick={onNavigate} className="inline-flex items-center gap-2">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
-            RE
-          </span>
-          <span className="font-mono text-sm font-semibold text-sidebar-foreground">
-            Refurb Estimator
-          </span>
+      {/* Logo */}
+      <div className="flex h-16 items-center border-b border-border px-4">
+        <Link href="/" onClick={onNavigate} className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <div>
+            <span className="font-serif text-lg font-medium tracking-tight">Refurb</span>
+            <span className="text-xs text-muted-foreground ml-1">Estimator</span>
+          </div>
         </Link>
       </div>
 
-      <nav className="flex flex-col gap-1 px-2 py-4">
-        <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          Calculators
-        </p>
-        {calculatorNavItems.map((item) => renderNavLink(item))}
-
-        <div className="mx-3 my-2 border-t border-[var(--border)]" />
-        <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          Development
-        </p>
-        {developmentNavItems.map((item) => renderNavLink(item))}
-
-        <div className="mx-3 my-2 border-t border-[var(--border)]" />
-        {planningNavItems.map((item) => renderNavLink(item))}
-
-        {user ? <div className="mx-3 my-2 border-t border-[var(--border)]" /> : null}
-        {dashboardItems.map((item) => renderNavLink(item, true))}
+      {/* Navigation */}
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-6">
+        <NavSection 
+          title="Calculators" 
+          items={calculatorNavItems} 
+          pathname={pathname} 
+          onNavigate={onNavigate} 
+        />
+        <NavSection 
+          title="Development" 
+          items={developmentNavItems} 
+          pathname={pathname} 
+          onNavigate={onNavigate} 
+        />
+        <NavSection 
+          title="Planning" 
+          items={planningNavItems} 
+          pathname={pathname} 
+          onNavigate={onNavigate} 
+        />
+        <NavSection 
+          title="Account" 
+          items={dashboardItems} 
+          pathname={pathname} 
+          onNavigate={onNavigate}
+          requiresAuth
+          user={user}
+        />
       </nav>
 
-      <div className="mt-auto border-t border-[var(--border)] px-3 py-4">
+      {/* User Section */}
+      <div className="border-t border-border p-4">
         {authLoading ? (
-          <p className="text-sm text-muted-foreground">Checking session...</p>
+          <div className="flex items-center gap-3 px-3 py-2">
+            <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
+            <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+          </div>
         ) : user ? (
-          <div className="space-y-2">
-            <p className="truncate text-sm text-muted-foreground">{user.email}</p>
-            <div className="space-y-2">
-              {useSheetClose ? (
-                <SheetClose asChild>
-                  <Button
-                    variant="outline"
-                    className="relative w-full justify-start border-[var(--border)] text-primary hover:bg-primary/10"
-                    asChild
-                  >
-                    <Link href="/dashboard/notifications" onClick={onNavigate}>
-                      <Bell className="size-4" />
-                      Notifications
-                      {unreadCount > 0 ? (
-                        <span className="absolute right-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-destructive" />
-                      ) : null}
-                    </Link>
-                  </Button>
-                </SheetClose>
-              ) : (
-                <Button
-                  variant="outline"
-                  className="relative w-full justify-start border-[var(--border)] text-primary hover:bg-primary/10"
-                  asChild
-                >
-                  <Link href="/dashboard/notifications" onClick={onNavigate}>
-                    <Bell className="size-4" />
-                    Notifications
-                    {unreadCount > 0 ? (
-                      <span className="absolute right-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-destructive" />
-                    ) : null}
-                  </Link>
-                </Button>
-              )}
-              <Button
-                variant="destructive"
-                className="w-full justify-start"
-                onClick={() => void onSignOut()}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 px-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                {user.email?.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <p className="truncate text-sm font-medium">{user.email}</p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Link
+                href="/dashboard/notifications"
+                onClick={onNavigate}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
               >
-                <LogOut className="size-4" />
-                Sign out
-              </Button>
+                <Bell className="h-4 w-4" />
+                <span>Notifications</span>
+                {unreadCount > 0 && (
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
+                    {unreadCount}
+                  </span>
+                )}
+              </Link>
+              <button
+                onClick={() => void onSignOut()}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Sign out</span>
+              </button>
             </div>
           </div>
         ) : (
-          useSheetClose ? (
-            <SheetClose asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-start border-[var(--border)] text-primary hover:bg-primary/10"
-                asChild
-              >
-                <Link href="/auth/login" onClick={onNavigate}>
-                  Sign in
-                </Link>
-              </Button>
-            </SheetClose>
-          ) : (
-            <Button
-              variant="outline"
-              className="w-full justify-start border-[var(--border)] text-primary hover:bg-primary/10"
-              asChild
-            >
-              <Link href="/auth/login" onClick={onNavigate}>
-                Sign in
-              </Link>
-            </Button>
-          )
+          <Link
+            href="/auth/login"
+            onClick={onNavigate}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Sign in
+          </Link>
         )}
       </div>
     </div>
@@ -340,7 +331,8 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[240px] flex-col border-r border-[var(--border)] bg-[#0A1420] md:flex">
+      {/* Desktop Sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-card md:flex">
         <SidebarContent
           pathname={pathname}
           authLoading={authLoading}
@@ -350,17 +342,37 @@ export default function Sidebar() {
         />
       </aside>
 
-      <MobileBottomNav pathname={pathname} isOpen={isOpen} onOpenChange={setIsOpen}>
-        <SidebarContent
-          pathname={pathname}
-          authLoading={authLoading}
-          user={user}
-          unreadCount={displayedUnreadCount}
-          onSignOut={handleSignOut}
-          onNavigate={handleNavigate}
-          useSheetClose
-        />
-      </MobileBottomNav>
+      {/* Mobile Header */}
+      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 backdrop-blur md:hidden">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Building2 className="h-4 w-4" />
+          </div>
+          <span className="font-serif text-lg font-medium">Refurb</span>
+        </Link>
+        
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9">
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-72 p-0">
+            <SidebarContent
+              pathname={pathname}
+              authLoading={authLoading}
+              user={user}
+              unreadCount={displayedUnreadCount}
+              onSignOut={handleSignOut}
+              onNavigate={handleNavigate}
+            />
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Mobile spacer */}
+      <div className="h-14 md:hidden" />
     </>
   );
 }

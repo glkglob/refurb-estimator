@@ -15,7 +15,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "lint:fix": "eslint . --fix",
-    "ci:install": "pnpm install --frozen-lockfile"
+    "ci:install": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "ci": "pnpm tsc --noEmit && pnpm test",
+    "typecheck:test": "tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
     "@apollo/server": "5.5.0",

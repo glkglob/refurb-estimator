@@ -21,7 +21,8 @@
     "types": [
       "node",
       "react",
-      "react-dom"
+      "react-dom",
+      "jest"
     ],
     "jsx": "react-jsx",
     "incremental": true,

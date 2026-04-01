@@ -13,7 +13,7 @@ import {
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import NextImage from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,7 +69,6 @@ const regions: Region[] = [
   "wales",
   "northern_ireland"
 ];
-
 
 function estimateDataUrlBytes(dataUrl: string): number {
   const commaIndex = dataUrl.indexOf(",");
@@ -130,21 +129,21 @@ async function resizeToDataUrl(file: File): Promise<string> {
 
 function labelForRegion(region: Region): string {
   const REGION_LABELS: Record<string, string> = {
-  london: "London",
-  south_east: "South East",
-  south_west: "South West",
-  east_of_england: "East of England",
-  west_midlands: "West Midlands",
-  east_midlands: "East Midlands",
-  yorkshire_and_humber: "Yorkshire and the Humber",
-  north_west: "North West",
-  north_east: "North East",
-  scotland: "Scotland",
-  wales: "Wales",
-  northern_ireland: "Northern Ireland",
-};
+    london: "London",
+    south_east: "South East",
+    south_west: "South West",
+    east_of_england: "East of England",
+    west_midlands: "West Midlands",
+    east_midlands: "East Midlands",
+    yorkshire_and_humber: "Yorkshire and the Humber",
+    north_west: "North West",
+    north_east: "North East",
+    scotland: "Scotland",
+    wales: "Wales",
+    northern_ireland: "Northern Ireland"
+  };
 
-return REGION_LABELS[region] ?? region;;
+  return REGION_LABELS[region] ?? region;
 }
 
 function confidenceBadgeClass(confidence: string): string {
@@ -190,7 +189,7 @@ export default function PhotoPage() {
 
   useEffect(() => {
     return () => {
-      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+      previewUrls.forEach((url: string) => URL.revokeObjectURL(url));
     };
   }, [previewUrls]);
 
@@ -275,7 +274,7 @@ export default function PhotoPage() {
   }
 
   function removeFile(index: number) {
-    const nextFiles = selectedFiles.filter((_, fileIndex) => fileIndex !== index);
+    const nextFiles = selectedFiles.filter((_: File, fileIndex: number) => fileIndex !== index);
     if (nextFiles.length === 0) {
       resetAll();
       return;
@@ -293,7 +292,9 @@ export default function PhotoPage() {
     setError(null);
 
     try {
-      const base64DataUrls = await Promise.all(selectedFiles.map((file) => resizeToDataUrl(file)));
+      const base64DataUrls = await Promise.all(
+        selectedFiles.map((file: File) => resizeToDataUrl(file))
+      );
       for (const dataUrl of base64DataUrls) {
         if (estimateDataUrlBytes(dataUrl) > maxBytes) {
           throw new Error("One or more images are too large after processing. Please use smaller photos.");
@@ -345,7 +346,7 @@ export default function PhotoPage() {
 
       const pdfInput: QuotePdfInput = {
         propertyDescription: `${estimateInput.totalAreaM2}m² ${estimateInput.propertyType} in ${estimateInput.region}, ${estimateInput.condition} condition, ${estimateInput.finishLevel} finish`,
-        categories: estimateResult.categories.map((category) => ({
+        categories: estimateResult.categories.map((category: EstimateResult["categories"][number]) => ({
           category: category.category,
           low: category.low,
           typical: category.typical,
@@ -453,7 +454,7 @@ export default function PhotoPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={(event) => {
+                onClick={(event: MouseEvent<HTMLButtonElement>) => {
                   event.stopPropagation();
                   cameraInputRef.current?.click();
                 }}
@@ -467,7 +468,7 @@ export default function PhotoPage() {
           {selectedFiles.length > 0 && previewUrls.length > 0 ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-                {previewUrls.map((url, index) => (
+                {previewUrls.map((url: string, index: number) => (
                   <div key={url} className="rounded-lg border bg-muted/20 p-2">
                     <div className="relative h-40 w-full overflow-hidden rounded">
                       <NextImage
@@ -503,7 +504,7 @@ export default function PhotoPage() {
                   <p className="text-sm font-medium text-foreground">Region preference</p>
                   <Select
                     value={regionOverride}
-                    onValueChange={(value) => setRegionOverride(value as Region | "auto")}
+                    onValueChange={(value: string) => setRegionOverride(value as Region | "auto")}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
@@ -524,7 +525,7 @@ export default function PhotoPage() {
                     type="button"
                     variant="ghost"
                     className="h-auto px-0 text-primary hover:bg-transparent hover:text-primary/90"
-                    onClick={() => setShowDetails((current) => !current)}
+                    onClick={() => setShowDetails((current: boolean) => !current)}
                   >
                     <ChevronDown
                       className={cn(
@@ -549,7 +550,7 @@ export default function PhotoPage() {
                         step={1}
                         placeholder="e.g. 3"
                         value={bedrooms ?? ""}
-                        onChange={(event) => {
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => {
                           if (event.target.value === "") {
                             setBedrooms(null);
                             return;
@@ -569,7 +570,7 @@ export default function PhotoPage() {
                         step={1}
                         placeholder="e.g. 85"
                         value={approxAreaM2 ?? ""}
-                        onChange={(event) => {
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => {
                           if (event.target.value === "") {
                             setApproxAreaM2(null);
                             return;
@@ -590,7 +591,9 @@ export default function PhotoPage() {
                         placeholder="e.g. SW1A 1AA"
                         maxLength={8}
                         value={postcode}
-                        onChange={(event) => setPostcode(event.target.value.toUpperCase())}
+                        onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                          setPostcode(event.target.value.toUpperCase())
+                        }
                       />
                       <p className="text-xs text-muted-foreground">
                         Helps determine region and local costs

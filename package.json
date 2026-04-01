@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit",
     "lint:fix": "eslint . --fix",
     "ci:install": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
-    "ci": "pnpm tsc --noEmit && pnpm test",
+    "ci": "pnpm tsc --noEmit && pnpm lint && pnpm test && pnpm build",
     "typecheck:test": "tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {

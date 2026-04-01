@@ -74,7 +74,7 @@ export function UpgradePrompt({
         <Button onClick={() => setBilling("annual")}>Annual</Button>
       </div>
 
-      {error && <p className="text-red-500">{error}</p>}
+      {error ? <p className="text-red-500">{error}</p> : null}
 
       <Button onClick={handleUpgrade} disabled={isUnlocked || isLoading}>
         {isLoading ? "Loading..." : `Upgrade to ${requiredPlanConfig.name}`}

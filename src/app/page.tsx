@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { AlertTriangle, Loader2 } from "lucide-react";
@@ -12,9 +13,6 @@ import ScenarioLimitPromptDialog from "@/components/ScenarioLimitPromptDialog";
 import SaveScenarioModal from "@/components/SaveScenarioModal";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import TrustBanner from "@/components/TrustBanner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiClient";
 import { saveScenario } from "@/lib/dataService";
@@ -29,6 +27,75 @@ import type { QuotePdfInput } from "@/lib/generateQuotePdf";
 import { shareOrCopy } from "@/lib/share";
 import { ScenarioLimitExceededError } from "@/lib/storage";
 import type { EstimateInput, EstimateResult, Scenario } from "@/lib/types";
+
+const WIN_RAISED: React.CSSProperties = {
+  backgroundColor: "#d4d0c8",
+  borderTop: "2px solid #ffffff",
+  borderLeft: "2px solid #ffffff",
+  borderRight: "2px solid #808080",
+  borderBottom: "2px solid #808080",
+};
+
+function WinCard({
+  title,
+  badge,
+  description,
+  href,
+  btnLabel,
+  featured = false,
+  colSpan = false,
+}: {
+  title: string;
+  badge?: string;
+  description: string;
+  href: string;
+  btnLabel: string;
+  featured?: boolean;
+  colSpan?: boolean;
+}) {
+  return (
+    <div
+      className={colSpan ? "sm:col-span-2" : ""}
+      style={{
+        ...WIN_RAISED,
+        padding: "8px",
+        backgroundColor: featured ? "#c8d8f0" : "#d4d0c8",
+      }}
+    >
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <span style={{ fontWeight: "bold", fontSize: "11px", color: "#000000" }}>{title}</span>
+        {badge ? (
+          <span
+            style={{
+              fontSize: "9px",
+              backgroundColor: "#000080",
+              color: "#ffffff",
+              padding: "1px 4px",
+              fontFamily: "Tahoma, Verdana, Arial, sans-serif",
+            }}
+          >
+            {badge}
+          </span>
+        ) : null}
+      </div>
+      <p style={{ fontSize: "11px", color: "#444444", marginBottom: "6px" }}>{description}</p>
+      <Link
+        href={href}
+        style={{
+          ...WIN_RAISED,
+          display: "inline-block",
+          padding: "2px 10px",
+          fontSize: "11px",
+          color: "#000000",
+          textDecoration: "none",
+          fontFamily: "Tahoma, Verdana, Arial, sans-serif",
+        }}
+      >
+        {btnLabel}
+      </Link>
+    </div>
+  );
+}
 
 const EstimateResults = dynamic(() => import("@/components/EstimateResults"), {
   ssr: false,
@@ -218,103 +285,102 @@ export default function HomePage() {
   }
 
   return (
-    <section className="space-y-6">
-      <h1 className="text-3xl font-semibold tracking-tight">Quick Estimate</h1>
+    <section className="space-y-3" style={{ fontFamily: "Tahoma, Verdana, Arial, sans-serif", fontSize: "11px", color: "#000000" }}>
+      {/* Win2000-style page title bar */}
+      <div
+        className="flex items-center gap-2 px-3 py-2"
+        style={{
+          background: "linear-gradient(90deg, #0a246a 0%, #3a6ea5 60%, #a6caf0 100%)",
+          color: "#ffffff",
+        }}
+      >
+        <span
+          className="inline-flex h-5 w-5 items-center justify-center text-[10px] font-bold"
+          style={{ background: "#ffffff", color: "#0a246a", border: "1px solid #808080" }}
+        >
+          Q
+        </span>
+        <h1 className="text-[13px] font-bold text-white">Quick Estimate</h1>
+      </div>
 
-      <p className="text-sm text-muted-foreground">
+      <p style={{ color: "#000000", fontSize: "11px" }}>
         Enter your property details below and click Calculate to get an instant estimate.
       </p>
 
       <TrustBanner />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="border-primary/40 bg-primary/5 sm:col-span-2">
-          <CardHeader className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <CardTitle>Development Appraisal</CardTitle>
-              <Badge variant="secondary">Pro feature — free during beta</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Run full deal viability checks with SDLT, finance, margin targets, and BRRR
-              refinance outputs.
-            </p>
-          </CardHeader>
-          <CardFooter>
-            <Button asChild>
-              <Link href="/development">Open Development Appraisal →</Link>
-            </Button>
-          </CardFooter>
-        </Card>
+      {/* Calculator grid — Win2000 groupbox style */}
+      <div
+        style={{
+          border: "1px solid #808080",
+          backgroundColor: "#d4d0c8",
+          padding: "8px",
+          position: "relative",
+        }}
+      >
+        <span
+          style={{
+            position: "absolute",
+            top: "-8px",
+            left: "8px",
+            backgroundColor: "#d4d0c8",
+            padding: "0 4px",
+            fontSize: "11px",
+            fontWeight: "bold",
+            color: "#000000",
+          }}
+        >
+          Calculators &amp; Tools
+        </span>
 
-        <Card className="border-primary/30 bg-primary/5 sm:col-span-2">
-          <CardHeader className="space-y-2">
-            <CardTitle>Find Tradespeople</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Browse verified contractors and send one enquiry to get matched locally.
-            </p>
-          </CardHeader>
-          <CardFooter>
-            <Button asChild variant="outline">
-              <Link href="/tradespeople">Open tradespeople directory →</Link>
-            </Button>
-          </CardFooter>
-        </Card>
+        <div className="grid gap-2 sm:grid-cols-2 mt-2">
+          {/* Development Appraisal — featured */}
+          <WinCard
+            title="Development Appraisal"
+            badge="Pro feature — free during beta"
+            description="Run full deal viability checks with SDLT, finance, margin targets, and BRRR refinance outputs."
+            href="/development"
+            btnLabel="Open Development Appraisal"
+            featured
+            colSpan
+          />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Loft conversion</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Band a loft project with regional multipliers and add-ons.
-            </p>
-          </CardHeader>
-          <CardFooter>
-            <Button asChild variant="outline">
-              <Link href="/loft">Open loft calculator</Link>
-            </Button>
-          </CardFooter>
-        </Card>
+          <WinCard
+            title="Find Tradespeople"
+            description="Browse verified contractors and send one enquiry to get matched locally."
+            href="/tradespeople"
+            btnLabel="Open Tradespeople Directory"
+            colSpan
+          />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>New Build</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Estimate build costs for new homes and developments.
-            </p>
-          </CardHeader>
-          <CardFooter>
-            <Button asChild variant="outline">
-              <Link href="/new-build">Open calculator →</Link>
-            </Button>
-          </CardFooter>
-        </Card>
+          <WinCard
+            title="Loft Conversion"
+            description="Band a loft project with regional multipliers and add-ons."
+            href="/loft"
+            btnLabel="Open Loft Calculator"
+          />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Extensions</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Single/double storey rear, side return, and wrap-around extensions.
-            </p>
-          </CardHeader>
-          <CardFooter>
-            <Button asChild variant="outline">
-              <Link href="/extension">Open calculator →</Link>
-            </Button>
-          </CardFooter>
-        </Card>
+          <WinCard
+            title="New Build"
+            description="Estimate build costs for new homes and developments."
+            href="/new-build"
+            btnLabel="Open Calculator"
+          />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Detailed rooms</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Build a room-by-room estimate with a deeper breakdown.
-            </p>
-          </CardHeader>
-          <CardFooter>
-            <Button asChild variant="outline">
-              <Link href="/rooms">Open calculator →</Link>
-            </Button>
-          </CardFooter>
-        </Card>
+          <WinCard
+            title="Extensions"
+            description="Single/double storey rear, side return, and wrap-around extensions."
+            href="/extension"
+            btnLabel="Open Calculator"
+          />
+
+          <WinCard
+            title="Detailed Rooms"
+            description="Build a room-by-room estimate with a deeper breakdown."
+            href="/rooms"
+            btnLabel="Open Calculator"
+          />
+        </div>
       </div>
 
       <AuthBanner />
@@ -334,72 +400,70 @@ export default function HomePage() {
       </div>
 
       {submitError ? (
-        <div className="bp-warning flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
-          <p className="font-medium text-destructive">{submitError}</p>
+        <div className="bp-warning flex items-start gap-2 px-3 py-2 text-[11px]">
+          <AlertTriangle className="mt-0.5 size-3 shrink-0" style={{ color: "#cc0000" }} />
+          <p style={{ color: "#cc0000" }}>{submitError}</p>
         </div>
       ) : null}
 
       {result ? (
-        <div id="results" className="mt-8 space-y-6">
+        <div id="results" className="mt-4 space-y-3">
           {lastInput ? (
-            <p className="text-sm text-muted-foreground">
+            <p style={{ color: "#000080", fontSize: "11px" }}>
               Estimate for: {lastInput.totalAreaM2}m² {lastInput.propertyType} in{" "}
               {lastInput.region}, {lastInput.condition} condition, {lastInput.finishLevel} finish
             </p>
           ) : null}
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => setIsSaveModalOpen(true)}
-              disabled={isSaving}
-            >
-              {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
-              Save as Scenario
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleDownloadPdf}
-              disabled={isGeneratingPdf}
-            >
-              {isGeneratingPdf ? <Loader2 className="size-4 animate-spin" /> : null}
-              Download PDF
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() =>
-                exportToCsv(`${lastInput?.region.toLowerCase()}-estimate.csv`, [
-                  ...result.categories.map((category) => ({
-                    category: category.category,
-                    low: category.low,
-                    typical: category.typical,
-                    high: category.high,
-                  })),
-                  {
-                    category: "TOTAL",
-                    low: result.totalLow,
-                    typical: result.totalTypical,
-                    high: result.totalHigh,
-                  },
-                ])
-              }
-            >
-              Download CSV
-            </Button>
-
-            <Button type="button" variant="outline" onClick={() => void handleShareEstimate()}>
-              Share
-            </Button>
-
-            <Button type="button" variant="outline" onClick={handleNewEstimate}>
-              New estimate
-            </Button>
+          <div className="flex flex-wrap gap-1">
+            {[
+              { label: "Save as Scenario", onClick: () => setIsSaveModalOpen(true), disabled: isSaving, loading: isSaving },
+              { label: "Download PDF", onClick: () => void handleDownloadPdf(), disabled: isGeneratingPdf, loading: isGeneratingPdf },
+              {
+                label: "Download CSV",
+                onClick: () =>
+                  exportToCsv(`${lastInput?.region.toLowerCase()}-estimate.csv`, [
+                    ...result.categories.map((category) => ({
+                      category: category.category,
+                      low: category.low,
+                      typical: category.typical,
+                      high: category.high,
+                    })),
+                    {
+                      category: "TOTAL",
+                      low: result.totalLow,
+                      typical: result.totalTypical,
+                      high: result.totalHigh,
+                    },
+                  ]),
+              },
+              { label: "Share", onClick: () => void handleShareEstimate() },
+              { label: "New Estimate", onClick: handleNewEstimate },
+            ].map(({ label, onClick, disabled, loading }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={onClick}
+                disabled={disabled}
+                style={{
+                  backgroundColor: "#d4d0c8",
+                  borderTop: "2px solid #ffffff",
+                  borderLeft: "2px solid #ffffff",
+                  borderRight: "2px solid #808080",
+                  borderBottom: "2px solid #808080",
+                  color: "#000000",
+                  fontSize: "11px",
+                  fontFamily: "Tahoma, Verdana, Arial, sans-serif",
+                  padding: "3px 12px",
+                  cursor: disabled ? "not-allowed" : "default",
+                  opacity: disabled ? 0.6 : 1,
+                  minWidth: "80px",
+                }}
+              >
+                {loading ? <Loader2 className="inline size-3 animate-spin mr-1" /> : null}
+                {label}
+              </button>
+            ))}
           </div>
 
           <EstimateResults result={result} />

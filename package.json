@@ -5,7 +5,7 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@9.15.9",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -48,6 +48,8 @@
     "pdf-lib": "1.17.1",
     "pg": "8.20.0",
     "radix-ui": "1.4.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "shadcn": "4.1.1",
     "sonner": "2.0.7",
     "stripe": "21.0.1",
@@ -69,23 +71,18 @@
     "@types/multer": "2.1.0",
     "@types/node": "25.5.0",
     "@types/pg": "8.20.0",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.0",
     "add": "2.0.6",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.1",
     "jest": "30.3.0",
     "jest-environment-jsdom": "30.3.0",
-    "node-fetch": "2.7.0",
-    "pnpm": "10.33.0",
     "postcss": "8.5.8",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
     "tailwindcss": "4.2.2",
     "ts-jest": "29.4.6",
     "ts-node": "10.9.2",
     "typescript": "5.9.3",
-    "undici": "7.24.6",
     "whatwg-fetch": "3.6.20"
   }
 }

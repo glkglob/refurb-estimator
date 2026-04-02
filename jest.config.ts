@@ -12,14 +12,19 @@ const config: Config = {
 
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
-    "^next/server$": "<rootDir>/test/mocks/nextServer.ts"
+    "^next/server$": "<rootDir>/test/mocks/nextServer.ts",
+    "^server-only$": "<rootDir>/test/mocks/serverOnly.ts"
   },
 
   transformIgnorePatterns: [
     "/node_modules/(?!next/)"
   ],
 
-  testPathIgnorePatterns: ["/node_modules/", "/.next/"]
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "/.next/",
+    "<rootDir>/tests/unit/.*\\.adapters\\.test\\.ts$",
+  ]
 };
 
 export default config;

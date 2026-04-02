@@ -1,4 +1,0 @@
-{
-  "extends": "@raycast/api/tsconfig.json",
-  "include": ["src/**/*"]
-}

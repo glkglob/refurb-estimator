@@ -14,6 +14,12 @@ Object.defineProperty(globalThis, "TextDecoder", {
 	configurable: true
 });
 
+Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+	value: jest.fn(),
+	writable: true,
+	configurable: true
+});
+
 beforeAll(() => {
 	// eslint-disable-next-line no-console
 	console.log("TEST_SUITE_EXECUTED");

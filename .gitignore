@@ -52,3 +52,5 @@ next-env.d.ts
 .claude/
 .env*
 frontend/.env*
+.pnpm-store/
+.playwright-browsers/

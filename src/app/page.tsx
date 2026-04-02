@@ -39,6 +39,13 @@ import {
 } from "@/lib/enhancedEstimator";
 import { exportToCsv } from "@/lib/exportCsv";
 import type { QuotePdfInput } from "@/lib/generateQuotePdf";
+import { applyLabourToEstimateResult } from "@/lib/pricing/applyLabourCost";
+import {
+  estimateLabourCost,
+  LABOUR_REGION_OPTIONS,
+  type LabourRegion,
+  TRADE_RATES,
+} from "@/lib/pricing/tradeRates";
 import { shareOrCopy } from "@/lib/share";
 import { ScenarioLimitExceededError } from "@/lib/storage";
 import type { EstimateInput, EstimateResult, Scenario } from "@/lib/types";
@@ -93,6 +100,14 @@ export default function HomePage() {
   const [formKey, setFormKey] = useState(0);
   const [lastInput, setLastInput] = useState<EstimateInput | null>(null);
   const [result, setResult] = useState<EstimateResult | null>(null);
+  const [lastLabour, setLastLabour] = useState<{
+    low: number;
+    mid: number;
+    high: number;
+  } | null>(null);
+  const [tradeId, setTradeId] = useState<string>("general_builder");
+  const [labourDays, setLabourDays] = useState<number>(1);
+  const [labourRegion, setLabourRegion] = useState<LabourRegion>("midlands");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isScenarioLimitPromptOpen, setIsScenarioLimitPromptOpen] = useState(false);
@@ -113,7 +128,7 @@ export default function HomePage() {
 
   function handleSubmit(input: EstimateInput) {
     try {
-      const nextResult = calculateEnhancedEstimate({
+      const baseResult = calculateEnhancedEstimate({
         propertyCategory: inferPropertyCategory(input.propertyType),
         postcodeDistrict: getFallbackPostcodeDistrict(input.region),
         totalAreaM2: input.totalAreaM2,
@@ -122,13 +137,17 @@ export default function HomePage() {
         additionalFeatures: [],
         listedBuilding: false,
       });
+      const labour = estimateLabourCost(tradeId, labourDays, labourRegion);
+      const nextResult = applyLabourToEstimateResult(baseResult, labour, input.totalAreaM2);
 
       setLastInput(input);
       setResult(nextResult);
+      setLastLabour(labour);
       setSubmitError(null);
     } catch (error) {
       setLastInput(null);
       setResult(null);
+      setLastLabour(null);
 
       if (error instanceof Error) {
         setSubmitError(error.message);
@@ -194,6 +213,7 @@ export default function HomePage() {
   function handleNewEstimate() {
     setLastInput(null);
     setResult(null);
+    setLastLabour(null);
     setSubmitError(null);
     setFormKey((prev) => prev + 1);
     document.getElementById("estimate-form")?.scrollIntoView({ behavior: "smooth" });
@@ -380,6 +400,67 @@ export default function HomePage() {
 
           <Card className="overflow-hidden">
             <CardContent className="p-6 md:p-8">
+              <div className="mb-8 space-y-4 rounded-lg border border-border bg-muted/20 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  Labour Assumptions
+                </h3>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <label htmlFor="quick-trade" className="text-sm font-medium">
+                      Trade
+                    </label>
+                    <select
+                      id="quick-trade"
+                      value={tradeId}
+                      onChange={(event) => setTradeId(event.target.value)}
+                      className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      {TRADE_RATES.map((trade) => (
+                        <option key={trade.id} value={trade.id}>
+                          {trade.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="quick-labour-days" className="text-sm font-medium">
+                      Days
+                    </label>
+                    <input
+                      id="quick-labour-days"
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={labourDays}
+                      onChange={(event) => {
+                        const nextValue = Number(event.target.value);
+                        setLabourDays(
+                          Number.isFinite(nextValue) && nextValue >= 1 ? Math.floor(nextValue) : 1,
+                        );
+                      }}
+                      className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="quick-labour-region" className="text-sm font-medium">
+                      Region
+                    </label>
+                    <select
+                      id="quick-labour-region"
+                      value={labourRegion}
+                      onChange={(event) => setLabourRegion(event.target.value as LabourRegion)}
+                      className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      {LABOUR_REGION_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <EstimateForm
                 key={formKey}
                 onSubmit={handleSubmit}
@@ -416,6 +497,20 @@ export default function HomePage() {
                   {lastInput.finishLevel} finish
                 </p> : null}
             </div>
+
+            {lastLabour ? (
+              <div className="mb-8 rounded-lg border border-border bg-background p-4">
+                <p className="text-lg font-medium">
+                  Labour estimate: £{lastLabour.low.toLocaleString("en-GB")} – £
+                  {lastLabour.high.toLocaleString("en-GB")} (typical: £
+                  {lastLabour.mid.toLocaleString("en-GB")})
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Rates sourced from Checkatrade &amp; industry aggregators, April 2026. Excludes
+                  materials, VAT, and specialist certifications.
+                </p>
+              </div>
+            ) : null}
 
             {/* Action Buttons */}
             <div className="mb-8 flex flex-wrap justify-center gap-3">

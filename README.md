@@ -29,6 +29,7 @@ The platform uses a single `PropertyType` enum across UI, API, and estimator log
 - Jest test suite
 - pdf-lib for estimate PDF export
 - Capacitor configuration for iOS packaging
+- Node.js 20+ runtime target
 
 ## Getting Started
 1. Install dependencies:
@@ -67,6 +68,7 @@ npx supabase migration new <name>
 | POST | `/api/v1/estimate/new-build` | New-build estimate |
 | POST | `/api/v1/estimate/share` | Create shareable estimate link |
 | POST | `/api/v1/ai/photo-estimate` | AI photo-to-estimate |
+| POST | `/api/v1/ai/upload` | AI design upload + generation metadata workflow |
 | GET, PATCH | `/api/v1/profile` | Current user profile |
 | GET | `/api/v1/profile/[userId]` | Public tradesperson profile |
 | GET, POST | `/api/v1/gallery` | Public gallery list, create gallery item |
@@ -77,6 +79,52 @@ npx supabase migration new <name>
 | GET | `/api/v1/notifications/count` | Unread notification count |
 | POST | `/api/v1/upload` | Storage upload endpoint |
 | GET, PATCH | `/api/v1/admin/users` | Admin user management |
+
+## AI Design Upload Workflow
+`POST /api/v1/ai/upload` accepts a multipart image upload, validates file type/size, stores the image in Supabase Storage (`design-uploads`), creates a signed URL, calls the AI design workflow, and persists generation metadata to `public.design_generations`.
+
+### Required Environment Variables
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key (server session auth) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key used for storage + metadata persistence |
+| `OPENAI_API_KEY` | Yes | API key used by `services/ai.ts` |
+| `OPENAI_DESIGN_METADATA_MODEL` | No | Override AI metadata model (default: `gpt-4.1-mini`) |
+| `SUPABASE_DESIGN_UPLOAD_BUCKET` | No | Storage bucket name (default: `design-uploads`) |
+| `DESIGN_SIGNED_URL_EXPIRY_SECONDS` | No | Signed URL TTL in seconds (default: `3600`) |
+
+### Example curl (authenticated session)
+```bash
+curl -X POST "http://localhost:3000/api/v1/ai/upload" \
+  -H "Cookie: sb-access-token=<access-token>; sb-refresh-token=<refresh-token>" \
+  -F "file=@/absolute/path/to/room.jpg;type=image/jpeg" \
+  -F "region=london" \
+  -F "projectType=loft" \
+  -F "promptHint=Bright modern storage-focused loft" \
+  -F "width=1024" \
+  -F "height=1024"
+```
+
+### Example successful response
+```json
+{
+  "bucket": "design-uploads",
+  "path": "user-id/2026-04-02/uuid.jpg",
+  "signedUrl": "https://<project>.supabase.co/storage/v1/object/sign/design-uploads/...",
+  "signedUrlExpirySeconds": 3600,
+  "design": {
+    "prompt": "Design prompt text...",
+    "seed": 998877,
+    "width": 1024,
+    "height": 1024,
+    "region": "london",
+    "provider": "openai",
+    "model": "gpt-4.1-mini",
+    "createdAt": "2026-04-02T10:30:00.000Z"
+  }
+}
+```
 
 ## iOS Build
 Capacitor setup and iOS workflow are documented in:

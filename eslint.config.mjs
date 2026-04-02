@@ -43,7 +43,6 @@ const config = defineConfig([
       ".next/**",
       "out/**",
       "coverage/**",
-      "raycast-extension/**",
       "supabase/**",
       "*.config.*",
     ],

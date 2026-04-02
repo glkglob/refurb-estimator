@@ -1,4 +1,4 @@
-import { aiClient } from "@/lib/ai/client";
+import { aiClient, PRICING_MODEL } from "@/lib/ai/client";
 import { z } from "zod";
 import { validateJsonRequest } from "@/lib/validate";
 import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
     }
     const input = parsed.data;
     const result = await aiClient.chat.completions.create({
-      model: process.env.LM_STUDIO_MODEL ?? "qwen/qwen3-4b",
+      model: PRICING_MODEL,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: buildUserPrompt(input) }
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
     });
     const rawText = result.choices[0]?.message?.content ?? "";
     if (!rawText) {
-      throw new Error("HuggingFace returned an empty design response");
+      throw new Error("AI returned an empty design response");
     }
     const json = parseJson(rawText);
     const validated = designAgentResponseSchema.parse(json);
@@ -163,7 +163,7 @@ export async function POST(request: Request) {
     logError("design-agent", requestId, error);
     if (error instanceof z.ZodError) {
       return jsonError(
-        "HuggingFace design response validation failed",
+        "AI design response validation failed",
         requestId,
         502,
         { details: error.issues.map((issue) => issue.message) }

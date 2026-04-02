@@ -167,5 +167,6 @@ describe("NewBuildPage assistant journey", () => {
     expect(screen.getByText(/Specification:/i).closest("div")).toHaveTextContent("basic");
     expect(screen.getByText(formatCurrency(basicTotal))).toBeInTheDocument();
     expect(screen.queryByText(formatCurrency(standardTotal))).not.toBeInTheDocument();
+    });
   });
 });

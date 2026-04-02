@@ -117,6 +117,7 @@ describe("NewBuildPage assistant journey", () => {
     } as const;
 
     const standardTotal = calculateNewBuild(standardInput).totalTypical;
+    const basicTotal = calculateNewBuild({ ...standardInput, spec: "basic" }).totalTypical;
     mockedCreate.mockResolvedValueOnce({
       choices: [
         {
@@ -163,7 +164,8 @@ describe("NewBuildPage assistant journey", () => {
       expect(Array.isArray(lastSanitizedEditorActions)).toBe(true);
     });
 
-    expect(screen.getByText(/Specification:/i).closest("div")).toHaveTextContent("standard");
-    expect(screen.getByText(formatCurrency(standardTotal))).toBeInTheDocument();
+    expect(screen.getByText(/Specification:/i).closest("div")).toHaveTextContent("basic");
+    expect(screen.getByText(formatCurrency(basicTotal))).toBeInTheDocument();
+    expect(screen.queryByText(formatCurrency(standardTotal))).not.toBeInTheDocument();
   });
 });

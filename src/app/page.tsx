@@ -273,7 +273,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-card to-background px-6 py-16 md:py-24">
+      <section className="relative overflow-hidden bg-linear-to-b from-card to-background px-6 py-16 md:py-24">
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col items-center text-center">
             {/* Badge */}
@@ -337,11 +337,9 @@ export default function HomePage() {
                         <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${tool.featured ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`}>
                           <Icon className="h-5 w-5" />
                         </div>
-                        {tool.badge && (
-                          <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
+                        {tool.badge ? <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
                             {tool.badge}
-                          </span>
-                        )}
+                          </span> : null}
                       </div>
                       <CardTitle className="mt-4 text-lg font-medium">{tool.title}</CardTitle>
                     </CardHeader>
@@ -396,32 +394,27 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          {submitError && (
-            <div className="mt-6 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
+          {submitError ? <div className="mt-6 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
               <p className="text-sm text-destructive">{submitError}</p>
-            </div>
-          )}
+            </div> : null}
         </div>
       </section>
 
       {/* Results Section */}
-      {result && (
-        <section id="results" className="scroll-mt-20 bg-card px-6 py-16 md:py-20">
+      {result ? <section id="results" className="scroll-mt-20 bg-card px-6 py-16 md:py-20">
           <div className="mx-auto max-w-4xl">
             <div className="mb-8 text-center">
               <h2 className="mb-2 font-serif text-2xl font-normal tracking-tight md:text-3xl">
                 Your Estimate
               </h2>
-              {lastInput && (
-                <p className="text-muted-foreground">
+              {lastInput ? <p className="text-muted-foreground">
                   {lastInput.totalAreaM2}m² {lastInput.propertyType} in {lastInput.region}
                   <span className="mx-2">·</span>
                   {lastInput.condition} condition
                   <span className="mx-2">·</span>
                   {lastInput.finishLevel} finish
-                </p>
-              )}
+                </p> : null}
             </div>
 
             {/* Action Buttons */}
@@ -486,8 +479,7 @@ export default function HomePage() {
 
             <EstimateResults result={result} />
           </div>
-        </section>
-      )}
+        </section> : null}
 
       {/* Testimonials Section */}
       <section className="px-6 py-16 md:py-20">

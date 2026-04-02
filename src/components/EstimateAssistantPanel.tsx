@@ -32,7 +32,7 @@ const DEFAULT_PROMPT_PLACEHOLDER =
   "Ask a question about this estimate, request an edit, or ask for next steps.";
 
 const EDIT_INTENT_PATTERN =
-  /\b(make|change|update|set|remove|add|increase|decrease|reduce|lower|raise|adjust|edit|switch|cheaper)\b/i;
+  /\b(edit|update|change|set|adjust|increase|decrease|remove|delete|add|replace)\b/i;
 
 const UI_TELEMETRY_SAMPLE_RATE = Number.parseFloat(
   process.env.NEXT_PUBLIC_ASSISTANT_UI_SAMPLE_RATE ?? "0.03"

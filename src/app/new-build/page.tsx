@@ -70,14 +70,15 @@ export default function NewBuildPage() {
 
   /* ----------------------------- STATE ----------------------------- */
 
-  const [propertyType] = useState<NewBuildPropertyType>(PropertyType.DETACHED_HOUSE);
-
-  const [spec] = useState<NewBuildSpec>("standard");
+  const [propertyType, setPropertyType] = useState<NewBuildPropertyType>(
+    PropertyType.DETACHED_HOUSE
+  );
+  const [spec, setSpec] = useState<NewBuildSpec>("standard");
 
   const [totalAreaM2, setTotalAreaM2] = useState("120");
-  const [bedrooms] = useState("3");
-  const [storeys] = useState("2");
-  const [blockStoreys] = useState("3");
+  const [bedrooms, setBedrooms] = useState("3");
+  const [storeys, setStoreys] = useState("2");
+  const [blockStoreys, setBlockStoreys] = useState("3");
   const [postcodeDistrict, setPostcodeDistrict] = useState("");
 
   const [result, setResult] = useState<NewBuildResult | null>(null);
@@ -104,6 +105,16 @@ export default function NewBuildPage() {
   }, [result]);
 
   /* ----------------------------- CORE LOGIC ----------------------------- */
+
+  function syncFormStateFromInput(input: NewBuildInput): void {
+    setPropertyType(input.propertyType);
+    setSpec(input.spec);
+    setTotalAreaM2(String(input.totalAreaM2));
+    setBedrooms(String(input.bedrooms));
+    setStoreys(String(input.storeys));
+    setBlockStoreys(String(input.numberOfStoreys ?? input.storeys));
+    setPostcodeDistrict(input.postcodeDistrict);
+  }
 
   function buildInput(): NewBuildInput | null {
     const area = parseNumber(totalAreaM2);
@@ -163,16 +174,14 @@ export default function NewBuildPage() {
     if (!lastInput) return;
 
     const applied = applyEditorActionsToNewBuildInput(lastInput, actions);
-
-    // safer handling (fix for your failing test)
-    if (applied.changedFields.length === 0) {
-      console.warn("No changes from assistant", actions);
+    if (applied.changedFields.length === 0 || !applied.shouldRecalculate) {
       return;
     }
 
     try {
       const next = calculateNewBuild(applied.nextInput);
 
+      syncFormStateFromInput(applied.nextInput);
       setLastInput(applied.nextInput);
       setResult(next);
       setError(null);
@@ -236,15 +245,14 @@ export default function NewBuildPage() {
               />
             </div>
 
-            {error && <div className="text-red-500">{error}</div>}
+            {error ? <div className="text-red-500">{error}</div> : null}
 
             <Button type="submit">Calculate estimate</Button>
           </form>
         </CardContent>
       </Card>
 
-      {result && lastInput && (
-        <div id="results" className="space-y-6">
+      {result && lastInput ? <div id="results" className="space-y-6">
           <EstimateAssistantPanel
             mode="new_build"
             estimateInput={lastInput}
@@ -257,16 +265,13 @@ export default function NewBuildPage() {
           <Button onClick={handleDownloadPdf} disabled={isGeneratingPdf}>
             {isGeneratingPdf ? <Loader2 className="animate-spin" /> : "Download"}
           </Button>
-        </div>
-      )}
+        </div> : null}
 
-      {isShareModalOpen && (
-        <ShareEstimateModal
+      {isShareModalOpen ? <ShareEstimateModal
           isOpen
           onClose={() => setIsShareModalOpen(false)}
           snapshot={{ kind: "new_build", input: lastInput!, result: result! }}
-        />
-      )}
+        /> : null}
     </section>
   );
 }

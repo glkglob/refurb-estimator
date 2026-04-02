@@ -68,12 +68,10 @@ export default function MobileBottomNav({
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {isActive && (
-                <span
+              {isActive ? <span
                   aria-hidden
                   className="absolute inset-x-4 top-0 h-0.5 rounded-full bg-accent"
-                />
-              )}
+                /> : null}
               <Icon className="h-5 w-5" />
               <span className="max-w-full font-medium">{item.label}</span>
             </Link>

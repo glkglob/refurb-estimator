@@ -51,7 +51,7 @@ const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
   other: "Other",
 };
 
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 type GalleryApiResponse = {
@@ -97,7 +97,7 @@ function validateImageFile(file: File): string | null {
   }
 
   if (file.size > MAX_IMAGE_SIZE_BYTES) {
-    return "Image must be smaller than 10MB.";
+    return "Image must be smaller than 5MB.";
   }
 
   return null;

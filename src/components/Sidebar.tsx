@@ -101,7 +101,7 @@ function NavSection({
           >
             <Icon className="h-4 w-4 shrink-0" />
             <span className="font-medium">{item.label}</span>
-            {isActive && <ChevronRight className="ml-auto h-4 w-4" />}
+            {isActive ? <ChevronRight className="ml-auto h-4 w-4" /> : null}
           </Link>
         );
       })}

@@ -64,7 +64,7 @@ describe("requireAuth", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => { });
   });
 
   afterEach(() => {
@@ -75,7 +75,7 @@ describe("requireAuth", () => {
     expect.hasAssertions();
     expect.assertions(3);
 
-    const consoleLogSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    const consoleLogSpy = jest.spyOn(console, "log").mockImplementation(() => { });
     // eslint-disable-next-line no-console
     console.log("[test] requireAuth execution checkpoint");
     expect(consoleLogSpy).toHaveBeenCalledWith("[test] requireAuth execution checkpoint");

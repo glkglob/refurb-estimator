@@ -64,7 +64,7 @@ export default function MobileBottomNav({
               className={cn(
                 "relative flex min-h-14 min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 px-1 text-center text-xs leading-tight transition-all duration-200 ease-out active:scale-95",
                 isActive
-                  ? "text-accent"
+                  ? "bg-primary/15 text-white"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >

@@ -77,7 +77,7 @@ describe("NewBuildPage assistant journey", () => {
     mockedCreate.mockReset();
     lastSanitizedEditorActions = [];
     originalFetch = global.fetch;
-    consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation(() => { });
 
     global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();

@@ -17,16 +17,16 @@ import {
   Sparkles,
   UserCircle,
   Wallet,
-  Wrench,
-  X
+  Wrench
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch, isApiFetchError } from "@/lib/apiClient";
 import { createClient } from "@/lib/supabase/client";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetClose, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const calculatorNavItems = [
   { href: "/", label: "Quick Estimate", icon: Calculator },
@@ -371,8 +371,19 @@ export default function Sidebar() {
         </Sheet>
       </div>
 
+      <MobileBottomNav pathname={pathname} isOpen={isOpen} onOpenChange={setIsOpen}>
+        <SidebarContent
+          pathname={pathname}
+          authLoading={authLoading}
+          user={user}
+          unreadCount={displayedUnreadCount}
+          onSignOut={handleSignOut}
+          onNavigate={handleNavigate}
+        />
+      </MobileBottomNav>
+
       {/* Mobile spacer */}
-      <div className="h-14 md:hidden" />
+      <div className="h-28 md:hidden" />
     </>
   );
 }

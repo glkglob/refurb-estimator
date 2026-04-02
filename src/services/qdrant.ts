@@ -1,7 +1,7 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 
 import { EMBEDDING_DIMENSIONS, generateEmbedding } from "@/lib/embeddings";
-import type { EstimateInput } from "@/schemas/estimate";
+import type { EstimateInput } from "@/lib/types";
 import type { EstimateResult } from "@/services/estimate";
 
 const DEFAULT_SEARCH_LIMIT = 5;

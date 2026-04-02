@@ -61,15 +61,15 @@ function isPathActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function NavSection({ 
-  title, 
-  items, 
-  pathname, 
-  onNavigate, 
-  requiresAuth = false, 
-  user 
-}: { 
-  title: string; 
+function NavSection({
+  title,
+  items,
+  pathname,
+  onNavigate,
+  requiresAuth = false,
+  user
+}: {
+  title: string;
   items: readonly { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[];
   pathname: string;
   onNavigate?: () => void;
@@ -88,17 +88,16 @@ function NavSection({
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = isPathActive(pathname, item.href);
-        
+
         return (
           <Link
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-              isActive 
-                ? "bg-primary text-primary-foreground" 
+            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${isActive
+                ? "bg-primary text-primary-foreground"
                 : "text-foreground/80 hover:bg-muted hover:text-foreground"
-            }`}
+              }`}
           >
             <Icon className="h-4 w-4 shrink-0" />
             <span className="font-medium">{item.label}</span>
@@ -142,28 +141,28 @@ function SidebarContent({
 
       {/* Navigation */}
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-6">
-        <NavSection 
-          title="Calculators" 
-          items={calculatorNavItems} 
-          pathname={pathname} 
-          onNavigate={onNavigate} 
+        <NavSection
+          title="Calculators"
+          items={calculatorNavItems}
+          pathname={pathname}
+          onNavigate={onNavigate}
         />
-        <NavSection 
-          title="Development" 
-          items={developmentNavItems} 
-          pathname={pathname} 
-          onNavigate={onNavigate} 
+        <NavSection
+          title="Development"
+          items={developmentNavItems}
+          pathname={pathname}
+          onNavigate={onNavigate}
         />
-        <NavSection 
-          title="Planning" 
-          items={planningNavItems} 
-          pathname={pathname} 
-          onNavigate={onNavigate} 
+        <NavSection
+          title="Planning"
+          items={planningNavItems}
+          pathname={pathname}
+          onNavigate={onNavigate}
         />
-        <NavSection 
-          title="Account" 
-          items={dashboardItems} 
-          pathname={pathname} 
+        <NavSection
+          title="Account"
+          items={dashboardItems}
+          pathname={pathname}
           onNavigate={onNavigate}
           requiresAuth
           user={user}
@@ -350,7 +349,7 @@ export default function Sidebar() {
           </div>
           <span className="font-serif text-lg font-medium">Refurb</span>
         </Link>
-        
+
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="h-9 w-9">

@@ -91,17 +91,17 @@ const COST_BREAKDOWN_ROWS: Array<{
   label: string;
   key: keyof AppraisalResult["costBreakdown"];
 }> = [
-  { label: "Purchase", key: "purchasePrice" },
-  { label: "SDLT", key: "stampDutyLandTax" },
-  { label: "Legal (acquisition)", key: "acquisitionLegalFees" },
-  { label: "Build / Refurb", key: "buildCosts" },
-  { label: "Professional fees", key: "professionalFees" },
-  { label: "Planning", key: "planningCosts" },
-  { label: "Contingency", key: "contingencyCost" },
-  { label: "Finance", key: "financeTotal" },
-  { label: "Legal (sale)", key: "saleLegalFees" },
-  { label: "Estate agent fee", key: "estateAgentFee" }
-];
+    { label: "Purchase", key: "purchasePrice" },
+    { label: "SDLT", key: "stampDutyLandTax" },
+    { label: "Legal (acquisition)", key: "acquisitionLegalFees" },
+    { label: "Build / Refurb", key: "buildCosts" },
+    { label: "Professional fees", key: "professionalFees" },
+    { label: "Planning", key: "planningCosts" },
+    { label: "Contingency", key: "contingencyCost" },
+    { label: "Finance", key: "financeTotal" },
+    { label: "Legal (sale)", key: "saleLegalFees" },
+    { label: "Estate agent fee", key: "estateAgentFee" }
+  ];
 
 function parseRequiredNonNegativeNumber(value: string, fieldLabel: string): number {
   if (value.trim() === "") {
@@ -278,9 +278,9 @@ export default function DevelopmentAppraisalPage() {
       bridgingRateMonthlyPercent: isFinanceIncluded
         ? parseRequiredNonNegativeNumber(formState.bridgingRateMonthlyPercent, "Bridging rate")
         : parseOptionalNonNegativeNumber(
-            formState.bridgingRateMonthlyPercent,
-            "Bridging rate"
-          ),
+          formState.bridgingRateMonthlyPercent,
+          "Bridging rate"
+        ),
       loanTermMonths: isFinanceIncluded
         ? parseRequiredNonNegativeNumber(formState.loanTermMonths, "Loan term")
         : parseOptionalNonNegativeNumber(formState.loanTermMonths, "Loan term"),

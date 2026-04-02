@@ -350,8 +350,8 @@ export async function POST(request: Request) {
     const userContent: Array<
       { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }
     > = IS_LM_STUDIO
-      ? [{ type: "text", text: userText }]
-      : [
+        ? [{ type: "text", text: userText }]
+        : [
           { type: "text", text: userText },
           ...(IS_LM_STUDIO ? [] : images.map((image) => ({ type: "image_url" as const, image_url: { url: image } })))
         ];

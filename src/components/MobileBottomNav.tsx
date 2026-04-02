@@ -29,10 +29,10 @@ type MobileBottomNavProps = {
 };
 
 const mobilePrimaryNavItems: readonly MobileNavItem[] = [
-  { href: "/",            label: "Estimate",    icon: Calculator },
-  { href: "/photo",       label: "AI Photo",    icon: Camera },
+  { href: "/", label: "Estimate", icon: Calculator },
+  { href: "/photo", label: "AI Photo", icon: Camera },
   { href: "/development", label: "Development", icon: Building2 },
-  { href: "/scenarios",   label: "Scenarios",   icon: GitCompare },
+  { href: "/scenarios", label: "Scenarios", icon: GitCompare },
 ] as const;
 
 function isPathActive(pathname: string, href: string): boolean {

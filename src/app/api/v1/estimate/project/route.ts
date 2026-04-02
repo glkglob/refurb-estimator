@@ -28,22 +28,22 @@ import { REGION_VALUES, type Region } from "@/lib/domain/region";
 const ROUTE_TAG = "api/v1/estimate/project";
 
 
-const CONDITION_VALUES = ["poor","fair","good"] as const;
-const FINISH_LEVEL_VALUES = ["budget","standard","premium"] as const;
+const CONDITION_VALUES = ["poor", "fair", "good"] as const;
+const FINISH_LEVEL_VALUES = ["budget", "standard", "premium"] as const;
 
 const PROPERTY_CATEGORY_VALUES = [
-  "flat","terraced","semi-detached","detached","bungalow","hmo","commercial"
+  "flat", "terraced", "semi-detached", "detached", "bungalow", "hmo", "commercial"
 ] as const;
 
 const RENOVATION_SCOPE_VALUES = [
-  "cosmetic","standard","full","structural"
+  "cosmetic", "standard", "full", "structural"
 ] as const;
 
 const ADDITIONAL_FEATURE_VALUES = [
-  "loft_conversion","extension_single_storey","extension_double_storey",
-  "basement_conversion","new_roof","full_rewire","new_boiler",
-  "underfloor_heating","solar_panels","new_windows_throughout",
-  "garden_landscaping","driveway"
+  "loft_conversion", "extension_single_storey", "extension_double_storey",
+  "basement_conversion", "new_roof", "full_rewire", "new_boiler",
+  "underfloor_heating", "solar_panels", "new_windows_throughout",
+  "garden_landscaping", "driveway"
 ] as const;
 
 type EstimateProjectRequestBody = {
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
 
     const postcodeDistrict =
       typeof body.postcodeDistrict === "string" &&
-      body.postcodeDistrict.trim().length > 0
+        body.postcodeDistrict.trim().length > 0
         ? body.postcodeDistrict.trim().toUpperCase()
         : getFallbackPostcodeDistrict(body.region);
 

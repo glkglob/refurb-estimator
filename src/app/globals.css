@@ -32,7 +32,7 @@
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-muted: hsl(var(--muted));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-secondary: hsl(var(--secondary-foreground));
+  --color-secondary: hsl(var(--secondary));
   --color-primary-foreground: hsl(var(--primary-foreground));
   --color-primary: hsl(var(--primary));
   --color-popover-foreground: hsl(var(--popover-foreground));
@@ -69,12 +69,12 @@
   --primary-foreground: 40 30% 96%;
 
   /* Secondary — warm taupe */
-  --secondary: 35 15% 90%;
+  --secondary: 35 18% 88%;
   --secondary-foreground: 30 10% 18%;
 
   /* Muted — soft warm grey */
   --muted: 35 12% 92%;
-  --muted-foreground: 30 8% 45%;
+  --muted-foreground: 30 8% 34%;
 
   /* Accent — soft coral/terracotta */
   --accent: 15 60% 55%;
@@ -85,8 +85,8 @@
   --destructive-foreground: 0 0% 100%;
 
   /* Borders and inputs */
-  --border: 35 15% 85%;
-  --input: 35 15% 88%;
+  --border: 35 14% 78%;
+  --input: 35 18% 86%;
   --ring: 30 10% 30%;
 
   --radius: 0.5rem;

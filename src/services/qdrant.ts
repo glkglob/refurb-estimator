@@ -18,12 +18,26 @@ export type EstimateQdrantClient = Pick<
   "getCollections" | "createCollection" | "upsert" | "search"
 >;
 
+type IndexedEstimateResult = {
+  totalCost: number;
+  formatted: string;
+  breakdown: {
+    base: number;
+    multiplier: number;
+  };
+};
+
 export type UpsertEstimateInput = {
   id: string | number;
   estimateInput: EstimateInput;
-  estimateResult: EstimateResult;
+  estimateResult: IndexedEstimateResult;
   summary: string;
   metadata?: Record<string, unknown>;
+};
+
+export type UpsertEstimateOptions = {
+  client?: EstimateQdrantClient;
+  vector?: number[];
 };
 
 export type SimilarEstimateSearchInput = {
@@ -121,6 +135,50 @@ function normalizeQuery(query: string): string {
   return trimmed;
 }
 
+function isUpsertEstimatePayload(
+  value: UpsertEstimateInput | EstimateInput,
+): value is UpsertEstimateInput {
+  return (
+    isRecord(value) &&
+    "id" in value &&
+    "estimateInput" in value &&
+    "estimateResult" in value &&
+    "summary" in value
+  );
+}
+
+function isEstimateResult(value: unknown): value is EstimateResult {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const formatted = value["formatted"];
+  const totalCost = value["totalCost"];
+  const breakdown = value["breakdown"];
+
+  if (typeof formatted !== "string" || typeof totalCost !== "number") {
+    return false;
+  }
+
+  if (!isRecord(breakdown)) {
+    return false;
+  }
+
+  return (
+    typeof breakdown.base === "number" &&
+    typeof breakdown.multiplier === "number"
+  );
+}
+
+function createEstimateSummary(input: EstimateInput, result: EstimateResult): string {
+  return JSON.stringify({
+    area: input.area,
+    region: input.region,
+    totalCost: result.totalCost,
+    formatted: result.formatted,
+  });
+}
+
 function getCollectionNames(
   collectionsResponse: Awaited<ReturnType<EstimateQdrantClient["getCollections"]>>,
 ): string[] {
@@ -165,12 +223,9 @@ export async function ensureCollection(
   });
 }
 
-export async function upsertEstimate(
+async function performUpsertEstimate(
   input: UpsertEstimateInput,
-  options: {
-    client?: EstimateQdrantClient;
-    vector?: number[];
-  } = {},
+  options: UpsertEstimateOptions = {},
 ): Promise<void> {
   const client = options.client ?? getEstimatesQdrantClient();
   const summary = normalizeSummary(input.summary);
@@ -197,6 +252,35 @@ export async function upsertEstimate(
         payload,
       },
     ],
+  });
+}
+
+export async function upsertEstimate(
+  input: UpsertEstimateInput,
+  options?: UpsertEstimateOptions,
+): Promise<void>;
+export async function upsertEstimate(
+  input: EstimateInput,
+  result: EstimateResult,
+): Promise<void>;
+export async function upsertEstimate(
+  input: UpsertEstimateInput | EstimateInput,
+  second: UpsertEstimateOptions | EstimateResult = {},
+): Promise<void> {
+  if (isUpsertEstimatePayload(input)) {
+    const options = isEstimateResult(second) ? {} : second;
+    return performUpsertEstimate(input, options);
+  }
+
+  if (!isEstimateResult(second)) {
+    throw new Error("Estimate result is required when upserting an estimate input");
+  }
+
+  return performUpsertEstimate({
+    id: crypto.randomUUID(),
+    estimateInput: input,
+    estimateResult: second,
+    summary: createEstimateSummary(input, second),
   });
 }
 
@@ -243,4 +327,16 @@ export async function searchSimilarEstimates(
     score: point.score,
     payload: isRecord(point.payload) ? point.payload : null,
   }));
+}
+
+export async function searchSimilar(
+  input: EstimateInput,
+): Promise<SimilarEstimateSearchResult[]> {
+  return searchSimilarEstimates({
+    query: JSON.stringify({
+      area: input.area,
+      region: input.region,
+    }),
+    region: input.region,
+  });
 }

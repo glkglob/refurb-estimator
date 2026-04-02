@@ -54,3 +54,5 @@ next-env.d.ts
 frontend/.env*
 .pnpm-store/
 .playwright-browsers/
+!.env.example
+!.env.local.example

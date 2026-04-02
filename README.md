@@ -39,13 +39,22 @@ npm install
 2. Configure environment:
 ```bash
 cp .env.local.example .env.local
+cp .env.example .env
 ```
-3. Fill required env vars in `.env.local` (Supabase + OpenAI if using AI photo estimate).
-4. Start development server:
+3. Fill required env vars in `.env.local` and `.env`.
+4. Start local infra (Qdrant and Stripe mock):
+```bash
+docker compose up -d qdrant stripe-mock
+```
+5. Start development server:
 ```bash
 WATCHPACK_POLLING=true npm run dev -- --webpack
 ```
-5. Open [http://localhost:3000](http://localhost:3000).
+6. Open [http://localhost:3000](http://localhost:3000).
+7. For local Stripe webhooks, forward events:
+```bash
+stripe listen --forward-to http://localhost:3000/api/webhooks/stripe
+```
 
 ## Database Migrations (Supabase CLI)
 Use Supabase CLI to apply SQL migrations in `supabase/migrations/`.
@@ -63,6 +72,7 @@ npx supabase migration new <name>
 | Method | Route | Purpose |
 |---|---|---|
 | POST | `/api/v1/estimate/project` | Refurb project estimate |
+| POST | `/api/v1/estimate/basic` | Strict area/region estimate with optional Qdrant indexing |
 | POST | `/api/v1/estimate/pdf` | Generate estimate PDF |
 | POST | `/api/v1/estimate/csv` | Generate estimate CSV |
 | POST | `/api/v1/estimate/new-build` | New-build estimate |
@@ -176,11 +186,48 @@ Run unit tests:
 npm test
 ```
 
+Run integration tests:
+```bash
+npm run test:integration
+```
+
+Run container smoke tests (Qdrant + Stripe webhook via stripe-mock):
+```bash
+RUN_CONTAINER_SMOKE=1 npm run test:smoke
+```
+
+Run feature-slice coverage (validation + estimate + Qdrant + Stripe webhook):
+```bash
+npm run test:coverage:slice
+```
+
+Run staged coverage policy (required slice gate + advisory full-project report):
+```bash
+npm run test:coverage:staged
+```
+
 Recommended local verification:
 ```bash
 npx tsc --noEmit
+npx eslint . --fix
 npm test
 npm run build
+```
+
+## Example curl Commands
+Basic estimate endpoint:
+```bash
+curl -X POST "http://localhost:3000/api/v1/estimate/basic" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "area": 85,
+    "region": "london"
+  }'
+```
+
+Stripe webhook simulation:
+```bash
+stripe trigger checkout.session.completed
 ```
 
 ## Deployment

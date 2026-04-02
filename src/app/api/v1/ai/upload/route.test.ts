@@ -78,10 +78,12 @@ function mockSupabase(options?: {
       : { signedUrl: options?.signedUrl ?? "https://signed.example.com/object" },
     error: options?.signedUrlError ?? null
   });
+  const remove = jest.fn().mockResolvedValue({ error: null });
 
   const storageFrom = jest.fn().mockReturnValue({
     upload,
-    createSignedUrl
+    createSignedUrl,
+    remove
   });
 
   const insert = jest.fn().mockResolvedValue({
@@ -99,6 +101,7 @@ function mockSupabase(options?: {
   return {
     upload,
     createSignedUrl,
+    remove,
     storageFrom,
     insert,
     from
@@ -168,6 +171,7 @@ describe("POST /api/v1/ai/upload", () => {
         height: 1024
       })
     );
+    expect(supabaseMocks.remove).not.toHaveBeenCalled();
   });
 
   test("returns 415 for non multipart requests", async () => {
@@ -251,7 +255,7 @@ describe("POST /api/v1/ai/upload", () => {
   });
 
   test("returns mapped AI error status when design generation fails", async () => {
-    mockSupabase();
+    const supabaseMocks = mockSupabase();
     mockedGenerateDesign.mockRejectedValue(
       new AIDesignServiceError("AI provider is currently unavailable.", 503)
     );
@@ -261,6 +265,8 @@ describe("POST /api/v1/ai/upload", () => {
 
     expect(response.status).toBe(503);
     expect(payload.error).toBe("AI provider is currently unavailable.");
+    expect(supabaseMocks.remove).toHaveBeenCalledTimes(1);
+    expect(supabaseMocks.remove.mock.calls[0]?.[0]?.[0]).toMatch(/^user-123\//);
   });
 
   test("returns 400 for invalid metadata", async () => {
@@ -273,7 +279,7 @@ describe("POST /api/v1/ai/upload", () => {
   });
 
   test("returns 503 when metadata persistence fails due to network", async () => {
-    mockSupabase({
+    const supabaseMocks = mockSupabase({
       insertError: {
         message: "Network timeout while inserting row"
       }
@@ -284,5 +290,23 @@ describe("POST /api/v1/ai/upload", () => {
 
     expect(response.status).toBe(503);
     expect(payload.error).toBe("Network error while saving design metadata.");
+    expect(supabaseMocks.remove).toHaveBeenCalledTimes(1);
+    expect(supabaseMocks.remove.mock.calls[0]?.[0]?.[0]).toMatch(/^user-123\//);
+  });
+
+  test("cleans up uploaded file when signed URL creation fails", async () => {
+    const supabaseMocks = mockSupabase({
+      signedUrlError: {
+        message: "Network request failed while signing URL"
+      }
+    });
+
+    const response = await POST(createMultipartRequest());
+    const payload = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(503);
+    expect(payload.error).toContain("Network error");
+    expect(supabaseMocks.remove).toHaveBeenCalledTimes(1);
+    expect(supabaseMocks.remove.mock.calls[0]?.[0]?.[0]).toMatch(/^user-123\//);
   });
 });

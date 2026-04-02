@@ -76,6 +76,9 @@ type UploadSupabaseClient = {
         data: { signedUrl: string } | null;
         error: UploadStorageError | null;
       }>;
+      remove: (paths: string[]) => Promise<{
+        error: UploadStorageError | null;
+      }>;
     };
   };
   from: (table: string) => {
@@ -84,6 +87,8 @@ type UploadSupabaseClient = {
     }>;
   };
 };
+
+type UploadStorageBucket = ReturnType<UploadSupabaseClient["storage"]["from"]>;
 
 type UploadHandlerDependencies = {
   requireRoleFn?: typeof requireRole;
@@ -270,6 +275,23 @@ async function persistDesignMetadata(
   return error;
 }
 
+async function cleanupUploadedFile(
+  storageBucket: UploadStorageBucket,
+  storagePath: string,
+  requestId: string
+): Promise<void> {
+  try {
+    const { error } = await storageBucket.remove([storagePath]);
+    if (error) {
+      logError(ROUTE_TAG, requestId, new Error(
+        `Failed to clean up uploaded file at ${storagePath}: ${error.message}`
+      ));
+    }
+  } catch (error) {
+    logError(ROUTE_TAG, requestId, error);
+  }
+}
+
 /**
  * Handles image upload, AI design generation, and metadata persistence.
  */
@@ -352,25 +374,32 @@ export async function handleUpload(
     );
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
+      await cleanupUploadedFile(storageBucket, storagePath, requestId);
       const mapped = mapStorageError("signed_url", signedUrlError ?? {
         message: "Signed URL was not returned by Supabase Storage."
       });
       return jsonError(mapped.message, requestId, mapped.status);
     }
 
-    const design = await generateDesignFn({
-      imageUrl: signedUrlData.signedUrl,
-      region: parsedMetadata.data.region,
-      projectType: parsedMetadata.data.projectType,
-      promptHint: parsedMetadata.data.promptHint,
-      width: parsedMetadata.data.width,
-      height: parsedMetadata.data.height,
-      user: {
-        userId: user.id,
-        email: user.email,
-        role: user.role
-      }
-    });
+    let design: GenerateDesignResult;
+    try {
+      design = await generateDesignFn({
+        imageUrl: signedUrlData.signedUrl,
+        region: parsedMetadata.data.region,
+        projectType: parsedMetadata.data.projectType,
+        promptHint: parsedMetadata.data.promptHint,
+        width: parsedMetadata.data.width,
+        height: parsedMetadata.data.height,
+        user: {
+          userId: user.id,
+          email: user.email,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      await cleanupUploadedFile(storageBucket, storagePath, requestId);
+      throw error;
+    }
 
     const createdAt = now.toISOString();
     const persistError = await persistDesignMetadata(supabaseClient, {
@@ -386,6 +415,7 @@ export async function handleUpload(
     });
 
     if (persistError) {
+      await cleanupUploadedFile(storageBucket, storagePath, requestId);
       const mapped = mapDatabaseError(persistError);
       return jsonError(mapped.message, requestId, mapped.status);
     }

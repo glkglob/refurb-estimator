@@ -16,6 +16,13 @@ import { applyEditorActionsToNewBuildInput } from "@/lib/assistant/newBuildActio
 import { apiFetch } from "@/lib/apiClient";
 
 import { calculateNewBuild } from "@/lib/newBuildEstimator";
+import { applyLabourToNewBuildResult } from "@/lib/pricing/applyLabourCost";
+import {
+  estimateLabourCost,
+  LABOUR_REGION_OPTIONS,
+  type LabourRegion,
+  TRADE_RATES,
+} from "@/lib/pricing/tradeRates";
 
 import {
   isCommercialPropertyType,
@@ -83,7 +90,15 @@ export default function NewBuildPage() {
 
   const [result, setResult] = useState<NewBuildResult | null>(null);
   const [lastInput, setLastInput] = useState<NewBuildInput | null>(null);
+  const [lastLabour, setLastLabour] = useState<{
+    low: number;
+    mid: number;
+    high: number;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tradeId, setTradeId] = useState<string>("general_builder");
+  const [labourDays, setLabourDays] = useState<number>(1);
+  const [labourRegion, setLabourRegion] = useState<LabourRegion>("midlands");
 
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -162,9 +177,11 @@ export default function NewBuildPage() {
     if (!input) return;
 
     try {
+      const labour = estimateLabourCost(tradeId, labourDays, labourRegion);
       const estimate = calculateNewBuild(input);
-      setResult(estimate);
+      setResult(applyLabourToNewBuildResult(estimate, labour, input.totalAreaM2));
       setLastInput(input);
+      setLastLabour(labour);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Calculation failed");
     }
@@ -179,11 +196,18 @@ export default function NewBuildPage() {
     }
 
     try {
+      const labour = estimateLabourCost(tradeId, labourDays, labourRegion);
       const next = calculateNewBuild(applied.nextInput);
+      const withLabour = applyLabourToNewBuildResult(
+        next,
+        labour,
+        applied.nextInput.totalAreaM2,
+      );
 
       syncFormStateFromInput(applied.nextInput);
       setLastInput(applied.nextInput);
-      setResult(next);
+      setResult(withLabour);
+      setLastLabour(labour);
       setError(null);
     } catch {
       setError("Assistant recalculation failed");
@@ -245,6 +269,62 @@ export default function NewBuildPage() {
               />
             </div>
 
+            <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Labour Assumptions
+              </h2>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="new-build-trade">Trade</Label>
+                  <select
+                    id="new-build-trade"
+                    value={tradeId}
+                    onChange={(event) => setTradeId(event.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    {TRADE_RATES.map((trade) => (
+                      <option key={trade.id} value={trade.id}>
+                        {trade.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="new-build-labour-days">Days</Label>
+                  <Input
+                    id="new-build-labour-days"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={labourDays}
+                    onChange={(event) => {
+                      const nextValue = Number(event.target.value);
+                      setLabourDays(
+                        Number.isFinite(nextValue) && nextValue >= 1 ? Math.floor(nextValue) : 1,
+                      );
+                    }}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="new-build-labour-region">Region</Label>
+                  <select
+                    id="new-build-labour-region"
+                    value={labourRegion}
+                    onChange={(event) => setLabourRegion(event.target.value as LabourRegion)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    {LABOUR_REGION_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
             {error ? <div className="text-red-500">{error}</div> : null}
 
             <Button type="submit">Calculate estimate</Button>
@@ -259,6 +339,20 @@ export default function NewBuildPage() {
             estimateResult={result}
             onApplyEditorActions={handleApplyAssistantEditorActions}
           />
+
+          {lastLabour ? (
+            <div className="rounded-lg border border-border bg-background p-4">
+              <p className="text-lg font-medium">
+                Labour estimate: £{lastLabour.low.toLocaleString("en-GB")} – £
+                {lastLabour.high.toLocaleString("en-GB")} (typical: £
+                {lastLabour.mid.toLocaleString("en-GB")})
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Rates sourced from Checkatrade &amp; industry aggregators, April 2026. Excludes
+                materials, VAT, and specialist certifications.
+              </p>
+            </div>
+          ) : null}
 
           <NewBuildResults result={result} />
 

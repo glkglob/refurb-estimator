@@ -30,6 +30,13 @@ import { defaultCostLibrary } from "@/lib/costLibrary";
 import { saveScenario } from "@/lib/dataService";
 import { estimateRooms } from "@/lib/estimator";
 import { PropertyType } from "@/lib/propertyType";
+import { applyLabourToEstimateResult } from "@/lib/pricing/applyLabourCost";
+import {
+  estimateLabourCost,
+  LABOUR_REGION_OPTIONS,
+  type LabourRegion,
+  TRADE_RATES,
+} from "@/lib/pricing/tradeRates";
 import type { SharedEstimateSnapshot } from "@/lib/share";
 import { ScenarioLimitExceededError } from "@/lib/storage";
 import type {
@@ -94,6 +101,9 @@ export default function RoomsPage() {
 
   const [region, setRegion] = useState<Region>("east_midlands");
   const [condition, setCondition] = useState<Condition>("fair");
+  const [tradeId, setTradeId] = useState<string>("general_builder");
+  const [labourDays, setLabourDays] = useState<number>(1);
+  const [labourRegion, setLabourRegion] = useState<LabourRegion>("midlands");
   const [contractorPostcode, setContractorPostcode] = useState("");
   const [rooms, setRooms] = useState<RoomInput[]>(INITIAL_ROOMS);
   const [nextRoomId, setNextRoomId] = useState(3);
@@ -164,19 +174,32 @@ export default function RoomsPage() {
   }
 
   const calculation = useMemo(() => {
+    const labour = estimateLabourCost(tradeId, labourDays, labourRegion);
+    const totalAreaM2 = rooms.reduce((sum, room) => sum + room.areaM2, 0);
+
     try {
+      const baseResult = estimateRooms(rooms, { region, condition }, defaultCostLibrary);
       return {
-        result: estimateRooms(rooms, { region, condition }, defaultCostLibrary),
+        result: applyLabourToEstimateResult(baseResult, labour, totalAreaM2),
+        labour,
         error: null as string | null,
       };
     } catch (error) {
       if (error instanceof Error) {
-        return { result: null, error: error.message };
+        return {
+          result: null,
+          labour: null as { low: number; mid: number; high: number } | null,
+          error: error.message,
+        };
       }
 
-      return { result: null, error: "Unable to estimate rooms" };
+      return {
+        result: null,
+        labour: null as { low: number; mid: number; high: number } | null,
+        error: "Unable to estimate rooms",
+      };
     }
-  }, [rooms, region, condition]);
+  }, [condition, labourDays, labourRegion, region, rooms, tradeId]);
 
   useEffect(() => {
     if (!shouldScrollToResultsRef.current) {
@@ -328,6 +351,85 @@ export default function RoomsPage() {
               onChange={(event) => setContractorPostcode(event.target.value.toUpperCase())}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Labour Assumptions
+          </h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-1">
+              <Label htmlFor="rooms-trade">Trade</Label>
+              <select
+                id="rooms-trade"
+                value={tradeId}
+                onChange={(event) => {
+                  setTradeId(event.target.value);
+                  markShouldScroll();
+                }}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {TRADE_RATES.map((trade) => (
+                  <option key={trade.id} value={trade.id}>
+                    {trade.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="rooms-labour-days">Days</Label>
+              <Input
+                id="rooms-labour-days"
+                type="number"
+                min={1}
+                step={1}
+                value={labourDays}
+                onChange={(event) => {
+                  const nextValue = Number(event.target.value);
+                  setLabourDays(
+                    Number.isFinite(nextValue) && nextValue >= 1 ? Math.floor(nextValue) : 1,
+                  );
+                  markShouldScroll();
+                }}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="rooms-labour-region">Region</Label>
+              <select
+                id="rooms-labour-region"
+                value={labourRegion}
+                onChange={(event) => {
+                  setLabourRegion(event.target.value as LabourRegion);
+                  markShouldScroll();
+                }}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {LABOUR_REGION_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {calculation.labour ? (
+            <div className="rounded-lg border border-border bg-muted/20 p-4">
+              <p className="text-lg font-medium">
+                Labour estimate: £{calculation.labour.low.toLocaleString("en-GB")} – £
+                {calculation.labour.high.toLocaleString("en-GB")} (typical: £
+                {calculation.labour.mid.toLocaleString("en-GB")})
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Rates sourced from Checkatrade &amp; industry aggregators, April 2026. Excludes
+                materials, VAT, and specialist certifications.
+              </p>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 

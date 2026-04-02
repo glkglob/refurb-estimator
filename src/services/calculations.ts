@@ -1,4 +1,7 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { getLatestSupplierPrice } from "@/lib/db/supplierRepo";
+import { getEffectivePrice } from "@/lib/pricing/getEffectivePrice";
+import type { MaterialId, MaterialPriceBand } from "@/types/material";
 import { z } from "zod";
 
 const gbpFormatter = new Intl.NumberFormat("en-GB", {
@@ -34,6 +37,24 @@ const NEW_BUILD_RATE_PER_M2 = {
   standard: 2050,
   premium: 2600
 } as const;
+
+const LOFT_COMPLEXITY_TO_PRICE_BAND: Record<
+  LoftCalculationParams["complexity"],
+  MaterialPriceBand
+> = {
+  simple: "low",
+  standard: "mid",
+  complex: "high"
+};
+
+const NEW_BUILD_SPEC_TO_PRICE_BAND: Record<
+  NewBuildCalculationParams["specification"],
+  MaterialPriceBand
+> = {
+  basic: "low",
+  standard: "mid",
+  premium: "high"
+};
 
 export type RegionParameters = {
   region: string;
@@ -79,6 +100,8 @@ export type DetailedCalculationResult = {
 
 type AdminSupabaseClient = ReturnType<typeof createAdminSupabaseClient>;
 
+export type SupplierPriceResolver = (materialId: MaterialId) => Promise<number | null>;
+
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
 }
@@ -116,6 +139,31 @@ function withGbp(items: Array<Omit<CostBreakdownItem, "amountGbp">>): CostBreakd
   }));
 }
 
+async function resolveSupplierPrice(
+  materialId: MaterialId,
+  supplierPriceResolver?: SupplierPriceResolver
+): Promise<number | null> {
+  try {
+    if (supplierPriceResolver) {
+      return await supplierPriceResolver(materialId);
+    }
+
+    const latest = await getLatestSupplierPrice(materialId);
+    return latest?.normalizedPrice ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveEffectiveMaterialPrice(
+  materialId: MaterialId,
+  priceBand: MaterialPriceBand,
+  supplierPriceResolver?: SupplierPriceResolver
+): Promise<number> {
+  const supplierPrice = await resolveSupplierPrice(materialId, supplierPriceResolver);
+  return getEffectivePrice(materialId, priceBand, supplierPrice);
+}
+
 /**
  * Loads region-specific cost, tax, and compliance parameters from Supabase.
  */
@@ -149,10 +197,28 @@ export async function loadRegionParameters(
 export async function calculateLoft(
   rawParams: LoftCalculationParams,
   region: string,
-  supabaseClient?: AdminSupabaseClient
+  supabaseClient?: AdminSupabaseClient,
+  supplierPriceResolver?: SupplierPriceResolver
 ): Promise<DetailedCalculationResult> {
   const params = loftParamsSchema.parse(rawParams);
   const regionParameters = await loadRegionParameters(region, supabaseClient);
+  const priceBand = LOFT_COMPLEXITY_TO_PRICE_BAND[params.complexity];
+
+  const paintPricePerM2 = await resolveEffectiveMaterialPrice(
+    "paint",
+    priceBand,
+    supplierPriceResolver
+  );
+  const flooringPricePerM2 = await resolveEffectiveMaterialPrice(
+    "laminate_flooring",
+    priceBand,
+    supplierPriceResolver
+  );
+  const bathroomSuitePrice = await resolveEffectiveMaterialPrice(
+    "bathroom_suite",
+    priceBand,
+    supplierPriceResolver
+  );
 
   const baseBuild =
     params.floorAreaM2 * LOFT_RATE_PER_M2[params.complexity] * regionParameters.loftCostMultiplier;
@@ -160,7 +226,13 @@ export async function calculateLoft(
   const insulationAndFire = params.floorAreaM2 * 95 * regionParameters.loftCostMultiplier;
   const stairPackage = 4200 * regionParameters.loftCostMultiplier;
   const dormers = params.dormerCount * 3800 * regionParameters.loftCostMultiplier;
-  const enSuite = params.includeEnSuite ? 8500 * regionParameters.loftCostMultiplier : 0;
+  const paintingAndDecoration =
+    params.floorAreaM2 * paintPricePerM2 * regionParameters.loftCostMultiplier;
+  const flooringMaterials =
+    params.floorAreaM2 * flooringPricePerM2 * regionParameters.loftCostMultiplier;
+  const enSuite = params.includeEnSuite
+    ? bathroomSuitePrice * regionParameters.loftCostMultiplier
+    : 0;
 
   const directItems = withGbp([
     { key: "base_build", label: "Base loft construction", amount: baseBuild },
@@ -168,6 +240,8 @@ export async function calculateLoft(
     { key: "insulation_fire", label: "Insulation & fire compliance", amount: insulationAndFire },
     { key: "stair_package", label: "Staircase package", amount: stairPackage },
     { key: "dormers", label: "Dormer works", amount: dormers },
+    { key: "painting", label: "Painting and decoration materials", amount: paintingAndDecoration },
+    { key: "flooring", label: "Flooring materials", amount: flooringMaterials },
     { key: "ensuite", label: "En-suite installation", amount: enSuite }
   ]);
 
@@ -215,10 +289,33 @@ export async function calculateLoft(
 export async function calculateNewBuild(
   rawParams: NewBuildCalculationParams,
   region: string,
-  supabaseClient?: AdminSupabaseClient
+  supabaseClient?: AdminSupabaseClient,
+  supplierPriceResolver?: SupplierPriceResolver
 ): Promise<DetailedCalculationResult> {
   const params = newBuildParamsSchema.parse(rawParams);
   const regionParameters = await loadRegionParameters(region, supabaseClient);
+  const priceBand = NEW_BUILD_SPEC_TO_PRICE_BAND[params.specification];
+
+  const paintPricePerM2 = await resolveEffectiveMaterialPrice(
+    "paint",
+    priceBand,
+    supplierPriceResolver
+  );
+  const flooringPricePerM2 = await resolveEffectiveMaterialPrice(
+    "laminate_flooring",
+    priceBand,
+    supplierPriceResolver
+  );
+  const kitchenUnitPrice = await resolveEffectiveMaterialPrice(
+    "kitchen_units",
+    priceBand,
+    supplierPriceResolver
+  );
+  const bathroomSuitePrice = await resolveEffectiveMaterialPrice(
+    "bathroom_suite",
+    priceBand,
+    supplierPriceResolver
+  );
 
   const baseBuild =
     params.floorAreaM2 *
@@ -231,8 +328,15 @@ export async function calculateNewBuild(
     params.floorAreaM2 * 230 * regionParameters.newBuildCostMultiplier;
   const externalWorks =
     params.floorAreaM2 * 140 * regionParameters.newBuildCostMultiplier;
-  const sustainability =
-    params.bedrooms * 1200 * regionParameters.newBuildCostMultiplier;
+  const paintingAndDecoration =
+    params.floorAreaM2 * paintPricePerM2 * regionParameters.newBuildCostMultiplier;
+  const flooringMaterials =
+    params.floorAreaM2 * flooringPricePerM2 * regionParameters.newBuildCostMultiplier;
+  const kitchens = kitchenUnitPrice * regionParameters.newBuildCostMultiplier;
+  const bathrooms =
+    Math.max(1, Math.ceil(params.bedrooms / 2)) *
+    bathroomSuitePrice *
+    regionParameters.newBuildCostMultiplier;
   const garage = params.includeGarage ? 18000 * regionParameters.newBuildCostMultiplier : 0;
   const storeyAdjustment = (params.storeys - 1) * 0.05 * baseBuild;
 
@@ -242,7 +346,10 @@ export async function calculateNewBuild(
     { key: "frame_envelope", label: "Frame and envelope uplift", amount: frameAndEnvelope },
     { key: "mep", label: "Mechanical and electrical services", amount: mechanicalElectrical },
     { key: "external_works", label: "External works", amount: externalWorks },
-    { key: "sustainability", label: "Sustainability package", amount: sustainability },
+    { key: "paint", label: "Painting and decoration materials", amount: paintingAndDecoration },
+    { key: "flooring", label: "Flooring materials", amount: flooringMaterials },
+    { key: "kitchens", label: "Kitchen units", amount: kitchens },
+    { key: "bathrooms", label: "Bathroom suites", amount: bathrooms },
     { key: "garage", label: "Garage", amount: garage },
     { key: "storey_adjustment", label: "Storey complexity adjustment", amount: storeyAdjustment }
   ]);

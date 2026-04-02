@@ -126,6 +126,45 @@ curl -X POST "http://localhost:3000/api/v1/ai/upload" \
 }
 ```
 
+## Supplier Pricing Ingestion (B&Q)
+Supplier pricing sync is implemented with Playwright scraping + Postgres persistence. Latest supplier prices are used automatically by the new-build estimator API.
+
+### Required Environment Variables
+| Variable | Required | Description |
+|---|---|---|
+| `SUPABASE_DB_URL` | Yes* | Direct Postgres connection string for sync + estimator supplier overrides |
+| `DATABASE_URL` | Yes* | Fallback Postgres connection string if `SUPABASE_DB_URL` is not set |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key for server-side Supabase operations |
+
+\* Set at least one of `SUPABASE_DB_URL` or `DATABASE_URL`.
+
+### Apply schema
+```bash
+psql "$SUPABASE_DB_URL" -f db/schema.sql
+```
+
+### Run sync job
+```bash
+npm run sync:bq
+```
+
+### Example curl (new-build estimate; supplier overrides auto-applied)
+```bash
+curl -X POST "http://localhost:3000/api/v1/estimate/new-build" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: sb-access-token=<access-token>; sb-refresh-token=<refresh-token>" \
+  -d '{
+    "propertyType": "Detached House",
+    "spec": "standard",
+    "totalAreaM2": 180,
+    "bedrooms": 4,
+    "storeys": 2,
+    "postcodeDistrict": "B1",
+    "garage": true
+  }'
+```
+
 ## iOS Build
 Capacitor setup and iOS workflow are documented in:
 

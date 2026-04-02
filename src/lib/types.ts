@@ -1,4 +1,5 @@
 import type { PropertyType } from "./propertyType";
+import type { MaterialId } from "../types/material";
 
 export type Region =
   | "london"
@@ -179,6 +180,8 @@ export type NewBuildPropertyType = PropertyType;
 
 export type NewBuildSpec = "basic" | "standard" | "premium";
 
+export type SupplierPriceOverrides = Partial<Record<MaterialId, number>>;
+
 export type NewBuildInput = {
   propertyType: PropertyType;
   spec: NewBuildSpec;
@@ -202,6 +205,7 @@ export type NewBuildInput = {
   disabledAccess?: boolean;
   extractionSystem?: boolean;
   parkingSpaces?: number;
+  supplierPriceOverrides?: SupplierPriceOverrides;
 };
 
 export type NewBuildCategoryBreakdown = {

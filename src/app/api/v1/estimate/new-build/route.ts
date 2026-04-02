@@ -6,6 +6,7 @@ import {
   logError
 } from "@/lib/api-route";
 import { calculateNewBuild } from "@/lib/newBuildEstimator";
+import { getLatestSupplierPrice } from "@/lib/db/supplierRepo";
 import {
   isCommercialPropertyType,
   isFlatLikePropertyType,
@@ -13,10 +14,17 @@ import {
 } from "@/lib/propertyType";
 import { requireRole } from "@/lib/rbac";
 import { AuthError, handleAuthError } from "@/lib/supabase/auth-helpers";
-import type { NewBuildInput } from "@/lib/types";
+import type { NewBuildInput, SupplierPriceOverrides } from "@/lib/types";
+import type { MaterialId } from "@/types/material";
 import { validateJsonRequest } from "@/lib/validate";
 
 const ROUTE_TAG = "api/v1/estimate/new-build";
+const SUPPLIER_MATERIAL_IDS: MaterialId[] = [
+  "paint",
+  "laminate_flooring",
+  "kitchen_units",
+  "bathroom_suite"
+];
 
 const newBuildSchema = z
   .object({
@@ -58,6 +66,29 @@ const newBuildSchema = z
     }
   });
 
+async function loadSupplierPriceOverrides(): Promise<SupplierPriceOverrides> {
+  const entries = await Promise.all(
+    SUPPLIER_MATERIAL_IDS.map(async (materialId) => {
+      try {
+        const latest = await getLatestSupplierPrice(materialId);
+        if (!latest || latest.normalizedPrice <= 0) {
+          return [materialId, undefined] as const;
+        }
+        return [materialId, latest.normalizedPrice] as const;
+      } catch {
+        return [materialId, undefined] as const;
+      }
+    })
+  );
+
+  return entries.reduce<SupplierPriceOverrides>((acc, [materialId, price]) => {
+    if (typeof price === "number") {
+      acc[materialId] = price;
+    }
+    return acc;
+  }, {});
+}
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
@@ -72,7 +103,12 @@ export async function POST(request: Request) {
     }
 
     const input = parsed.data as NewBuildInput;
-    const result = calculateNewBuild(input);
+    const supplierPriceOverrides = await loadSupplierPriceOverrides();
+    const estimatorInput: NewBuildInput =
+      Object.keys(supplierPriceOverrides).length > 0
+        ? { ...input, supplierPriceOverrides }
+        : input;
+    const result = calculateNewBuild(estimatorInput);
     return jsonSuccess({ input, result }, requestId);
   } catch (error) {
     if (error instanceof AuthError) {

@@ -1,16 +1,19 @@
 import { defaultCostLibrary } from "./costLibrary";
 import { postcodeToRegion } from "./enhancedEstimator";
+import { getEffectivePrice } from "./pricing/getEffectivePrice";
 import {
   isCommercialPropertyType,
   isFlatLikePropertyType,
   PropertyType
 } from "./propertyType";
+import type { MaterialPriceBand } from "../types/material";
 import type {
   NewBuildCategory,
   NewBuildInput,
   NewBuildPropertyType,
   NewBuildResult,
-  NewBuildSpec
+  NewBuildSpec,
+  SupplierPriceOverrides
 } from "./types";
 
 type Tier = "low" | "typical" | "high";
@@ -148,6 +151,12 @@ const categoryOrder: NewBuildCategory[] = [
   "professional_fees"
 ];
 
+const SPEC_TO_PRICE_BAND: Record<NewBuildSpec, MaterialPriceBand> = {
+  basic: "low",
+  standard: "mid",
+  premium: "high"
+};
+
 function multiplyTier(amounts: TierAmounts, multiplier: number): TierAmounts {
   return {
     low: amounts.low * multiplier,
@@ -175,6 +184,49 @@ function getStoreyAdjustment(storeys: number): number {
     return 0.95;
   }
   return 1;
+}
+
+function getBathroomSuiteCount(bedrooms: number): number {
+  return Math.max(1, Math.ceil(bedrooms / 2));
+}
+
+function getMaterialBasketPerM2(
+  spec: NewBuildSpec,
+  totalAreaM2: number,
+  bedrooms: number,
+  supplierPriceOverrides?: SupplierPriceOverrides
+): number {
+  const area = Math.max(totalAreaM2, 1);
+  const priceBand = SPEC_TO_PRICE_BAND[spec];
+  const bathrooms = getBathroomSuiteCount(bedrooms);
+
+  const paintPricePerM2 = getEffectivePrice(
+    "paint",
+    priceBand,
+    supplierPriceOverrides?.paint
+  );
+  const flooringPricePerM2 = getEffectivePrice(
+    "laminate_flooring",
+    priceBand,
+    supplierPriceOverrides?.laminate_flooring
+  );
+  const kitchenPrice = getEffectivePrice(
+    "kitchen_units",
+    priceBand,
+    supplierPriceOverrides?.kitchen_units
+  );
+  const bathroomSuitePrice = getEffectivePrice(
+    "bathroom_suite",
+    priceBand,
+    supplierPriceOverrides?.bathroom_suite
+  );
+
+  return (
+    paintPricePerM2 +
+    flooringPricePerM2 +
+    kitchenPrice / area +
+    (bathroomSuitePrice * bathrooms) / area
+  );
 }
 
 function initializeCategoryTotals(): Record<NewBuildCategory, TierAmounts> {
@@ -249,10 +301,27 @@ export function calculateNewBuild(input: NewBuildInput): NewBuildResult {
 
   const storeyCount = input.numberOfStoreys ?? input.storeys;
   const baseRate = baseBuildRates[input.propertyType][input.spec];
+  const materialBasketPerM2 = getMaterialBasketPerM2(
+    input.spec,
+    input.totalAreaM2,
+    input.bedrooms,
+    input.supplierPriceOverrides
+  );
+  const defaultMaterialBasketPerM2 = getMaterialBasketPerM2(
+    input.spec,
+    input.totalAreaM2,
+    input.bedrooms
+  );
+  const materialAdjustmentPerM2 = materialBasketPerM2 - defaultMaterialBasketPerM2;
+  const adjustedBaseRate: TierAmounts = {
+    low: Math.max(0, baseRate.low + materialAdjustmentPerM2),
+    typical: Math.max(0, baseRate.typical + materialAdjustmentPerM2),
+    high: Math.max(0, baseRate.high + materialAdjustmentPerM2)
+  };
   const storeyAdjustment = getStoreyAdjustment(storeyCount);
 
   let baseCost = multiplyTier(
-    baseRate,
+    adjustedBaseRate,
     input.totalAreaM2 * regionalMultiplier * storeyAdjustment
   );
 
@@ -350,7 +419,7 @@ export function calculateNewBuild(input: NewBuildInput): NewBuildResult {
     if (input.commercialGroundFloor) {
       const groundFloorArea = input.totalAreaM2 / storeyCount;
       const premiumAmounts = multiplyTier(
-        baseRate,
+        adjustedBaseRate,
         groundFloorArea * 0.15 * regionalMultiplier
       );
       addAdjustment(

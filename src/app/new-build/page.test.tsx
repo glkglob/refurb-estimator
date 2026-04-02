@@ -52,13 +52,6 @@ describe("NewBuildPage assistant journey", () => {
   let consoleWarnSpy: jest.SpyInstance;
   let lastAssistantBody = "";
 
-  beforeAll(() => {
-    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
-      value: jest.fn(),
-      writable: true
-    });
-  });
-
   beforeEach(async () => {
     globalThis.TextEncoder = TextEncoder as typeof TextEncoder;
     globalThis.TextDecoder = TextDecoder as typeof TextDecoder;
@@ -125,8 +118,9 @@ describe("NewBuildPage assistant journey", () => {
       basementIncluded: false
     } as const;
 
-    const standardTotal = calculateNewBuild(standardInput).totalTypical;
-    const basicTotal = calculateNewBuild({ ...standardInput, spec: "basic" }).totalTypical;
+    const labourTypical = 275;
+    const standardTotal = calculateNewBuild(standardInput).totalTypical + labourTypical;
+    const basicTotal = calculateNewBuild({ ...standardInput, spec: "basic" }).totalTypical + labourTypical;
     mockedCreate.mockResolvedValueOnce({
       choices: [
         {

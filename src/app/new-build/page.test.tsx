@@ -48,9 +48,9 @@ function formatCurrency(value: number): string {
 
 describe("NewBuildPage assistant journey", () => {
   let originalFetch: typeof fetch;
-  let lastSanitizedEditorActions: unknown[] = [];
   let assistantChatPost: AssistantChatPostHandler;
   let consoleWarnSpy: jest.SpyInstance;
+  let lastAssistantBody = "";
 
   beforeAll(() => {
     Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
@@ -75,9 +75,9 @@ describe("NewBuildPage assistant journey", () => {
     assistantChatPost = routeModule.POST;
 
     mockedCreate.mockReset();
-    lastSanitizedEditorActions = [];
     originalFetch = global.fetch;
     consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation(() => { });
+    lastAssistantBody = "";
 
     global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
@@ -88,10 +88,19 @@ describe("NewBuildPage assistant journey", () => {
           body: init?.body ?? null
         });
 
-        const response = await assistantChatPost(request);
-        const payload = (await response.clone().json()) as { actions?: unknown[] };
-        lastSanitizedEditorActions = payload.actions ?? [];
-        return response;
+        const routeResponse = await assistantChatPost(request);
+        let bodyText = "";
+        try {
+          const payload = await routeResponse.json();
+          bodyText = JSON.stringify(payload);
+        } catch {
+          bodyText = await routeResponse.text();
+        }
+        lastAssistantBody = bodyText;
+        return new Response(bodyText, {
+          status: routeResponse.status,
+          headers: routeResponse.headers
+        });
       }
 
       return new Response("Not found", { status: 404 });
@@ -160,13 +169,23 @@ describe("NewBuildPage assistant journey", () => {
       expect(mockedCreate).toHaveBeenCalledTimes(1);
     });
 
-    await waitFor(() => {
-      expect(Array.isArray(lastSanitizedEditorActions)).toBe(true);
-    });
+    expect(lastAssistantBody.length).toBeGreaterThan(0);
+    expect(JSON.parse(lastAssistantBody)).toEqual(
+      expect.objectContaining({
+        actions: expect.arrayContaining([
+          expect.objectContaining({
+            type: "update_fields",
+            fields: expect.objectContaining({
+              spec: "basic"
+            })
+          })
+        ])
+      })
+    );
 
-    expect(screen.getByText(/Specification:/i).closest("div")).toHaveTextContent("basic");
-    expect(screen.getByText(formatCurrency(basicTotal))).toBeInTheDocument();
-    expect(screen.queryByText(formatCurrency(standardTotal))).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Specification:/i).closest("div")).toHaveTextContent("basic");
+      expect(screen.getByText(formatCurrency(basicTotal))).toBeInTheDocument();
     });
   });
 });

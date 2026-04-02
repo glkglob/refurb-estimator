@@ -285,7 +285,7 @@ export default function HomePage() {
             {/* Headline */}
             <h1 className="mb-6 max-w-4xl font-serif text-4xl font-normal tracking-tight text-foreground md:text-6xl lg:text-7xl">
               <span className="text-balance">Know your renovation costs</span>{" "}
-              <span className="text-muted-foreground">before you commit</span>
+              <span className="text-[hsl(24_49%_26%)]">before you commit</span>
             </h1>
             
             {/* Subheadline */}
@@ -297,7 +297,7 @@ export default function HomePage() {
             {/* CTA Button */}
             <Button 
               size="lg" 
-              className="h-12 gap-2 px-8 text-base font-medium"
+              className="h-12 gap-2 bg-[hsl(18_64%_46%)] px-8 text-base font-semibold text-white shadow-sm hover:bg-[hsl(18_64%_40%)]"
               onClick={() => document.getElementById("estimate-form")?.scrollIntoView({ behavior: "smooth" })}
             >
               Get Your Free Estimate
@@ -308,7 +308,7 @@ export default function HomePage() {
       </section>
 
       {/* Trust Banner */}
-      <section className="border-y border-border bg-card px-6 py-6">
+      <section className="border-y border-[hsl(35_22%_80%)] bg-[hsl(40_26%_90%)] px-6 py-6">
         <div className="mx-auto max-w-6xl">
           <TrustBanner />
         </div>
@@ -344,7 +344,7 @@ export default function HomePage() {
                       <CardTitle className="mt-4 text-lg font-medium">{tool.title}</CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      <CardDescription className="text-sm leading-relaxed">
+                      <CardDescription className="text-sm leading-relaxed text-[hsl(30_6%_29%)]">
                         {tool.description}
                       </CardDescription>
                       <div className="mt-4 flex items-center gap-1 text-sm font-medium text-accent opacity-0 transition-opacity group-hover:opacity-100">

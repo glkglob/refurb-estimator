@@ -62,9 +62,9 @@ export default function TrustBanner() {
       {trustPoints.map((point) => {
         const Icon = point.icon;
         return (
-          <li key={point.text} className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Icon className="h-4 w-4 text-accent" />
-            <span className="font-medium">{point.text}</span>
+          <li key={point.text} className="flex items-center gap-2 text-sm text-[hsl(30_8%_18%)]">
+            <Icon className="h-4 w-4 text-[hsl(18_64%_46%)]" />
+            <span className="font-semibold">{point.text}</span>
           </li>
         );
       })}

@@ -82,7 +82,7 @@ function NavSection({
 
   return (
     <div className="space-y-1">
-      <p className="px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+      <p className="px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] text-[hsl(30_4%_42%)]">
         {title}
       </p>
       {items.map((item) => {

@@ -78,15 +78,11 @@ describe("POST /api/v1/assistant/chat", () => {
       string,
       unknown
     >;
-    if (process.env.AI_PROVIDER === "lmstudio") {
-      expect(completionPayload).not.toHaveProperty("response_format");
-    } else {
-      expect(completionPayload).toEqual(
-        expect.objectContaining({
-          response_format: { type: "json_object" }
-        })
-      );
-    }
+    expect(completionPayload).toEqual(
+      expect.objectContaining({
+        response_format: { type: "json_object" }
+      })
+    );
   });
 
   test("filters unsupported editor fields and enforces recalculate at the end", async () => {

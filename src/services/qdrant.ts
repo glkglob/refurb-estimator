@@ -11,7 +11,9 @@ const qdrantApiKey = process.env.QDRANT_API_KEY?.trim() ?? "";
 
 export const ESTIMATES_COLLECTION =
   process.env.QDRANT_ESTIMATES_COLLECTION?.trim() || "estimates";
-export const ESTIMATE_VECTOR_SIZE = 1536;
+// Driven by EMBEDDING_DIMENSIONS so it stays in sync with the embedding model.
+// Gemini text-embedding-004 → 768 dims; previously OpenAI text-embedding-3-small → 1536.
+export const ESTIMATE_VECTOR_SIZE = EMBEDDING_DIMENSIONS;
 
 export type EstimateQdrantClient = Pick<
   QdrantClient,
@@ -67,14 +69,6 @@ function getQdrantUrl(): string {
   }
 
   return qdrantUrl;
-}
-
-function assertEmbeddingDimensions(): void {
-  if (EMBEDDING_DIMENSIONS !== ESTIMATE_VECTOR_SIZE) {
-    throw new Error(
-      `Embedding dimension mismatch: expected ${ESTIMATE_VECTOR_SIZE}, got ${EMBEDDING_DIMENSIONS}`,
-    );
-  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -194,8 +188,6 @@ function getCollectionNames(
 }
 
 export function getEstimatesQdrantClient(): EstimateQdrantClient {
-  assertEmbeddingDimensions();
-
   if (!qdrantClient) {
     qdrantClient = new QdrantClient({
       url: getQdrantUrl(),

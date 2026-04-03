@@ -18,9 +18,7 @@ import {
 import { validateJsonRequest } from "@/lib/validate";
 
 const ASSISTANT_MODEL =
-  process.env.AI_PROVIDER === "lmstudio"
-    ? process.env.LM_STUDIO_MODEL ?? "qwen/qwen3-4b"
-    : "gpt-4o-mini";
+  process.env.GEMINI_ASSISTANT_MODEL ?? process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
 
 const EMPTY_EDITOR_ACTION: EstimateEditorResponse["actions"][number] = {
   type: "none",
@@ -133,9 +131,7 @@ export async function POST(request: Request) {
       model: ASSISTANT_MODEL,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.2,
-      ...(process.env.AI_PROVIDER === "lmstudio"
-        ? {}
-        : { response_format: { type: "json_object" as const } })
+      response_format: { type: "json_object" as const }
     });
 
     const rawText = aiResponse.choices[0]?.message?.content ?? "";

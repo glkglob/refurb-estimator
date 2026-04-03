@@ -1,3 +1,62 @@
 {
-    "workbench.editor.decorations.colors": true
+  // -------------------------------------------------------------------------
+  // Editor
+  // -------------------------------------------------------------------------
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.tabSize": 2,
+  "editor.rulers": [100],
+  "editor.bracketPairColorization.enabled": true,
+  "workbench.editor.decorations.colors": true,
+
+  // -------------------------------------------------------------------------
+  // TypeScript
+  // -------------------------------------------------------------------------
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+
+  // -------------------------------------------------------------------------
+  // ESLint
+  // -------------------------------------------------------------------------
+  "eslint.workingDirectories": ["."],
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+
+  // -------------------------------------------------------------------------
+  // Files
+  // -------------------------------------------------------------------------
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "files.exclude": {
+    "**/.next": true,
+    "**/node_modules": true
+  },
+
+  // -------------------------------------------------------------------------
+  // Tailwind CSS IntelliSense
+  // -------------------------------------------------------------------------
+  "tailwindCSS.experimental.classRegex": [
+    ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+  ],
+
+  // -------------------------------------------------------------------------
+  // Jest
+  // -------------------------------------------------------------------------
+  "jest.jestCommandLine": "npx jest",
+  "jest.autoRun": "off",
+
+  // -------------------------------------------------------------------------
+  // AI — Google Gemini (via Gemini Code Assist extension)
+  // -------------------------------------------------------------------------
+  // Disable GitHub Copilot if present; Gemini is the sole AI provider.
+  "github.copilot.enable": {
+    "*": false
+  },
+  "geminiCode.enableCodeCompletion": true,
+  "geminiCode.enableInlineChat": true
 }

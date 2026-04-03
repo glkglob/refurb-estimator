@@ -9,7 +9,7 @@ jest.mock("@/lib/ai/client", () => ({
       }
     }
   },
-  PRICING_MODEL: "gpt-4o-mini"
+  PRICING_MODEL: "gemini-2.0-flash"
 }));
 
 type MockedCreateFn = jest.MockedFunction<typeof aiClient.chat.completions.create>;

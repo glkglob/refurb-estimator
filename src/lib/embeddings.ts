@@ -27,7 +27,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     contents: input,
   });
 
-  const vector = response.embedding?.values;
+  const vector = response.embeddings?.[0]?.values;
   if (!Array.isArray(vector) || vector.length === 0) {
     throw new Error("Gemini returned an empty embedding");
   }

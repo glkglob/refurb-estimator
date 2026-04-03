@@ -29,7 +29,6 @@ The platform uses a single `PropertyType` enum across UI, API, and estimator log
 - Jest test suite
 - pdf-lib for estimate PDF export
 - Capacitor configuration for iOS packaging
-- Node.js 20+ runtime target
 
 ## Getting Started
 1. Install dependencies:
@@ -68,7 +67,6 @@ npx supabase migration new <name>
 | POST | `/api/v1/estimate/new-build` | New-build estimate |
 | POST | `/api/v1/estimate/share` | Create shareable estimate link |
 | POST | `/api/v1/ai/photo-estimate` | AI photo-to-estimate |
-| POST | `/api/v1/ai/upload` | AI design upload + generation metadata workflow |
 | GET, PATCH | `/api/v1/profile` | Current user profile |
 | GET | `/api/v1/profile/[userId]` | Public tradesperson profile |
 | GET, POST | `/api/v1/gallery` | Public gallery list, create gallery item |

@@ -88,7 +88,7 @@ function buildGeminiPrompt(messages: ChatMessage[]): {
         } else if (part.type === "image_url") {
           // data:<mime>;base64,<data>  or  https:// URL
           const url = part.image_url.url;
-          const dataMatch = url.match(/^data:(image\/[^;]+);base64,(.+)$/s);
+          const dataMatch = url.match(/^data:(image\/[^;]+);base64,([\s\S]+)$/);
           if (dataMatch) {
             inlineImages.push({
               mimeType: dataMatch[1],

@@ -1,0 +1,37 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Playwright: Run E2E Tests",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "test:e2e"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Playwright: Run Mobile Tests",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "test:e2e:mobile"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Artillery: Run Load Test",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "test:load"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Artillery: Generate Report",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "test:load:report"],
+      "console": "integratedTerminal"
+    }
+  ]
+}

@@ -214,6 +214,63 @@ npm test
 npm run build
 ```
 
+### E2E and load harness
+The canonical production-route test harness is locked to the current contracts:
+
+- Load testing targets `POST /api/v1/estimate/basic`
+- Real PDF E2E targets `POST /api/v1/estimate/pdf`
+- Stripe webhooks remain locked to `POST /api/webhooks/stripe`
+
+Setup:
+```bash
+npm install
+cp .env.example .env
+```
+
+If you want the full-stack PDF test to run instead of being skipped, set:
+
+- `E2E_TRADESPERSON_EMAIL`
+- `E2E_TRADESPERSON_PASSWORD`
+
+Run desktop and full E2E coverage:
+```bash
+npm run test:e2e
+```
+
+Run the mobile device matrix only:
+```bash
+npm run test:e2e:mobile
+```
+
+Run the Artillery load profile against the real estimate route:
+```bash
+npm run test:load
+```
+
+Generate the Artillery HTML summary from the JSON output:
+```bash
+npm run test:load:report
+```
+
+Outputs:
+
+- Playwright HTML report: `playwright-report/`
+- Artillery JSON report: `tests/load/artillery-report.json`
+- Artillery HTML report: `tests/load/artillery-report.html`
+
+Interpreting load-test results:
+
+- `p50`, `p95`, and `p99` are the median, tail, and worst-tail response-time percentiles for `POST /api/v1/estimate/basic`
+- `error rate` is enforced through the Artillery `ensure` plugin and should stay under the configured threshold
+- `throughput` is reported as requests per second and summarized in the generated JSON and HTML reports
+
+Troubleshooting:
+
+- Playwright matrix tests mock `/api/v1/estimate/pdf`; the dedicated real-PDF test does not. If the real-PDF test fails with `401` or `403`, verify the E2E auth env vars and Supabase credentials.
+- If Artillery cannot connect, confirm `API_BASE_URL` points at a running app and that the server is reachable from the machine running the test.
+- If Playwright starts the app on the wrong host, set `PLAYWRIGHT_BASE_URL` explicitly in `.env`.
+- If the real PDF download succeeds but assertions fail, inspect the extracted text in the Playwright output directory first; PDF text extraction can expose formatting differences even when the binary is valid.
+
 ## Example curl Commands
 Basic estimate endpoint:
 ```bash

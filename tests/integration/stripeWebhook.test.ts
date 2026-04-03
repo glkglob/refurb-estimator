@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 
+import type { PaymentIntentRow } from "@/types/database";
 import {
   processStripeWebhookEvent,
   processStripeWebhookRequest,
@@ -50,6 +51,10 @@ type ProfileUpdateCall = {
   value: string;
 };
 
+type PaymentIntentUpsertCall = {
+  payload: Record<string, unknown>;
+};
+
 type StripeClientMock = {
   webhooks: {
     constructEvent: jest.Mock;
@@ -59,26 +64,136 @@ type StripeClientMock = {
   };
 };
 
-function createSupabaseClientMock(): {
+function createPaymentIntentRow(
+  overrides: Partial<PaymentIntentRow> = {},
+): PaymentIntentRow {
+  return {
+    id: overrides.id ?? "payment_intent_row_1",
+    stripe_payment_intent_id:
+      overrides.stripe_payment_intent_id ?? "pi_test_123",
+    stripe_customer_id: overrides.stripe_customer_id ?? null,
+    stripe_checkout_session_id:
+      overrides.stripe_checkout_session_id ?? null,
+    user_id: overrides.user_id ?? null,
+    amount: overrides.amount ?? 1000,
+    currency: overrides.currency ?? "gbp",
+    status: overrides.status ?? "processing",
+    metadata: overrides.metadata ?? {},
+    created_at: overrides.created_at ?? new Date().toISOString(),
+    updated_at: overrides.updated_at ?? new Date().toISOString(),
+  };
+}
+
+function createSupabaseClientMock(
+  initialPaymentIntents: PaymentIntentRow[] = [],
+): {
   client: {
     from: jest.Mock;
   };
   updates: ProfileUpdateCall[];
+  paymentIntentUpserts: PaymentIntentUpsertCall[];
+  paymentIntentRows: PaymentIntentRow[];
 } {
   const updates: ProfileUpdateCall[] = [];
+  const paymentIntentUpserts: PaymentIntentUpsertCall[] = [];
+  const paymentIntentRows = [...initialPaymentIntents];
 
   const client = {
-    from: jest.fn(() => ({
-      update: (payload: Record<string, unknown>) => ({
-        eq: async (column: string, value: string) => {
-          updates.push({ payload, column, value });
-          return { error: null };
-        },
-      }),
-    })),
+    from: jest.fn((table: string) => {
+      if (table === "payment_intents") {
+        return {
+          select: () => ({
+            eq: (_column: string, value: string) => ({
+              maybeSingle: async () => ({
+                data:
+                  paymentIntentRows.find(
+                    (row) => row.stripe_payment_intent_id === value,
+                  ) ?? null,
+                error: null,
+              }),
+            }),
+          }),
+          upsert: (payload: Record<string, unknown>) => ({
+            select: () => ({
+              single: async () => {
+                const stripePaymentIntentId =
+                  typeof payload.stripe_payment_intent_id === "string"
+                    ? payload.stripe_payment_intent_id
+                    : null;
+
+                if (!stripePaymentIntentId) {
+                  return {
+                    data: null,
+                    error: { message: "Missing stripe_payment_intent_id" },
+                  };
+                }
+
+                const existingIndex = paymentIntentRows.findIndex(
+                  (row) => row.stripe_payment_intent_id === stripePaymentIntentId,
+                );
+                const nextRow =
+                  existingIndex >= 0
+                    ? {
+                        ...paymentIntentRows[existingIndex],
+                        ...payload,
+                      }
+                    : createPaymentIntentRow({
+                        ...payload,
+                        stripe_payment_intent_id: stripePaymentIntentId,
+                      });
+
+                if (existingIndex >= 0) {
+                  paymentIntentRows[existingIndex] = nextRow;
+                } else {
+                  paymentIntentRows.push(nextRow);
+                }
+
+                paymentIntentUpserts.push({ payload });
+                return { data: nextRow, error: null };
+              },
+            }),
+          }),
+          update: (payload: Record<string, unknown>) => ({
+            eq: (_column: string, value: string) => ({
+              select: () => ({
+                single: async () => {
+                  const existingIndex = paymentIntentRows.findIndex(
+                    (row) => row.stripe_payment_intent_id === value,
+                  );
+
+                  if (existingIndex < 0) {
+                    return {
+                      data: null,
+                      error: { message: "Row not found" },
+                    };
+                  }
+
+                  const nextRow = {
+                    ...paymentIntentRows[existingIndex],
+                    ...payload,
+                  };
+                  paymentIntentRows[existingIndex] = nextRow;
+
+                  return { data: nextRow, error: null };
+                },
+              }),
+            }),
+          }),
+        };
+      }
+
+      return {
+        update: (payload: Record<string, unknown>) => ({
+          eq: async (column: string, value: string) => {
+            updates.push({ payload, column, value });
+            return { error: null };
+          },
+        }),
+      };
+    }),
   };
 
-  return { client, updates };
+  return { client, updates, paymentIntentUpserts, paymentIntentRows };
 }
 
 function createStripeClientMock(subscriptionResponse: unknown): StripeClientMock {
@@ -161,6 +276,104 @@ describe("services/stripeWebhook integration contract", () => {
         type: "checkout.session.completed",
       }),
     );
+  });
+
+  test("upserts payment_intents for payment_intent events without profile side effects", async () => {
+    const { client, updates, paymentIntentUpserts, paymentIntentRows } =
+      createSupabaseClientMock();
+    const stripeClient = createStripeClientMock({
+      customer: "cus_unused",
+      items: {
+        data: [],
+      },
+    });
+
+    await processStripeWebhookRequest(
+      JSON.stringify({
+        id: "evt_payment_intent_1",
+        type: "payment_intent.succeeded",
+        data: {
+          object: {
+            id: "pi_live_123",
+            customer: "cus_live_123",
+            amount: 4999,
+            currency: "gbp",
+            status: "succeeded",
+            metadata: {
+              userId: "550e8400-e29b-41d4-a716-446655440000",
+            },
+          },
+        },
+      }),
+      "valid-signature",
+      {
+        webhookSecret: "whsec_test",
+        stripeClient: stripeClient as unknown as Stripe,
+        supabaseClient: client,
+        paymentIntentsClient: client,
+      },
+    );
+
+    expect(updates).toHaveLength(0);
+    expect(paymentIntentUpserts).toHaveLength(1);
+    expect(paymentIntentUpserts[0]?.payload).toEqual(
+      expect.objectContaining({
+        stripe_payment_intent_id: "pi_live_123",
+        stripe_customer_id: "cus_live_123",
+        amount: 4999,
+        currency: "gbp",
+        status: "succeeded",
+      }),
+    );
+    expect(paymentIntentRows[0]?.status).toBe("succeeded");
+  });
+
+  test("exits early when the payment_intent record is already succeeded", async () => {
+    const { client, updates } = createSupabaseClientMock([
+      createPaymentIntentRow({
+        stripe_payment_intent_id: "pi_done_123",
+        status: "succeeded",
+      }),
+    ]);
+    const stripeClient = createStripeClientMock({
+      customer: "cus_123",
+      items: {
+        data: [
+          {
+            current_period_end: 1735689600,
+            price: { id: "price_pro_monthly" },
+          },
+        ],
+      },
+    });
+
+    await processStripeWebhookRequest(
+      JSON.stringify({
+        id: "evt_checkout_already_succeeded",
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: "cs_done_123",
+            payment_intent: "pi_done_123",
+            client_reference_id: "user_123",
+            customer: "cus_123",
+            subscription: "sub_123",
+            amount_total: 4999,
+            currency: "gbp",
+          },
+        },
+      }),
+      "valid-signature",
+      {
+        webhookSecret: "whsec_test",
+        stripeClient: stripeClient as unknown as Stripe,
+        supabaseClient: client,
+        paymentIntentsClient: client,
+      },
+    );
+
+    expect(stripeClient.subscriptions.retrieve).not.toHaveBeenCalled();
+    expect(updates).toHaveLength(0);
   });
 
   test("returns an invalid signature error and triggers failure hook", async () => {

@@ -56,3 +56,4 @@ frontend/.env*
 .playwright-browsers/
 !.env.example
 !.env.local.example
+.pnpm-store/

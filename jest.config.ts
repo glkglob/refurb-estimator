@@ -23,6 +23,7 @@ const config: Config = {
   testPathIgnorePatterns: [
     "/node_modules/",
     "/.next/",
+    "<rootDir>/tests/e2e/",
     "<rootDir>/tests/unit/.*\\.adapters\\.test\\.ts$",
   ]
 };

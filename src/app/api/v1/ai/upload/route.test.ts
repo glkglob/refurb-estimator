@@ -124,8 +124,8 @@ describe("POST /api/v1/ai/upload", () => {
       width: 1024,
       height: 1024,
       region: "london",
-      provider: "openai",
-      model: "gpt-4.1-mini",
+      provider: "gemini",
+      model: "gemini-2.0-flash",
       createdAt: "2026-04-02T10:30:00.000Z"
     });
   });

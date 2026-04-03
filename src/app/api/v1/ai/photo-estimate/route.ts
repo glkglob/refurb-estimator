@@ -27,8 +27,7 @@ const DEFAULT_REGION: Region = "west_midlands";
 const DEFAULT_CONDITION: Condition = "fair";
 const DEFAULT_FINISH_LEVEL: FinishLevel = "standard";
 const SUPPORTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const IS_LM_STUDIO = process.env.AI_PROVIDER === "lmstudio";
-const PHOTO_MODEL = IS_LM_STUDIO ? (process.env.LM_STUDIO_MODEL ?? "qwen/qwen3-4b") : "gpt-4o";
+const PHOTO_MODEL = process.env.GEMINI_VISION_MODEL ?? "gemini-2.0-flash";
 
 const SYSTEM_PROMPT = `You are a UK property refurbishment expert and chartered surveyor. Analyse the provided property photo and return a JSON object with these exact fields:
 
@@ -310,7 +309,7 @@ export async function POST(request: Request) {
     const body = parsedBody.data as PhotoEstimateRequestBody;
 
     const images = normalizeImagePayload(body.image);
-    if (images.length === 0 && IS_LM_STUDIO === false) {
+    if (images.length === 0) {
       return jsonError("Image is required", requestId, 400);
     }
 
@@ -349,12 +348,10 @@ export async function POST(request: Request) {
     const userText = `Analyse all provided property photos together.\n${hintLines.join("\n")}`;
     const userContent: Array<
       { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }
-    > = IS_LM_STUDIO
-        ? [{ type: "text", text: userText }]
-        : [
-          { type: "text", text: userText },
-          ...(IS_LM_STUDIO ? [] : images.map((image) => ({ type: "image_url" as const, image_url: { url: image } })))
-        ];
+    > = [
+      { type: "text", text: userText },
+      ...images.map((image) => ({ type: "image_url" as const, image_url: { url: image } }))
+    ];
 
     const completion = await aiClient.chat.completions.create({
       model: PHOTO_MODEL,
@@ -367,7 +364,7 @@ export async function POST(request: Request) {
 
     const content = completion.choices[0]?.message?.content;
     if (typeof content !== "string") {
-      throw new Error("OpenAI response was empty");
+      throw new Error("Gemini response was empty");
     }
 
     const parsed = JSON.parse(content) as AiAnalysisResponse;

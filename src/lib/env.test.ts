@@ -1,65 +1,70 @@
 import {
+  _resetEnvCache,
   getServerAiEnv,
   getServerCoreEnv,
 } from "./env";
 
+beforeEach(() => {
+  _resetEnvCache();
+});
+
+afterEach(() => {
+  _resetEnvCache();
+});
+
 describe("getServerAiEnv", () => {
   function setServerEnv(overrides: Record<string, string | undefined> = {}) {
-    process.env.OPENAI_API_KEY = "sk-test-key";
-    process.env.HUGGINGFACE_PRICING_API_KEY = "hf-test-key";
-    process.env.HUGGINGFACE_REFURB_DESIGN_KEY = "hf-test-key";
+    process.env.GEMINI_API_KEY = "gemini-test-key";
     Object.assign(process.env, overrides);
   }
 
-  test("throws when OPENAI_API_KEY is missing", () => {
-    process.env.HUGGINGFACE_PRICING_API_KEY = "hf-test-key";
-    process.env.HUGGINGFACE_REFURB_DESIGN_KEY = "hf-test-key";
-    delete process.env.OPENAI_API_KEY;
+  test("throws when GEMINI_API_KEY is missing", () => {
+    delete process.env.GEMINI_API_KEY;
 
-    expect(() => getServerAiEnv()).toThrow("OPENAI_API_KEY");
+    expect(() => getServerAiEnv()).toThrow("GEMINI_API_KEY");
   });
 
-  test("throws when HUGGINGFACE_PRICING_API_KEY is missing", () => {
-    process.env.OPENAI_API_KEY = "sk-test-key";
-    process.env.HUGGINGFACE_REFURB_DESIGN_KEY = "hf-test-key";
-    delete process.env.HUGGINGFACE_PRICING_API_KEY;
-
-    expect(() => getServerAiEnv()).toThrow("HUGGINGFACE_PRICING_API_KEY");
-  });
-
-  test("throws when HUGGINGFACE_REFURB_DESIGN_KEY is missing", () => {
-    process.env.OPENAI_API_KEY = "sk-test-key";
-    process.env.HUGGINGFACE_PRICING_API_KEY = "hf-test-key";
-    delete process.env.HUGGINGFACE_REFURB_DESIGN_KEY;
-
-    expect(() => getServerAiEnv()).toThrow("HUGGINGFACE_REFURB_DESIGN_KEY");
-  });
-
-  test("returns validated env when all required vars are set", () => {
+  test("returns validated env when GEMINI_API_KEY is set", () => {
     setServerEnv();
 
     const env = getServerAiEnv();
 
-    expect(env.OPENAI_API_KEY).toBe("sk-test-key");
-    expect(env.HUGGINGFACE_PRICING_API_KEY).toBe("hf-test-key");
-    expect(env.HUGGINGFACE_REFURB_DESIGN_KEY).toBe("hf-test-key");
+    expect(env.GEMINI_API_KEY).toBe("gemini-test-key");
   });
 
-  test("returns default for OPENAI_DESIGNER_MODEL when not set", () => {
+  test("returns default for GEMINI_MODEL when not set", () => {
     setServerEnv();
-    delete process.env.OPENAI_DESIGNER_MODEL;
+    delete process.env.GEMINI_MODEL;
 
     const env = getServerAiEnv();
 
-    expect(env.OPENAI_DESIGNER_MODEL).toBe("gpt-4.1");
+    expect(env.GEMINI_MODEL).toBe("gemini-2.0-flash");
   });
 
-  test("uses provided OPENAI_DESIGNER_MODEL when set", () => {
-    setServerEnv({ OPENAI_DESIGNER_MODEL: "gpt-4.1" });
+  test("uses provided GEMINI_MODEL when set", () => {
+    setServerEnv({ GEMINI_MODEL: "gemini-1.5-pro" });
 
     const env = getServerAiEnv();
 
-    expect(env.OPENAI_DESIGNER_MODEL).toBe("gpt-4.1");
+    expect(env.GEMINI_MODEL).toBe("gemini-1.5-pro");
+  });
+
+  test("returns default for GEMINI_DESIGN_MODEL when not set", () => {
+    setServerEnv();
+    delete process.env.GEMINI_DESIGN_MODEL;
+
+    const env = getServerAiEnv();
+
+    expect(env.GEMINI_DESIGN_MODEL).toBe("gemini-2.0-flash");
+  });
+
+  test("returns default for GEMINI_VISION_MODEL when not set", () => {
+    setServerEnv();
+    delete process.env.GEMINI_VISION_MODEL;
+
+    const env = getServerAiEnv();
+
+    expect(env.GEMINI_VISION_MODEL).toBe("gemini-2.0-flash");
   });
 });
 

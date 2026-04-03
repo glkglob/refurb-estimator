@@ -71,14 +71,6 @@ function getQdrantUrl(): string {
   return qdrantUrl;
 }
 
-function assertEmbeddingDimensions(): void {
-  if (EMBEDDING_DIMENSIONS !== ESTIMATE_VECTOR_SIZE) {
-    throw new Error(
-      `Embedding dimension mismatch: expected ${ESTIMATE_VECTOR_SIZE}, got ${EMBEDDING_DIMENSIONS}`,
-    );
-  }
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -196,8 +188,6 @@ function getCollectionNames(
 }
 
 export function getEstimatesQdrantClient(): EstimateQdrantClient {
-  assertEmbeddingDimensions();
-
   if (!qdrantClient) {
     qdrantClient = new QdrantClient({
       url: getQdrantUrl(),

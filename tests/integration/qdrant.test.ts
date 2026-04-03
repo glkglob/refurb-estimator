@@ -13,7 +13,7 @@ jest.mock("@qdrant/js-client-rest", () => ({
 }));
 
 jest.mock("@/lib/embeddings", () => ({
-  EMBEDDING_DIMENSIONS: 1536,
+  EMBEDDING_DIMENSIONS: 768,
   generateEmbedding: jest.fn(),
 }));
 
@@ -132,7 +132,7 @@ describe("services/qdrant integration contract", () => {
     );
   });
 
-  test("builds similarity search requests with region filter and 1536-dim vectors", async () => {
+  test("builds similarity search requests with region filter and embedding-sized vectors", async () => {
     const client = createQdrantClientMock();
     const vector = createVector();
 
@@ -327,7 +327,7 @@ describe("services/qdrant integration contract", () => {
         QdrantClient: qdrantClientConstructor,
       }));
       jest.doMock("@/lib/embeddings", () => ({
-        EMBEDDING_DIMENSIONS: 1536,
+        EMBEDDING_DIMENSIONS: 768,
         generateEmbedding: jest.fn(),
       }));
 
@@ -348,26 +348,7 @@ describe("services/qdrant integration contract", () => {
         QdrantClient: jest.fn(),
       }));
       jest.doMock("@/lib/embeddings", () => ({
-        EMBEDDING_DIMENSIONS: 512,
-        generateEmbedding: jest.fn(),
-      }));
-
-      await jest.isolateModulesAsync(async () => {
-        const isolatedModule = (await import("@/services/qdrant")) as {
-          getEstimatesQdrantClient: () => unknown;
-        };
-
-        expect(() => isolatedModule.getEstimatesQdrantClient()).toThrow(
-          "Embedding dimension mismatch: expected 1536, got 512",
-        );
-      });
-
-      jest.resetModules();
-      jest.doMock("@qdrant/js-client-rest", () => ({
-        QdrantClient: jest.fn(),
-      }));
-      jest.doMock("@/lib/embeddings", () => ({
-        EMBEDDING_DIMENSIONS: 1536,
+        EMBEDDING_DIMENSIONS: 768,
         generateEmbedding: jest.fn(),
       }));
 

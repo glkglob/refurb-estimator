@@ -118,4 +118,28 @@ describe("generateQuotePdf", () => {
     const result = await generateQuotePdf(input);
     expect(result.length).toBeGreaterThan(0);
   });
+
+  it("handles very long property descriptions and large numbers of categories without crashing", async () => {
+    const stressInput: QuotePdfInput = {
+      propertyDescription: "This is an extremely long description designed to test the text wrapping capabilities of the PDF generator. ".repeat(20),
+      categories: Array.from({ length: 30 }, (_, i) => ({
+        category: `Specialist Category #${i + 1}`,
+        low: 1000,
+        typical: 2000,
+        high: 3000,
+      })),
+      totalLow: 30000,
+      totalTypical: 60000,
+      totalHigh: 90000,
+      costPerM2: { low: 100, typical: 200, high: 300 },
+    };
+
+    const result = await generateQuotePdf(stressInput);
+    expect(result.length).toBeGreaterThan(0);
+
+    const pdf = await PDFDocument.load(result);
+    // Ensure the document was created. 
+    // For multi-page testing, we'd check pdf.getPageCount() if the logic supports it.
+    expect(pdf.getPageCount()).toBeGreaterThanOrEqual(1);
+  });
 });

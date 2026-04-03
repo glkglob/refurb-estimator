@@ -1,0 +1,44 @@
+{
+  "recommendations": [
+    // -----------------------------------------------------------------------
+    // Core language support
+    // -----------------------------------------------------------------------
+    "dbaeumer.vscode-eslint",           // ESLint
+    "esbenp.prettier-vscode",           // Prettier formatter
+    "ms-vscode.vscode-typescript-next", // Latest TypeScript language features
+
+    // -----------------------------------------------------------------------
+    // Next.js / React
+    // -----------------------------------------------------------------------
+    "bradlc.vscode-tailwindcss",        // Tailwind CSS IntelliSense
+    "styled-components.vscode-styled-components",
+
+    // -----------------------------------------------------------------------
+    // Google Gemini AI (replaces GitHub Copilot / OpenAI Codex)
+    // -----------------------------------------------------------------------
+    "google.cloudcode",                 // Gemini Code Assist (inline completions + chat)
+
+    // -----------------------------------------------------------------------
+    // Testing
+    // -----------------------------------------------------------------------
+    "orta.vscode-jest",                 // Jest test runner integration
+
+    // -----------------------------------------------------------------------
+    // Git & GitHub
+    // -----------------------------------------------------------------------
+    "github.vscode-pull-request-github", // PR & issue management
+    "eamodio.gitlens",                   // Git history and blame
+
+    // -----------------------------------------------------------------------
+    // Environment & config
+    // -----------------------------------------------------------------------
+    "mikestead.dotenv",                  // .env file syntax highlighting
+    "antfu.iconify"                      // Lucide/Iconify icon previews
+  ],
+
+  "unwantedRecommendations": [
+    // Disable Copilot — Gemini Code Assist is the AI pair-programmer.
+    "github.copilot",
+    "github.copilot-chat"
+  ]
+}

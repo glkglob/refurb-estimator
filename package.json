@@ -42,6 +42,7 @@
     "@capacitor/share": "8.0.1",
     "@fontsource/ibm-plex-mono": "5.2.7",
     "@fontsource/inter": "5.2.8",
+    "@google/genai": "1.48.0",
     "@qdrant/js-client-rest": "1.17.0",
     "@stripe/stripe-js": "9.0.1",
     "@supabase/ssr": "0.10.0",

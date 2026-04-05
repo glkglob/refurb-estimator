@@ -30,5 +30,9 @@
 **/values.dev.yaml
 **/build
 **/dist
+refurb-estimator
+coverage
+tests
+.playwright-mcp
 LICENSE
 README.md

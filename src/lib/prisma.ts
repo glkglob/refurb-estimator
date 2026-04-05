@@ -287,7 +287,7 @@ export const supabaseRepository = {
     }): Promise<GalleryItem[]> {
       const supabase = await createServerSupabaseClient();
       let query = supabase
-        .from("gallery")
+        .from("gallery_items")
         .select("*")
         .eq("user_id", options.where.userId)
         .order("created_at", {

@@ -1,0 +1,20 @@
+config:
+  processor: "./processor.cjs"
+  phases:
+    - name: "ramp-up"
+      duration: 300
+      arrivalRate: 200
+      rampTo: 1000
+    - name: "steady-state"
+      duration: 600
+      arrivalRate: 1000
+
+scenarios:
+  - name: "Canonical basic estimate contract"
+    flow:
+      - function: "buildEstimatePayload"
+      - post:
+          url: "/api/v1/estimate/basic"
+          json:
+            area: "{{ area }}"
+            region: "{{ region }}"

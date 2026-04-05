@@ -64,13 +64,6 @@ export type CompletionResponse = {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Flatten an OpenAI-style message array into a single Gemini prompt string.
- *
- * Gemini's generateContent accepts a single `contents` array; we concatenate
- * system + user turns into a plain-text prompt to preserve existing behaviour.
- * Multi-image payloads are handled inline as data URIs.
- */
 function buildGeminiPrompt(messages: ChatMessage[]): {
   prompt: string;
   inlineImages: Array<{ mimeType: string; data: string }>;
@@ -86,7 +79,6 @@ function buildGeminiPrompt(messages: ChatMessage[]): {
         if (part.type === "text") {
           parts.push(part.text);
         } else if (part.type === "image_url") {
-          // data:<mime>;base64,<data>  or  https:// URL
           const url = part.image_url.url;
           const dataMatch = url.match(/^data:(image\/[^;]+);base64,([\s\S]+)$/);
           if (dataMatch) {
@@ -95,7 +87,6 @@ function buildGeminiPrompt(messages: ChatMessage[]): {
               data: dataMatch[2],
             });
           } else {
-            // Fallback: embed URL as text hint (Gemini flash handles public URLs)
             parts.push(`[Image URL: ${url}]`);
           }
         }
@@ -106,22 +97,16 @@ function buildGeminiPrompt(messages: ChatMessage[]): {
   return { prompt: parts.join("\n\n"), inlineImages };
 }
 
-/**
- * Call Gemini generateContent with an OpenAI-style request and return an
- * OpenAI-compatible response shape.
- */
 async function geminiCreate(
   ai: GoogleGenAI,
   request: CompletionRequest
 ): Promise<CompletionResponse> {
   const { prompt, inlineImages } = buildGeminiPrompt(request.messages);
 
-  // Build the contents array for Gemini
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const contents: any[] = [];
 
   if (inlineImages.length > 0) {
-    // Multimodal: text + inline image parts
     const imageParts = inlineImages.map((img) => ({
       inlineData: { mimeType: img.mimeType, data: img.data },
     }));
@@ -163,13 +148,6 @@ export type AiClientLike = {
   };
 };
 
-/**
- * Shared Gemini AI client.
- *
- * Drop-in replacement for the former OpenAI `aiClient`. Routes call:
- *   `aiClient.chat.completions.create({ model, messages, temperature })`
- * and receive the same `{ choices: [{ message: { content } }] }` shape.
- */
 export const aiClient: AiClientLike = {
   chat: {
     completions: {

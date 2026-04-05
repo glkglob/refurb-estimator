@@ -1,7 +1,7 @@
 import {
   AIDesignServiceError,
   generateDesign,
-  type AiClientLike,
+  type AiClientLike
 } from "./ai";
 
 type CreateCompletionFn = AiClientLike["chat"]["completions"]["create"];
@@ -19,19 +19,19 @@ function createMockClient(
               prompt: "Create a Scandinavian loft concept with natural timber and skylights.",
               seed: 123456,
               width: 1024,
-              height: 768,
-            }),
-          },
-        },
-      ],
+              height: 768
+            })
+          }
+        }
+      ]
     }) as jest.MockedFunction<CreateCompletionFn>);
 
   return {
     chat: {
       completions: {
-        create,
-      },
-    },
+        create
+      }
+    }
   };
 }
 
@@ -43,8 +43,8 @@ describe("services/ai.generateDesign", () => {
     user: {
       userId: "user-1",
       email: "user@example.com",
-      role: "customer",
-    },
+      role: "customer"
+    }
   };
 
   test("returns validated design metadata when AI response is valid", async () => {
@@ -52,14 +52,14 @@ describe("services/ai.generateDesign", () => {
 
     const result = await generateDesign(baseRequest, {
       client,
-      model: "gemini-test-model",
+      model: "gpt-test-model"
     });
 
     expect(result.prompt).toContain("Scandinavian loft concept");
     expect(result.seed).toBe(123456);
     expect(result.width).toBe(1024);
     expect(result.height).toBe(768);
-    expect(result.model).toBe("gemini-test-model");
+    expect(result.model).toBe("gpt-test-model");
     expect(result.provider).toBe("gemini");
   });
 
@@ -69,11 +69,11 @@ describe("services/ai.generateDesign", () => {
         {
           message: {
             content: JSON.stringify({
-              prompt: "Design a practical new-build exterior with brick and zinc cladding.",
-            }),
-          },
-        },
-      ],
+              prompt: "Design a practical new-build exterior with brick and zinc cladding."
+            })
+          }
+        }
+      ]
     }) as jest.MockedFunction<CreateCompletionFn>;
     const client = createMockClient(create);
 
@@ -81,7 +81,7 @@ describe("services/ai.generateDesign", () => {
       {
         ...baseRequest,
         projectType: "new_build",
-        user: { ...baseRequest.user, userId: "same-user" },
+        user: { ...baseRequest.user, userId: "same-user" }
       },
       { client }
     );
@@ -89,7 +89,7 @@ describe("services/ai.generateDesign", () => {
       {
         ...baseRequest,
         projectType: "new_build",
-        user: { ...baseRequest.user, userId: "same-user" },
+        user: { ...baseRequest.user, userId: "same-user" }
       },
       { client }
     );
@@ -104,49 +104,49 @@ describe("services/ai.generateDesign", () => {
       choices: [
         {
           message: {
-            content: "{invalid-json",
-          },
-        },
-      ],
+            content: "{invalid-json"
+          }
+        }
+      ]
     }) as jest.MockedFunction<CreateCompletionFn>;
 
     const client = createMockClient(create);
 
-    await expect(generateDesign(baseRequest, { client })).rejects.toMatchObject({
+    await expect(
+      generateDesign(baseRequest, { client })
+    ).rejects.toMatchObject({
       name: "AIDesignServiceError",
-      statusCode: 502,
+      statusCode: 502
     } satisfies Partial<AIDesignServiceError>);
   });
 
   test("maps network failures to 503", async () => {
-    const create = jest
-      .fn()
-      .mockRejectedValue(
-        new Error("Network request failed")
-      ) as jest.MockedFunction<CreateCompletionFn>;
+    const create = jest.fn().mockRejectedValue(new Error("Network request failed")) as jest.MockedFunction<
+      CreateCompletionFn
+    >;
     const client = createMockClient(create);
 
     await expect(generateDesign(baseRequest, { client })).rejects.toMatchObject({
       statusCode: 503,
-      message: "Network error while contacting AI generation service.",
+      message: "Network error while contacting AI generation service."
     } satisfies Partial<AIDesignServiceError>);
   });
 
   test("maps provider rate limits to 503", async () => {
     const create = jest.fn().mockRejectedValue({
       status: 429,
-      message: "Too many requests",
+      message: "Too many requests"
     }) as jest.MockedFunction<CreateCompletionFn>;
     const client = createMockClient(create);
 
     await expect(generateDesign(baseRequest, { client })).rejects.toMatchObject({
       statusCode: 503,
-      message: "AI service rate limit exceeded. Please retry shortly.",
+      message: "AI service rate limit exceeded. Please retry shortly."
     } satisfies Partial<AIDesignServiceError>);
   });
 
-  test("throws 500 when GEMINI_API_KEY is absent and no client is injected", async () => {
-    const original = process.env.GEMINI_API_KEY;
+  test("throws 500 when no API key is available and no client is injected", async () => {
+    const originalApiKey = process.env.GEMINI_API_KEY;
     delete process.env.GEMINI_API_KEY;
 
     try {
@@ -154,7 +154,7 @@ describe("services/ai.generateDesign", () => {
         statusCode: 500,
       } satisfies Partial<AIDesignServiceError>);
     } finally {
-      process.env.GEMINI_API_KEY = original;
+      process.env.GEMINI_API_KEY = originalApiKey;
     }
   });
 });

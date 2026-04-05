@@ -37,7 +37,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     const { itemId } = await context.params;
     const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase
-      .from("gallery")
+      .from("gallery_items")
       .select("*")
       .eq("id", itemId)
       .maybeSingle();

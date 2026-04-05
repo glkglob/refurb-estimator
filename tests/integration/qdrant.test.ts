@@ -132,7 +132,7 @@ describe("services/qdrant integration contract", () => {
     );
   });
 
-  test("builds similarity search requests with region filter and embedding-sized vectors", async () => {
+  test("builds similarity search requests with region filter and 768-dim vectors", async () => {
     const client = createQdrantClientMock();
     const vector = createVector();
 

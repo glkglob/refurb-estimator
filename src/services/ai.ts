@@ -48,10 +48,6 @@ export type GenerateDesignResult = {
   createdAt: string;
 };
 
-// ---------------------------------------------------------------------------
-// Minimal client interface — identical shape to what tests inject
-// ---------------------------------------------------------------------------
-
 type CompletionRequest = {
   model: string;
   temperature: number;
@@ -90,10 +86,6 @@ type ErrorWithStatus = {
   message?: unknown;
 };
 
-// ---------------------------------------------------------------------------
-// Error class
-// ---------------------------------------------------------------------------
-
 /**
  * Represents an AI provider error with a mapped HTTP status code.
  */
@@ -106,10 +98,6 @@ export class AIDesignServiceError extends Error {
     this.statusCode = statusCode;
   }
 }
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
 
 /**
  * Build a Gemini-backed AiClientLike from the shared singleton.
@@ -154,6 +142,7 @@ function toStatusNumber(error: unknown): number | undefined {
   if (!hasStatus(error) || typeof error.status !== "number") {
     return undefined;
   }
+
   return error.status;
 }
 
@@ -161,6 +150,7 @@ function isNetworkError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
   }
+
   const message = error.message.toLowerCase();
   return (
     message.includes("network") ||
@@ -210,6 +200,7 @@ function createSeed(imageUrl: string, userId: string): number {
     .update(`${imageUrl}:${userId}`)
     .digest("hex")
     .slice(0, 8);
+
   return Number.parseInt(hash, 16);
 }
 
@@ -224,19 +215,12 @@ function buildUserPrompt(request: GenerateDesignRequest): string {
     `Prompt hint: ${request.promptHint?.trim() || "none"}`,
     `Requested dimensions: ${request.width ?? DEFAULT_IMAGE_DIMENSION}x${request.height ?? DEFAULT_IMAGE_DIMENSION}`,
     "Return JSON only in this schema:",
-    '{"prompt":"string","seed":12345,"width":1024,"height":1024}',
+    '{"prompt":"string","seed":12345,"width":1024,"height":1024}'
   ].join("\n");
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 /**
  * Generates structured design metadata from an uploaded image URL and user context.
- *
- * @param request   - Project and user context for the design prompt.
- * @param dependencies - Optional overrides for model and client (used in tests).
  */
 export async function generateDesign(
   request: GenerateDesignRequest,
@@ -271,31 +255,25 @@ export async function generateDesign(
         {
           role: "system",
           content:
-            "You are an AI design orchestration service. Return strict JSON only for downstream persistence.",
+            "You are an AI design orchestration service. Return strict JSON only for downstream persistence."
         },
         {
           role: "user",
-          content: buildUserPrompt(request),
-        },
-      ],
+          content: buildUserPrompt(request)
+        }
+      ]
     });
 
     const content = response.choices[0]?.message?.content;
     if (typeof content !== "string" || content.trim().length === 0) {
-      throw new AIDesignServiceError(
-        "AI provider returned an empty response.",
-        502
-      );
+      throw new AIDesignServiceError("AI provider returned an empty response.", 502);
     }
 
     let parsedContent: unknown;
     try {
       parsedContent = JSON.parse(content);
     } catch {
-      throw new AIDesignServiceError(
-        "AI provider returned invalid JSON.",
-        502
-      );
+      throw new AIDesignServiceError("AI provider returned invalid JSON.", 502);
     }
 
     const parsed = aiResponseSchema.safeParse(parsedContent);
@@ -308,15 +286,13 @@ export async function generateDesign(
 
     return {
       prompt: parsed.data.prompt,
-      seed:
-        parsed.data.seed ??
-        createSeed(request.imageUrl, request.user.userId),
+      seed: parsed.data.seed ?? createSeed(request.imageUrl, request.user.userId),
       width: parsed.data.width ?? request.width ?? DEFAULT_IMAGE_DIMENSION,
       height: parsed.data.height ?? request.height ?? DEFAULT_IMAGE_DIMENSION,
       region: request.region,
       provider: "gemini",
       model,
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
     };
   } catch (error) {
     throw mapAiError(error);

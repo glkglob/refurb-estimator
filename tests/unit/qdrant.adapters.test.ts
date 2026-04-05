@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const vector = Array.from({ length: 1536 }, (_, index) => index / 1000);
+const vector = Array.from({ length: 768 }, (_, index) => index / 1000);
 
 const qdrantClientMock = {
   getCollections: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock("@qdrant/js-client-rest", () => ({
 }));
 
 vi.mock("@/lib/embeddings", () => ({
-  EMBEDDING_DIMENSIONS: 1536,
+  EMBEDDING_DIMENSIONS: 768,
   generateEmbedding: vi.fn(async () => vector),
 }));
 

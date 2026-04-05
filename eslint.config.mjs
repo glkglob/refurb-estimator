@@ -1,6 +1,7 @@
 import { defineConfig } from "eslint/config";
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
+import reactPlugin from "eslint-plugin-react";
 
 const config = defineConfig([
   ...nextCoreWebVitals,
@@ -8,6 +9,9 @@ const config = defineConfig([
 
   // ── Project overrides ──
   {
+    plugins: {
+      react: reactPlugin,
+    },
     rules: {
       // TypeScript strict — no untyped escape hatches
       "@typescript-eslint/no-explicit-any": "warn",

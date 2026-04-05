@@ -6,6 +6,14 @@ import {
   getPlanFromPriceId,
   getStripeClient,
 } from "@/lib/stripe";
+import {
+  extractStripePaymentIntentId,
+  extractStripePaymentStatus,
+  getByStripeId,
+  type PaymentIntentsSupabaseClient,
+  updateStatus,
+  upsertFromStripe,
+} from "@/services/paymentIntents";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { stripeWebhookSchema, type StripeWebhookEvent } from "@/schemas/stripe";
 import { validate } from "@/utils/validator";
@@ -82,7 +90,7 @@ type SupabaseError = {
   message: string;
 };
 
-type StripeWebhookSupabaseClient = {
+type StripeWebhookProfilesClient = {
   from: (table: "profiles") => {
     update: (values: Record<string, unknown>) => {
       eq: (
@@ -101,7 +109,8 @@ type ProfileUpdateTarget = {
 export type StripeWebhookDependencies = {
   stripeClient?: Stripe;
   webhookSecret?: string | null;
-  supabaseClient?: StripeWebhookSupabaseClient;
+  supabaseClient?: StripeWebhookProfilesClient;
+  paymentIntentsClient?: PaymentIntentsSupabaseClient;
   onEventProcessed?: (event: StripeWebhookEvent) => void;
   onEventFailed?: (error: unknown, eventType?: string) => void;
 };
@@ -110,6 +119,24 @@ export type StripeSignatureVerificationDependencies = Pick<
   StripeWebhookDependencies,
   "stripeClient" | "webhookSecret"
 >;
+
+function validateMinimalStripeEvent(
+  event: StripeWebhookEvent | MinimalStripeEvent,
+): MinimalStripeEvent {
+  if (
+    typeof event.id !== "string" ||
+    event.id.trim().length === 0 ||
+    typeof event.type !== "string" ||
+    event.type.trim().length === 0 ||
+    typeof event.data !== "object" ||
+    event.data === null ||
+    !("object" in event.data)
+  ) {
+    throw new Error("Invalid Stripe event payload");
+  }
+
+  return event;
+}
 
 function extractReferenceId(reference: StripeReference | null | undefined): string | null {
   if (typeof reference === "string") {
@@ -175,12 +202,12 @@ function getSubscriptionCurrentPeriodEnd(subscription: SubscriptionLike): string
     : null;
 }
 
-function getSupabaseClient(
+function getProfileSupabaseClient(
   dependencies: Pick<StripeWebhookDependencies, "supabaseClient">,
-): StripeWebhookSupabaseClient {
+): StripeWebhookProfilesClient {
   return (
     dependencies.supabaseClient ??
-    (createAdminSupabaseClient() as unknown as StripeWebhookSupabaseClient)
+    (createAdminSupabaseClient() as unknown as StripeWebhookProfilesClient)
   );
 }
 
@@ -201,7 +228,7 @@ function getCheckoutProfileTarget(
 async function updateProfilePlan(
   target: ProfileUpdateTarget,
   update: ProfilePlanUpdate,
-  supabaseClient: StripeWebhookSupabaseClient,
+  supabaseClient: StripeWebhookProfilesClient,
 ): Promise<void> {
   const payload = { ...update, updated_at: new Date().toISOString() };
   const { error } = await supabaseClient
@@ -277,7 +304,7 @@ function buildSubscriptionUpdate(
 async function handleCheckoutSessionCompleted(
   domainEvent: CheckoutCompletedDomainEvent,
   stripeClient: Stripe,
-  supabaseClient: StripeWebhookSupabaseClient,
+  supabaseClient: StripeWebhookProfilesClient,
 ): Promise<void> {
   const target = getCheckoutProfileTarget(domainEvent);
   if (!target) {
@@ -303,7 +330,7 @@ async function handleCheckoutSessionCompleted(
 
 async function handleSubscriptionLifecycleEvent(
   domainEvent: SubscriptionLifecycleDomainEvent,
-  supabaseClient: StripeWebhookSupabaseClient,
+  supabaseClient: StripeWebhookProfilesClient,
 ): Promise<void> {
   if (!domainEvent.customerId) {
     return;
@@ -404,21 +431,55 @@ export async function processStripeWebhookEvent(
   event: StripeWebhookEvent | MinimalStripeEvent,
   dependencies: Omit<StripeWebhookDependencies, "webhookSecret"> = {},
 ): Promise<void> {
-  const domainEvent = mapStripeEventToDomain(event);
+  const validatedEvent = validateMinimalStripeEvent(event);
+  const profileSupabaseClient = getProfileSupabaseClient(dependencies);
+  const paymentIntentId = extractStripePaymentIntentId(validatedEvent);
+  const paymentIntentStatus = extractStripePaymentStatus(validatedEvent);
 
-  if (domainEvent.kind === "ignored") {
+  if (paymentIntentId) {
+    await upsertFromStripe(validatedEvent, {
+      supabaseClient: dependencies.paymentIntentsClient,
+    });
+  }
+
+  const paymentIntentRecord = paymentIntentId
+    ? await getByStripeId(paymentIntentId, {
+        supabaseClient: dependencies.paymentIntentsClient,
+      })
+    : null;
+
+  if (paymentIntentRecord?.status === "succeeded") {
     return;
   }
 
-  const supabaseClient = getSupabaseClient(dependencies);
+  const domainEvent = mapStripeEventToDomain(validatedEvent);
+
+  if (domainEvent.kind === "ignored") {
+    if (paymentIntentId && paymentIntentStatus) {
+      await updateStatus(paymentIntentId, paymentIntentStatus, {
+        supabaseClient: dependencies.paymentIntentsClient,
+      });
+    }
+
+    return;
+  }
 
   if (domainEvent.kind === "checkout.session.completed") {
     const stripeClient = dependencies.stripeClient ?? getStripeClient();
-    await handleCheckoutSessionCompleted(domainEvent, stripeClient, supabaseClient);
-    return;
+    await handleCheckoutSessionCompleted(
+      domainEvent,
+      stripeClient,
+      profileSupabaseClient,
+    );
+  } else {
+    await handleSubscriptionLifecycleEvent(domainEvent, profileSupabaseClient);
   }
 
-  await handleSubscriptionLifecycleEvent(domainEvent, supabaseClient);
+  if (paymentIntentId && paymentIntentStatus) {
+    await updateStatus(paymentIntentId, paymentIntentStatus, {
+      supabaseClient: dependencies.paymentIntentsClient,
+    });
+  }
 }
 
 export async function processStripeWebhookRequest(

@@ -27,7 +27,7 @@ export default function TrustBanner() {
       try {
         const supabase = createClient();
         const { count, error } = await supabase
-          .from("estimates")
+          .from("scenarios")
           .select("*", { count: "exact", head: true });
 
         if (!isActive || error || typeof count !== "number") {

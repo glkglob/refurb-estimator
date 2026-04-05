@@ -38,13 +38,22 @@ npm install
 2. Configure environment:
 ```bash
 cp .env.local.example .env.local
+cp .env.example .env
 ```
-3. Fill required env vars in `.env.local` (Supabase + OpenAI if using AI photo estimate).
-4. Start development server:
+3. Fill required env vars in `.env.local` and `.env`.
+4. Start local infra (Qdrant and Stripe mock):
+```bash
+docker compose up -d qdrant stripe-mock
+```
+5. Start development server:
 ```bash
 WATCHPACK_POLLING=true npm run dev -- --webpack
 ```
-5. Open [http://localhost:3000](http://localhost:3000).
+6. Open [http://localhost:3000](http://localhost:3000).
+7. For local Stripe webhooks, forward events:
+```bash
+stripe listen --forward-to http://localhost:3000/api/webhooks/stripe
+```
 
 ## Database Migrations (Supabase CLI)
 Use Supabase CLI to apply SQL migrations in `supabase/migrations/`.
@@ -62,6 +71,7 @@ npx supabase migration new <name>
 | Method | Route | Purpose |
 |---|---|---|
 | POST | `/api/v1/estimate/project` | Refurb project estimate |
+| POST | `/api/v1/estimate/basic` | Strict area/region estimate with optional Qdrant indexing |
 | POST | `/api/v1/estimate/pdf` | Generate estimate PDF |
 | POST | `/api/v1/estimate/csv` | Generate estimate CSV |
 | POST | `/api/v1/estimate/new-build` | New-build estimate |
@@ -174,11 +184,105 @@ Run unit tests:
 npm test
 ```
 
+Run integration tests:
+```bash
+npm run test:integration
+```
+
+Run container smoke tests (Qdrant + Stripe webhook via stripe-mock):
+```bash
+RUN_CONTAINER_SMOKE=1 npm run test:smoke
+```
+
+Run feature-slice coverage (validation + estimate + Qdrant + Stripe webhook):
+```bash
+npm run test:coverage:slice
+```
+
+Run staged coverage policy (required slice gate + advisory full-project report):
+```bash
+npm run test:coverage:staged
+```
+
 Recommended local verification:
 ```bash
 npx tsc --noEmit
+npx eslint . --fix
 npm test
 npm run build
+```
+
+### E2E and load harness
+The canonical production-route test harness is locked to the current contracts:
+
+- Load testing targets `POST /api/v1/estimate/basic`
+- Real PDF E2E targets `POST /api/v1/estimate/pdf`
+- Stripe webhooks remain locked to `POST /api/webhooks/stripe`
+
+Setup:
+```bash
+npm install
+cp .env.example .env
+```
+
+If you want the full-stack PDF test to run instead of being skipped, set:
+
+- `E2E_TRADESPERSON_EMAIL`
+- `E2E_TRADESPERSON_PASSWORD`
+
+Run desktop and full E2E coverage:
+```bash
+npm run test:e2e
+```
+
+Run the mobile device matrix only:
+```bash
+npm run test:e2e:mobile
+```
+
+Run the Artillery load profile against the real estimate route:
+```bash
+npm run test:load
+```
+
+Generate the Artillery HTML summary from the JSON output:
+```bash
+npm run test:load:report
+```
+
+Outputs:
+
+- Playwright HTML report: `playwright-report/`
+- Artillery JSON report: `tests/load/artillery-report.json`
+- Artillery HTML report: `tests/load/artillery-report.html`
+
+Interpreting load-test results:
+
+- `p50`, `p95`, and `p99` are the median, tail, and worst-tail response-time percentiles for `POST /api/v1/estimate/basic`
+- `error rate` is enforced through the Artillery `ensure` plugin and should stay under the configured threshold
+- `throughput` is reported as requests per second and summarized in the generated JSON and HTML reports
+
+Troubleshooting:
+
+- Playwright matrix tests mock `/api/v1/estimate/pdf`; the dedicated real-PDF test does not. If the real-PDF test fails with `401` or `403`, verify the E2E auth env vars and Supabase credentials.
+- If Artillery cannot connect, confirm `API_BASE_URL` points at a running app and that the server is reachable from the machine running the test.
+- If Playwright starts the app on the wrong host, set `PLAYWRIGHT_BASE_URL` explicitly in `.env`.
+- If the real PDF download succeeds but assertions fail, inspect the extracted text in the Playwright output directory first; PDF text extraction can expose formatting differences even when the binary is valid.
+
+## Example curl Commands
+Basic estimate endpoint:
+```bash
+curl -X POST "http://localhost:3000/api/v1/estimate/basic" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "area": 85,
+    "region": "london"
+  }'
+```
+
+Stripe webhook simulation:
+```bash
+stripe trigger checkout.session.completed
 ```
 
 ## Deployment

@@ -2,49 +2,29 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-type PricingKeySource = "HUGGINGFACE_PRICING_API_KEY";
-type DesignKeySource = "HUGGINGFACE_REFURB_DESIGN_KEY";
-
 function isConfigured(value: string | undefined): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function resolvePricingKeySource(): PricingKeySource | null {
-  if (isConfigured(process.env.HUGGINGFACE_PRICING_API_KEY)) {
-    return "HUGGINGFACE_PRICING_API_KEY";
-  }
-  return null;
-}
-
-function resolveDesignKeySource(): DesignKeySource | null {
-  if (isConfigured(process.env.HUGGINGFACE_REFURB_DESIGN_KEY)) {
-    return "HUGGINGFACE_REFURB_DESIGN_KEY";
-  }
-  return null;
-}
-
 export async function GET() {
+  const geminiKeyConfigured = isConfigured(process.env.GEMINI_API_KEY);
+
   const configured = {
-    HUGGINGFACE_PRICING_API_KEY: isConfigured(process.env.HUGGINGFACE_PRICING_API_KEY),
-    HUGGINGFACE_REFURB_DESIGN_KEY: isConfigured(process.env.HUGGINGFACE_REFURB_DESIGN_KEY),
-    OPENAI_API_KEY: isConfigured(process.env.OPENAI_API_KEY)
+    GEMINI_API_KEY: geminiKeyConfigured,
+    GEMINI_MODEL: isConfigured(process.env.GEMINI_MODEL),
+    GEMINI_VISION_MODEL: isConfigured(process.env.GEMINI_VISION_MODEL),
+    GEMINI_DESIGN_MODEL: isConfigured(process.env.GEMINI_DESIGN_MODEL),
   };
 
-  const resolved = {
-    pricingAgent: resolvePricingKeySource(),
-    designAgent: resolveDesignKeySource()
-  };
-
-  const ok = Boolean(resolved.pricingAgent && resolved.designAgent);
+  const ok = geminiKeyConfigured;
 
   return NextResponse.json(
     {
       ok,
       message: ok
         ? "AI environment variables are configured."
-        : "Missing Hugging Face API key configuration for one or more agents.",
+        : "Missing GEMINI_API_KEY — all AI features are unavailable.",
       configured,
-      resolved
     },
     { status: ok ? 200 : 503 }
   );

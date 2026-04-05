@@ -1,3 +1,5 @@
+import { postcodeToRegion } from "./enhancedEstimator";
+import { assertFinitePositive, assertFiniteNonNegative, clamp } from "./math";
 export type RefurbType = "light" | "medium" | "heavy" | "extension" | "loft";
 
 /**
@@ -86,22 +88,6 @@ export type ValuationResult = {
   roiPercent: number;
 };
 
-function assertFinitePositive(value: number, name: string): void {
-  if (!Number.isFinite(value) || value <= 0) {
-    throw new Error(`${name} must be a finite number greater than 0`);
-  }
-}
-
-function assertFiniteNonNegative(value: number, name: string): void {
-  if (!Number.isFinite(value) || value < 0) {
-    throw new Error(`${name} must be a finite number greater than or equal to 0`);
-  }
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
 /**
  * Very lightweight postcode parsing:
  * - Normalizes whitespace and casing.
@@ -110,92 +96,12 @@ function clamp(value: number, min: number, max: number): number {
  * This is intentionally coarse and only for v1 heuristics.
  */
 export function getRegionFromPostcode(postcode?: string): UKRegion {
-  if (!postcode) return "unknown";
-
-  const normalized = postcode.trim().toUpperCase().replace(/\s+/g, "");
-  if (normalized.length < 2) return "unknown";
-
-  // Extract postcode area (leading 1–2 letters)
-  // Examples: "SW1A1AA" -> "SW", "M11AE" -> "M", "EH12NG" -> "EH"
-  const match = normalized.match(/^([A-Z]{1,2})/);
-  if (!match) {
+  if (!postcode || postcode.trim().length === 0) return "unknown";
+  try {
+    return postcodeToRegion(postcode) as UKRegion;
+  } catch {
     return "unknown";
   }
-
-  const area = match[1];
-
-  if (
-    [
-      "E",
-      "EC",
-      "N",
-      "NW",
-      "SE",
-      "SW",
-      "W",
-      "WC",
-      "BR",
-      "CR",
-      "DA",
-      "EN",
-      "HA",
-      "IG",
-      "KT",
-      "RM",
-      "SM",
-      "TW",
-      "UB",
-      "WD",
-    ].includes(area)
-  ) {
-    return "london";
-  }
-
-  if (["GU", "HP", "ME", "MK", "OX", "RG", "SL", "TN"].includes(area)) {
-    return "south_east";
-  }
-
-  if (["AL", "CB", "CM", "CO", "IP", "LU", "NR", "PE", "SG", "SS"].includes(area)) {
-    return "east_of_england";
-  }
-
-  if (["BA", "BH", "BS", "DT", "EX", "GL", "PL", "SN", "SP", "TA", "TQ", "TR"].includes(area)) {
-    return "south_west";
-  }
-
-  if (["B", "CV", "DY", "HR", "ST", "TF", "WR", "WS", "WV"].includes(area)) {
-    return "west_midlands";
-  }
-
-  if (["DE", "LE", "LN", "NG", "NN"].includes(area)) {
-    return "east_midlands";
-  }
-
-  if (["BB", "BL", "CA", "CH", "CW", "FY", "L", "LA", "M", "OL", "PR", "SK", "WA", "WN"].includes(area)) {
-    return "north_west";
-  }
-
-  if (["DH", "DL", "NE", "SR", "TS"].includes(area)) {
-    return "north_east";
-  }
-
-  if (["BD", "DN", "HD", "HG", "HU", "HX", "LS", "S", "WF", "YO"].includes(area)) {
-    return "yorkshire_and_humber";
-  }
-
-  if (["AB", "DD", "DG", "EH", "FK", "G", "HS", "IV", "KA", "KW", "KY", "ML", "PA", "PH", "TD", "ZE"].includes(area)) {
-    return "scotland";
-  }
-
-  if (["CF", "LD", "LL", "NP", "SA"].includes(area)) {
-    return "wales";
-  }
-
-  if (["BT"].includes(area)) {
-    return "northern_ireland";
-  }
-
-  return "unknown";
 }
 
 function resolveRegion(region?: UKRegion, postcode?: string): UKRegion {

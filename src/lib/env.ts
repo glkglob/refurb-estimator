@@ -14,16 +14,18 @@ const serverCoreEnvSchema = z.object({
 /**
  * AI server environment variables.
  * Only required for endpoints that actually call AI providers.
+ * All AI is now handled by Google Gemini — no OpenAI or HuggingFace keys.
  */
 const serverAiEnvSchema = z.object({
-  OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
-  HUGGINGFACE_PRICING_API_KEY: z
+  GEMINI_API_KEY: z
     .string()
-    .min(1, "HUGGINGFACE_PRICING_API_KEY is required"),
-  HUGGINGFACE_REFURB_DESIGN_KEY: z
-    .string()
-    .min(1, "HUGGINGFACE_REFURB_DESIGN_KEY is required"),
-  OPENAI_DESIGNER_MODEL: z.string().min(1).default("gpt-4.1"),
+    .min(1, "GEMINI_API_KEY is required"),
+  /** Override the default Gemini model (defaults to gemini-2.0-flash). */
+  GEMINI_MODEL: z.string().min(1).default("gemini-2.0-flash"),
+  /** Override the model used by the design-metadata service. */
+  GEMINI_DESIGN_MODEL: z.string().min(1).default("gemini-2.0-flash"),
+  /** Override the model used for vision / photo-estimate. */
+  GEMINI_VISION_MODEL: z.string().min(1).default("gemini-2.0-flash"),
 });
 
 const clientEnvSchema = z.object({
@@ -81,10 +83,10 @@ function readServerAiEnv(): ServerAiEnv {
     schema: serverAiEnvSchema,
     scope: "server ai",
     values: {
-      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-      HUGGINGFACE_PRICING_API_KEY: process.env.HUGGINGFACE_PRICING_API_KEY,
-      HUGGINGFACE_REFURB_DESIGN_KEY: process.env.HUGGINGFACE_REFURB_DESIGN_KEY,
-      OPENAI_DESIGNER_MODEL: process.env.OPENAI_DESIGNER_MODEL,
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+      GEMINI_MODEL: process.env.GEMINI_MODEL,
+      GEMINI_DESIGN_MODEL: process.env.GEMINI_DESIGN_MODEL,
+      GEMINI_VISION_MODEL: process.env.GEMINI_VISION_MODEL,
     },
   });
 }
@@ -109,7 +111,6 @@ export function getServerCoreEnv(): ServerCoreEnv {
   if (!cachedServerCoreEnv) {
     cachedServerCoreEnv = readServerCoreEnv();
   }
-
   return cachedServerCoreEnv;
 }
 
@@ -117,7 +118,6 @@ export function getServerAiEnv(): ServerAiEnv {
   if (!cachedServerAiEnv) {
     cachedServerAiEnv = readServerAiEnv();
   }
-
   return cachedServerAiEnv;
 }
 
@@ -125,7 +125,6 @@ export function getClientEnv(): ClientEnv {
   if (!cachedClientEnv) {
     cachedClientEnv = readClientEnv();
   }
-
   return cachedClientEnv;
 }
 

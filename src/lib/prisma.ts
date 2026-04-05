@@ -1,3 +1,7 @@
+/**
+ * Database Repository Layer.
+ * Note: Named 'prisma.ts' for compatibility, but internally uses Supabase.
+ */
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
   EstimateInput,

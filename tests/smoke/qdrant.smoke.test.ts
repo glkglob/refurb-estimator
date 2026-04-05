@@ -155,7 +155,7 @@ describeIfContainer("Qdrant container smoke", () => {
     const collectionInfo = await client.getCollection(collectionName);
     const vectorConfig = getCollectionVectorConfig(collectionInfo);
 
-    expect(vectorConfig.size).toBe(1536);
+    expect(vectorConfig.size).toBe(768);
     expect(vectorConfig.distance).toBe("Cosine");
 
     const londonVector = createOneHotVector(qdrantService.ESTIMATE_VECTOR_SIZE, 0);

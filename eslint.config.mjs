@@ -43,6 +43,7 @@ const config = defineConfig([
       ".next/**",
       "out/**",
       "coverage/**",
+      "refurb-estimator/**",
       "supabase/**",
       "*.config.*",
     ],

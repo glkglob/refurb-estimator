@@ -1,0 +1,48 @@
+steps:
+  # Build the Docker image.
+  # DOCKER_BUILDKIT=1 is required: the Dockerfile uses RUN --mount=type=cache
+  # and RUN --mount=type=bind, which are BuildKit-only features.  Cloud Build's
+  # Docker daemon (20.x) does not enable BuildKit by default.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Build
+    env:
+      - 'DOCKER_BUILDKIT=1'
+    args:
+      - build
+      - --no-cache
+      - -t
+      - '$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
+      - .
+      - -f
+      - Dockerfile
+
+  # Push the image to Artifact Registry.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Push
+    args:
+      - push
+      - '$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
+
+  # Deploy the new image to Cloud Run.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    id: Deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - update
+      - '$_SERVICE_NAME'
+      - --platform=managed
+      - '--image=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
+      - '--labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID'
+      - '--region=$_DEPLOY_REGION'
+      - --quiet
+
+images:
+  - '$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
+
+options:
+  dynamicSubstitutions: true
+  substitutionOption: ALLOW_LOOSE
+  # Omitting 'logging: CLOUD_LOGGING_ONLY' so Cloud Build falls back to its
+  # default GCS bucket logging, which works without extra IAM grants.

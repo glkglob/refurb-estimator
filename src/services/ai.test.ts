@@ -60,7 +60,7 @@ describe("services/ai.generateDesign", () => {
     expect(result.width).toBe(1024);
     expect(result.height).toBe(768);
     expect(result.model).toBe("gpt-test-model");
-    expect(result.provider).toBe("gemini");
+    expect(result.provider).toBe("openai");
   });
 
   test("creates deterministic seed when seed is missing from AI output", async () => {
@@ -146,15 +146,15 @@ describe("services/ai.generateDesign", () => {
   });
 
   test("throws 500 when no API key is available and no client is injected", async () => {
-    const originalApiKey = process.env.GEMINI_API_KEY;
-    delete process.env.GEMINI_API_KEY;
+    const originalApiKey = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
 
     try {
       await expect(generateDesign(baseRequest)).rejects.toMatchObject({
         statusCode: 500,
       } satisfies Partial<AIDesignServiceError>);
     } finally {
-      process.env.GEMINI_API_KEY = originalApiKey;
+      process.env.OPENAI_API_KEY = originalApiKey;
     }
   });
 });

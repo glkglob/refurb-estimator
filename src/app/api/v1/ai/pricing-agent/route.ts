@@ -3,7 +3,10 @@ import { validateJsonRequest } from "@/lib/validate";
 import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 import { parseJson } from "@/lib/ai/utils";
 import { aiClient, PRICING_MODEL } from "@/lib/ai/client";
+import { mapAiProviderError } from "@/lib/ai/errors";
 import { PropertyType } from "@/lib/propertyType";
+import { requireRole } from "@/lib/rbac";
+import { AuthError } from "@/lib/supabase/auth-helpers";
 
 const pricingAgentRequestSchema = z.object({
   propertyType: z.nativeEnum(PropertyType),
@@ -85,6 +88,8 @@ function buildUserPrompt(input: PricingAgentRequest): string {
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
   try {
+    await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
+
     const parsed = await validateJsonRequest(request, pricingAgentRequestSchema, {
       errorMessage: "Invalid pricing-agent payload"
     });
@@ -112,10 +117,16 @@ export async function POST(request: Request) {
 
   } catch (error: unknown) {
     logError("pricing-agent", requestId, error);
+
+    if (error instanceof AuthError) {
+      return jsonError(error.message, requestId, error.status);
+    }
+
     if (error instanceof z.ZodError) {
       return jsonError("Pricing response validation failed", requestId, 502, { details: error.issues.map((i) => i.message) });
     }
-    const message = error instanceof Error ? error.message : "Pricing agent request failed";
-    return jsonError(message, requestId);
+
+    const mapped = mapAiProviderError(error, "Pricing agent request failed");
+    return jsonError(mapped.message, requestId, mapped.status);
   }
 }

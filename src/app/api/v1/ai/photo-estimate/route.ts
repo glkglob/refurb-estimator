@@ -1,6 +1,7 @@
-import { aiClient } from "@/lib/ai/client";
+import { aiClient, VISION_MODEL } from "../../../../../lib/ai/client";
 import { z } from "zod";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { parseJson } from "@/lib/ai/utils";
+import { mapAiProviderError } from "@/lib/ai/errors";
 import type {
   Condition,
   EstimateInput,
@@ -19,6 +20,8 @@ import {
 import { validateJsonRequest } from "@/lib/validate";
 import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 import { isRegion, type Region } from "@/lib/domain/region";
+import { requireRole } from "@/lib/rbac";
+import { AuthError } from "@/lib/supabase/auth-helpers";
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
@@ -27,7 +30,7 @@ const DEFAULT_REGION: Region = "west_midlands";
 const DEFAULT_CONDITION: Condition = "fair";
 const DEFAULT_FINISH_LEVEL: FinishLevel = "standard";
 const SUPPORTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const PHOTO_MODEL = process.env.GEMINI_VISION_MODEL ?? "gemini-2.0-flash";
+const PHOTO_MODEL = VISION_MODEL;
 
 const SYSTEM_PROMPT = `You are a UK property refurbishment expert and chartered surveyor. Analyse the provided property photo and return a JSON object with these exact fields:
 
@@ -272,6 +275,8 @@ export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
   try {
+    await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
+
     const now = Date.now();
     const clientIp = getClientIp(request);
     const rateLimit = checkRateLimit(clientIp, now);
@@ -284,19 +289,6 @@ export async function POST(request: Request) {
         429,
         { retryAfter: retryAfterSeconds }
       );
-    }
-
-    const skipAuth = process.env.SKIP_AUTH === "true";
-    if (!skipAuth) {
-      const supabase = await createServerSupabaseClient();
-      const {
-        data: { user },
-        error: authError
-      } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        return jsonError("Sign in to use AI photo estimates.", requestId, 401);
-      }
     }
 
     const parsedBody = await validateJsonRequest(request, photoEstimateBodySchema, {
@@ -364,10 +356,10 @@ export async function POST(request: Request) {
 
     const content = completion.choices[0]?.message?.content;
     if (typeof content !== "string") {
-      throw new Error("Gemini response was empty");
+      throw new Error("AI response was empty");
     }
 
-    const parsed = JSON.parse(content) as AiAnalysisResponse;
+    const parsed = parseJson(content) as AiAnalysisResponse;
 
     if (parsed.error === "not_a_property") {
       return jsonError(
@@ -435,11 +427,20 @@ export async function POST(request: Request) {
       estimateInput,
       estimateResult
     }, requestId);
-  } catch (error) {
+  } catch (error: unknown) {
     logError("photo-estimate", requestId, error);
 
-    const message =
-      error instanceof Error ? error.message : "Failed to process photo estimate";
-    return jsonError("Failed to generate photo estimate", requestId, 500, { message });
+    if (error instanceof AuthError) {
+      return jsonError(error.message, requestId, error.status);
+    }
+
+    if (error instanceof z.ZodError) {
+      return jsonError("Invalid photo estimate payload", requestId, 400, {
+        details: error.issues.map((issue) => issue.message)
+      });
+    }
+
+    const mapped = mapAiProviderError(error, "Failed to generate photo estimate");
+    return jsonError(mapped.message, requestId, mapped.status);
   }
 }

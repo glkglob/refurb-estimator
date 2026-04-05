@@ -1,8 +1,11 @@
-import { aiClient, PRICING_MODEL } from "@/lib/ai/client";
+import { aiClient, DESIGN_MODEL } from "../../../../../lib/ai/client";
 import { z } from "zod";
 import { validateJsonRequest } from "@/lib/validate";
 import { getRequestId, jsonSuccess, jsonError, logError } from "@/lib/api-route";
 import { parseJson } from "@/lib/ai/utils";
+import { mapAiProviderError } from "@/lib/ai/errors";
+import { requireRole } from "@/lib/rbac";
+import { AuthError } from "@/lib/supabase/auth-helpers";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -136,6 +139,8 @@ function buildUserPrompt(input: DesignAgentRequest): string {
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
   try {
+    await requireRole(["CUSTOMER", "TRADESPERSON", "ADMIN"]);
+
     const parsed = await validateJsonRequest(request, designAgentRequestSchema, {
       errorMessage: "Invalid design-agent payload"
     });
@@ -144,7 +149,7 @@ export async function POST(request: Request) {
     }
     const input = parsed.data;
     const result = await aiClient.chat.completions.create({
-      model: PRICING_MODEL,
+      model: DESIGN_MODEL,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: buildUserPrompt(input) }
@@ -161,6 +166,11 @@ export async function POST(request: Request) {
     return jsonSuccess(normalized, requestId);
   } catch (error: unknown) {
     logError("design-agent", requestId, error);
+
+    if (error instanceof AuthError) {
+      return jsonError(error.message, requestId, error.status);
+    }
+
     if (error instanceof z.ZodError) {
       return jsonError(
         "AI design response validation failed",
@@ -169,7 +179,8 @@ export async function POST(request: Request) {
         { details: error.issues.map((issue) => issue.message) }
       );
     }
-    const message = error instanceof Error ? error.message : "Design agent request failed";
-    return jsonError(message, requestId);
+
+    const mapped = mapAiProviderError(error, "Design agent request failed");
+    return jsonError(mapped.message, requestId, mapped.status);
   }
 }

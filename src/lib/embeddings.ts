@@ -1,18 +1,18 @@
 import "server-only";
 
-import { getAI } from "@/lib/gemini";
+import { EMBEDDING_MODEL } from "@/lib/ai/client";
+import { openai, getOpenAIApiKey } from "@/lib/openai";
 
 /**
- * Gemini text-embedding-004 produces 768-dimensional vectors.
+ * OpenAI text-embedding-3-small produces 1536-dimensional vectors.
  * Update EMBEDDING_DIMENSIONS if you switch to a different model.
  */
-const EMBEDDING_MODEL = "text-embedding-004";
-export const EMBEDDING_DIMENSIONS = 768;
+export const EMBEDDING_DIMENSIONS = 1536;
 
 /**
- * Generate a Gemini text embedding for the given input string.
+ * Generate an OpenAI text embedding for the given input string.
  *
- * @throws If GEMINI_API_KEY is not set or the model returns an empty/invalid vector.
+ * @throws If OPENAI_API_KEY is not set or the model returns an empty/invalid vector.
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   const input = text.trim();
@@ -20,19 +20,19 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     throw new Error("Cannot generate embedding for empty text");
   }
 
-  const ai = getAI(); // throws if GEMINI_API_KEY is unset
+  getOpenAIApiKey();
 
-  const response = await ai.models.embedContent({
+  const response = await openai.embeddings.create({
     model: EMBEDDING_MODEL,
-    contents: input,
+    input
   });
 
-  const vector = response.embeddings?.[0]?.values;
+  const vector = response.data?.[0]?.embedding;
   if (!Array.isArray(vector) || vector.length === 0) {
-    throw new Error("Gemini returned an empty embedding");
+    throw new Error("OpenAI returned an empty embedding");
   }
   if (vector.some((value) => !Number.isFinite(value))) {
-    throw new Error("Gemini returned an invalid embedding");
+    throw new Error("OpenAI returned an invalid embedding");
   }
 
   return vector;

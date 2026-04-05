@@ -79,7 +79,7 @@ function mapSearchError(error: unknown): { message: string; status: number } {
   }
 
   if (
-    error.message.includes("Gemini") ||
+    error.message.includes("OpenAI") ||
     error.message.includes("Qdrant query failed") ||
     error.message.includes("timed out")
   ) {

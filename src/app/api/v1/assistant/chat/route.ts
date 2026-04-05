@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { aiClient } from "@/lib/ai/client";
+import { aiClient, ASSISTANT_MODEL } from "@/lib/ai/client";
 import { parseJson } from "@/lib/ai/utils";
 import { getRequestId, jsonError, jsonSuccess, logError } from "@/lib/api-route";
 import {
@@ -16,9 +16,6 @@ import {
   sanitizeAssistantActionsWithReport
 } from "@/lib/assistant/runtime";
 import { validateJsonRequest } from "@/lib/validate";
-
-const ASSISTANT_MODEL =
-  process.env.GEMINI_ASSISTANT_MODEL ?? process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
 
 const EMPTY_EDITOR_ACTION: EstimateEditorResponse["actions"][number] = {
   type: "none",

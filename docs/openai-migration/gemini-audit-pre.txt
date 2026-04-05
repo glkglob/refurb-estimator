@@ -1,0 +1,166 @@
+./src/services/ai.test.ts:63:    expect(result.provider).toBe("gemini");
+./src/services/ai.test.ts:149:    const originalApiKey = process.env.GEMINI_API_KEY;
+./src/services/ai.test.ts:150:    delete process.env.GEMINI_API_KEY;
+./src/services/ai.test.ts:157:      process.env.GEMINI_API_KEY = originalApiKey;
+./src/services/ai.ts:12:const DEFAULT_AI_MODEL = "gemini-2.0-flash";
+./src/services/ai.ts:46:  provider: "gemini";
+./src/services/ai.ts:155:    message.includes("gemini_api_key") ||
+./src/services/ai.ts:156:    message.includes("google_gemini_api") ||
+./src/services/ai.ts:157:    (message.includes("api key") && message.includes("gemini"))
+./src/services/ai.ts:179:      "AI service is not configured. Set GEMINI_API_KEY (or GOOGLE_GEMINI_API).",
+./src/services/ai.ts:272:    process.env.GEMINI_DESIGN_MODEL ??
+./src/services/ai.ts:322:      provider: "gemini",
+./jest.config.ts:17:    "^@google/genai$": "<rootDir>/node_modules/@google/genai/dist/index.cjs"
+./jest.config.ts:21:    "/node_modules/(?!next/|@google/genai/)"
+./.env.example:11:GEMINI_API_KEY=gemini-api-key
+./.vscode/settings.json:60:  "geminiCode.enableCodeCompletion": true,
+./.vscode/settings.json:61:  "geminiCode.enableInlineChat": true
+./package.json:45:    "@google/genai": "1.48.0",
+./src/lib/gemini.test.ts:1:jest.mock("@google/genai", () => ({
+./src/lib/gemini.test.ts:2:  GoogleGenAI: jest.fn()
+./src/lib/gemini.test.ts:6:  const originalGeminiApiKey = process.env.GEMINI_API_KEY;
+./src/lib/gemini.test.ts:7:  const originalGoogleGeminiApi = process.env.GOOGLE_GEMINI_API;
+./src/lib/gemini.test.ts:11:      delete process.env.GEMINI_API_KEY;
+./src/lib/gemini.test.ts:13:      process.env.GEMINI_API_KEY = originalGeminiApiKey;
+./src/lib/gemini.test.ts:17:      delete process.env.GOOGLE_GEMINI_API;
+./src/lib/gemini.test.ts:19:      process.env.GOOGLE_GEMINI_API = originalGoogleGeminiApi;
+./src/lib/gemini.test.ts:26:  test("throws when GEMINI_API_KEY is missing", async () => {
+./src/lib/gemini.test.ts:27:    delete process.env.GEMINI_API_KEY;
+./src/lib/gemini.test.ts:28:    delete process.env.GOOGLE_GEMINI_API;
+./src/lib/gemini.test.ts:30:    await expect(import("./gemini").then(({ getAI }) => getAI())).rejects.toThrow(
+./src/lib/gemini.test.ts:31:      "[gemini] GEMINI_API_KEY (or GOOGLE_GEMINI_API) is not set."
+./src/lib/gemini.test.ts:36:    process.env.GEMINI_API_KEY = "  test-key  ";
+./src/lib/gemini.test.ts:38:    const { GoogleGenAI } = await import("@google/genai");
+./src/lib/gemini.test.ts:39:    const { getAI } = await import("./gemini");
+./src/lib/gemini.test.ts:44:    expect(GoogleGenAI).toHaveBeenCalledTimes(1);
+./src/lib/gemini.test.ts:45:    expect(GoogleGenAI).toHaveBeenCalledWith({ apiKey: "test-key" });
+./src/lib/gemini.test.ts:49:  test("falls back to GOOGLE_GEMINI_API when GEMINI_API_KEY is missing", async () => {
+./src/lib/gemini.test.ts:50:    delete process.env.GEMINI_API_KEY;
+./src/lib/gemini.test.ts:51:    process.env.GOOGLE_GEMINI_API = "  fallback-key  ";
+./src/lib/gemini.test.ts:53:    const { GoogleGenAI } = await import("@google/genai");
+./src/lib/gemini.test.ts:54:    const { getAI } = await import("./gemini");
+./src/lib/gemini.test.ts:59:    expect(GoogleGenAI).toHaveBeenCalledWith({ apiKey: "fallback-key" });
+./src/lib/env.ts:20:  GEMINI_API_KEY: z
+./src/lib/env.ts:22:    .min(1, "GEMINI_API_KEY is required"),
+./src/lib/env.ts:23:  /** Override the default Gemini model (defaults to gemini-2.0-flash). */
+./src/lib/env.ts:24:  GEMINI_MODEL: z.string().min(1).default("gemini-2.0-flash"),
+./src/lib/env.ts:26:  GEMINI_DESIGN_MODEL: z.string().min(1).default("gemini-2.0-flash"),
+./src/lib/env.ts:28:  GEMINI_VISION_MODEL: z.string().min(1).default("gemini-2.0-flash"),
+./src/lib/env.ts:86:      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+./src/lib/env.ts:87:      GEMINI_MODEL: process.env.GEMINI_MODEL,
+./src/lib/env.ts:88:      GEMINI_DESIGN_MODEL: process.env.GEMINI_DESIGN_MODEL,
+./src/lib/env.ts:89:      GEMINI_VISION_MODEL: process.env.GEMINI_VISION_MODEL,
+./src/app/api/env-test/route.ts:10:  const geminiKeyConfigured = isConfigured(process.env.GEMINI_API_KEY);
+./src/app/api/env-test/route.ts:13:    GEMINI_API_KEY: geminiKeyConfigured,
+./src/app/api/env-test/route.ts:14:    GEMINI_MODEL: isConfigured(process.env.GEMINI_MODEL),
+./src/app/api/env-test/route.ts:15:    GEMINI_VISION_MODEL: isConfigured(process.env.GEMINI_VISION_MODEL),
+./src/app/api/env-test/route.ts:16:    GEMINI_DESIGN_MODEL: isConfigured(process.env.GEMINI_DESIGN_MODEL),
+./src/app/api/env-test/route.ts:19:  const ok = geminiKeyConfigured;
+./src/app/api/env-test/route.ts:26:        : "Missing GEMINI_API_KEY — all AI features are unavailable.",
+./src/lib/env.test.ts:17:    process.env.GEMINI_API_KEY = "gemini-test-key";
+./src/lib/env.test.ts:21:  test("throws when GEMINI_API_KEY is missing", () => {
+./src/lib/env.test.ts:22:    delete process.env.GEMINI_API_KEY;
+./src/lib/env.test.ts:24:    expect(() => getServerAiEnv()).toThrow("GEMINI_API_KEY");
+./src/lib/env.test.ts:27:  test("returns validated env when GEMINI_API_KEY is set", () => {
+./src/lib/env.test.ts:32:    expect(env.GEMINI_API_KEY).toBe("gemini-test-key");
+./src/lib/env.test.ts:35:  test("returns default for GEMINI_MODEL when not set", () => {
+./src/lib/env.test.ts:37:    delete process.env.GEMINI_MODEL;
+./src/lib/env.test.ts:41:    expect(env.GEMINI_MODEL).toBe("gemini-2.0-flash");
+./src/lib/env.test.ts:44:  test("uses provided GEMINI_MODEL when set", () => {
+./src/lib/env.test.ts:45:    setServerEnv({ GEMINI_MODEL: "gemini-1.5-pro" });
+./src/lib/env.test.ts:49:    expect(env.GEMINI_MODEL).toBe("gemini-1.5-pro");
+./src/lib/env.test.ts:52:  test("returns default for GEMINI_DESIGN_MODEL when not set", () => {
+./src/lib/env.test.ts:54:    delete process.env.GEMINI_DESIGN_MODEL;
+./src/lib/env.test.ts:58:    expect(env.GEMINI_DESIGN_MODEL).toBe("gemini-2.0-flash");
+./src/lib/env.test.ts:61:  test("returns default for GEMINI_VISION_MODEL when not set", () => {
+./src/lib/env.test.ts:63:    delete process.env.GEMINI_VISION_MODEL;
+./src/lib/env.test.ts:67:    expect(env.GEMINI_VISION_MODEL).toBe("gemini-2.0-flash");
+./src/lib/gemini.ts:1:import { GoogleGenAI } from "@google/genai";
+./src/lib/gemini.ts:3:let client: GoogleGenAI | null = null;
+./src/lib/gemini.ts:5:export function getAI(): GoogleGenAI {
+./src/lib/gemini.ts:9:    process.env.GEMINI_API_KEY?.trim() ||
+./src/lib/gemini.ts:10:    process.env.GOOGLE_GEMINI_API?.trim();
+./src/lib/gemini.ts:14:      "[gemini] GEMINI_API_KEY (or GOOGLE_GEMINI_API) is not set. " +
+./src/lib/gemini.ts:19:  client = new GoogleGenAI({ apiKey });
+./src/lib/ai/client.ts:6: * by @google/genai via the shared `getAI()` singleton in src/lib/gemini.ts.
+./src/lib/ai/client.ts:8:import { getAI } from "@/lib/gemini";
+./src/lib/ai/client.ts:9:import type { GoogleGenAI } from "@google/genai";
+./src/lib/ai/client.ts:17:  process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+./src/lib/ai/client.ts:21:  process.env.GEMINI_DESIGN_MODEL ?? process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+./src/lib/ai/client.ts:25:  process.env.GEMINI_VISION_MODEL ?? "gemini-2.0-flash";
+./src/lib/ai/client.ts:29:  process.env.GEMINI_ASSISTANT_MODEL ?? "gemini-2.0-flash";
+./src/lib/ai/client.ts:104:async function geminiCreate(
+./src/lib/ai/client.ts:105:  ai: GoogleGenAI,
+./src/lib/ai/client.ts:160:        return geminiCreate(ai, request);
+./src/lib/embeddings.ts:3:import { getAI } from "@/lib/gemini";
+./src/lib/embeddings.ts:15: * @throws If GEMINI_API_KEY is not set or the model returns an empty/invalid vector.
+./src/lib/embeddings.ts:23:  const ai = getAI(); // throws if GEMINI_API_KEY is unset
+./src/lib/ai/errors.test.ts:6:      new Error("[gemini] GEMINI_API_KEY is not set."),
+./src/lib/ai/errors.ts:75:    normalized.includes("gemini_api_key") ||
+./src/lib/ai/errors.ts:76:    normalized.includes("google_gemini_api") ||
+./src/lib/ai/errors.ts:77:    (normalized.includes("api key") && normalized.includes("gemini"))
+./src/lib/ai/errors.ts:102:      message: "AI service is not configured. Set GEMINI_API_KEY (or GOOGLE_GEMINI_API)."
+./docs/migration_report.md:11:Migrated the AI provider from Google Gemini (`@google/generative-ai`) to Hugging Face Inference (`@huggingface/inference`). Both AI routes (pricing-agent and design-agent) now use `InferenceClient.chatCompletion()` with `meta-llama/Llama-3.3-70B-Instruct`. All environment variables have been renamed, tests updated, and validation confirms zero remaining Gemini references.
+./docs/migration_report.md:21:| `GEMINI_API_KEY` | _(removed)_ | Eliminated — no longer a shared fallback |
+./docs/migration_report.md:22:| `GEMINI_PRICING_API_KEY` | `HUGGINGFACE_PRICING_API_KEY` | Required (was optional) |
+./docs/migration_report.md:23:| `GEMINI_DESIGN_API_KEY` | `HUGGINGFACE_REFURB_DESIGN_KEY` | Required (was optional) |
+./docs/migration_report.md:42:| `package.json` | Removed `@google/genai`, `@google/generative-ai`; added `@huggingface/inference` |
+./docs/migration_report.md:56:| `@google/genai` (dependency) | No longer used — Gemini SDK removed |
+./docs/migration_report.md:57:| `@google/generative-ai` (dependency) | No longer used — Gemini SDK removed |
+./docs/migration_report.md:59:| `GEMINI_API_KEY` env var and all references | Replaced by dedicated per-route HF keys |
+./docs/migration_report.md:69:| **Removed** | `@google/genai` | 1.46.0 | — |
+./docs/migration_report.md:70:| **Removed** | `@google/generative-ai` | 0.24.1 | — |
+./docs/migration_report.md:78:- Old shared fallback pattern (`GEMINI_DESIGN_API_KEY ?? GEMINI_API_KEY`) eliminated — each route now has its own dedicated, required key
+./docs/migration_report.md:107:   - Remove: `GEMINI_API_KEY`, `GEMINI_PRICING_API_KEY`, `GEMINI_DESIGN_API_KEY`
+./docs/migrate_gemini_to_hf.sh:3:# migrate_gemini_to_hf.sh
+./docs/migrate_gemini_to_hf.sh:63:if grep -q '"@google/genai"' package.json || grep -q '"@google/generative-ai"' package.json; then
+./docs/migrate_gemini_to_hf.sh:64:  log "Removing @google/genai and @google/generative-ai..."
+./docs/migrate_gemini_to_hf.sh:65:  npm uninstall @google/genai @google/generative-ai 2>&1 | tail -3
+./docs/migrate_gemini_to_hf.sh:82:  # Replace the schema: remove GEMINI_API_KEY, rename the others
+./docs/migrate_gemini_to_hf.sh:83:  sed -i 's/GEMINI_API_KEY: z.string().min(1, "GEMINI_API_KEY is required"),//' "$ENV_FILE"
+./docs/migrate_gemini_to_hf.sh:84:  sed -i 's/GEMINI_PRICING_API_KEY: z.string().min(1).optional(),/HUGGINGFACE_PRICING_API_KEY: z.string().min(1, "HUGGINGFACE_PRICING_API_KEY is required"),/' "$ENV_FILE"
+./docs/migrate_gemini_to_hf.sh:85:  sed -i 's/GEMINI_DESIGN_API_KEY: z.string().min(1).optional(),/HUGGINGFACE_REFURB_DESIGN_KEY: z.string().min(1, "HUGGINGFACE_REFURB_DESIGN_KEY is required"),/' "$ENV_FILE"
+./docs/migrate_gemini_to_hf.sh:88:  sed -i 's/GEMINI_API_KEY: process.env.GEMINI_API_KEY,//' "$ENV_FILE"
+./docs/migrate_gemini_to_hf.sh:89:  sed -i 's/GEMINI_PRICING_API_KEY: process.env.GEMINI_PRICING_API_KEY,/HUGGINGFACE_PRICING_API_KEY: process.env.HUGGINGFACE_PRICING_API_KEY,/' "$ENV_FILE"
+./docs/migrate_gemini_to_hf.sh:90:  sed -i 's/GEMINI_DESIGN_API_KEY: process.env.GEMINI_DESIGN_API_KEY,/HUGGINGFACE_REFURB_DESIGN_KEY: process.env.HUGGINGFACE_REFURB_DESIGN_KEY,/' "$ENV_FILE"
+./docs/migrate_gemini_to_hf.sh:106:  sed -i 's/process.env.GEMINI_API_KEY = "gemini-test-key";/process.env.HUGGINGFACE_PRICING_API_KEY = "hf-pricing-test-key";\n    process.env.HUGGINGFACE_REFURB_DESIGN_KEY = "hf-design-test-key";/' "$ENV_TEST_FILE"
+./docs/migrate_gemini_to_hf.sh:107:  sed -i 's/GEMINI_API_KEY/HUGGINGFACE_PRICING_API_KEY/g' "$ENV_TEST_FILE"
+./docs/migrate_gemini_to_hf.sh:108:  sed -i 's/GEMINI_PRICING_API_KEY/HUGGINGFACE_PRICING_API_KEY/g' "$ENV_TEST_FILE"
+./docs/migrate_gemini_to_hf.sh:109:  sed -i 's/GEMINI_DESIGN_API_KEY/HUGGINGFACE_REFURB_DESIGN_KEY/g' "$ENV_TEST_FILE"
+./docs/migrate_gemini_to_hf.sh:110:  sed -i 's/gemini-test-key/hf-test-key/g' "$ENV_TEST_FILE"
+./docs/migrate_gemini_to_hf.sh:120:  if grep -q "GoogleGenerativeAI\|@google/generative-ai" "$ROUTE_FILE" 2>/dev/null; then
+./docs/migrate_gemini_to_hf.sh:124:    sed -i 's|import { GoogleGenerativeAI, type Part } from "@google/generative-ai";|import { InferenceClient } from "@huggingface/inference";|' "$ROUTE_FILE"
+./docs/migrate_gemini_to_hf.sh:127:    sed -i 's/serverEnv.GEMINI_PRICING_API_KEY ?? serverEnv.GEMINI_API_KEY/serverEnv.HUGGINGFACE_PRICING_API_KEY/' "$ROUTE_FILE"
+./docs/migrate_gemini_to_hf.sh:128:    sed -i 's/serverEnv.GEMINI_DESIGN_API_KEY ?? serverEnv.GEMINI_API_KEY/serverEnv.HUGGINGFACE_REFURB_DESIGN_KEY/' "$ROUTE_FILE"
+./docs/migrate_gemini_to_hf.sh:146:  sed -i 's/GEMINI_API_KEY=your-gemini-api-key/HUGGINGFACE_PRICING_API_KEY=hf_your-pricing-api-key/' "$ENV_EXAMPLE"
+./docs/migrate_gemini_to_hf.sh:148:  sed -i '/# GEMINI_PRICING_API_KEY/d' "$ENV_EXAMPLE"
+./docs/migrate_gemini_to_hf.sh:149:  sed -i 's/# GEMINI_DESIGN_API_KEY=your-gemini-design-key/HUGGINGFACE_REFURB_DESIGN_KEY=hf_your-design-api-key/' "$ENV_EXAMPLE"
+./docs/migrate_gemini_to_hf.sh:161:    sed -i 's/GEMINI_API_KEY=.*/# REMOVED: GEMINI_API_KEY (migrated to Hugging Face)/' .env.local
+./docs/migrate_gemini_to_hf.sh:162:    sed -i 's/GEMINI_PRICING_API_KEY=.*/HUGGINGFACE_PRICING_API_KEY=REPLACE_WITH_YOUR_HF_TOKEN/' .env.local
+./docs/migrate_gemini_to_hf.sh:163:    sed -i 's/GEMINI_DESIGN_API_KEY=.*/HUGGINGFACE_REFURB_DESIGN_KEY=REPLACE_WITH_YOUR_HF_TOKEN/' .env.local
+./docs/migrate_gemini_to_hf.sh:192:for CANDIDATE in gemini.config.ts gemini.config.js .gemini src/lib/gemini.ts src/lib/gemini; do
+./docs/migrate_gemini_to_hf.sh:209:GEMINI_REFS=$(grep -rn "GEMINI\|@google/gen" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.example" src/ .env.local.example 2>/dev/null || true)
+./docs/migrate_gemini_to_hf.sh:211:if [ -z "$GEMINI_REFS" ]; then
+./docs/migrate_gemini_to_hf.sh:215:  echo "$GEMINI_REFS"
+./docs/migrate_gemini_to_hf.sh:253:Migrated AI provider from Google Gemini (`@google/generative-ai`) to Hugging Face Inference
+./docs/migrate_gemini_to_hf.sh:268:Migrated AI provider from Google Gemini (\`@google/generative-ai\`) to Hugging Face Inference
+./docs/migrate_gemini_to_hf.sh:276:| \`GEMINI_API_KEY\` | _(removed)_ | Eliminated — no longer a shared fallback |
+./docs/migrate_gemini_to_hf.sh:277:| \`GEMINI_PRICING_API_KEY\` | \`HUGGINGFACE_PRICING_API_KEY\` | Required |
+./docs/migrate_gemini_to_hf.sh:278:| \`GEMINI_DESIGN_API_KEY\` | \`HUGGINGFACE_REFURB_DESIGN_KEY\` | Required |
+./docs/migrate_gemini_to_hf.sh:299:| Removed | \`@google/genai\` | 1.46.0 |
+./docs/migrate_gemini_to_hf.sh:300:| Removed | \`@google/generative-ai\` | 0.24.1 |
+./docs/migrate_gemini_to_hf.sh:319:  - Remove: \`GEMINI_API_KEY\`, \`GEMINI_PRICING_API_KEY\`, \`GEMINI_DESIGN_API_KEY\`
+./src/app/api/v1/assistant/chat/route.ts:21:  process.env.GEMINI_ASSISTANT_MODEL ?? process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+./.env.local.example:19:GEMINI_API_KEY=your-gemini-api-key
+./.env.local.example:21:# Optional model overrides (defaults to gemini-2.0-flash for all)
+./.env.local.example:22:# GEMINI_MODEL=gemini-2.0-flash
+./.env.local.example:23:# GEMINI_VISION_MODEL=gemini-2.0-flash
+./.env.local.example:24:# GEMINI_DESIGN_MODEL=gemini-2.0-flash
+./.env.local.example:25:# GEMINI_ASSISTANT_MODEL=gemini-2.0-flash
+./src/app/api/v1/ai/upload/route.test.ts:127:      provider: "gemini",
+./src/app/api/v1/ai/upload/route.test.ts:128:      model: "gemini-2.0-flash",
+./src/app/api/v1/ai/photo-estimate/route.ts:33:const PHOTO_MODEL = process.env.GEMINI_VISION_MODEL ?? "gemini-2.0-flash";
+./src/app/api/v1/ai/design-agent/route.test.ts:14:  DESIGN_MODEL: "gemini-2.0-flash"
+./pnpm-lock.yaml:41:      '@google/genai':
+./pnpm-lock.yaml:1259:  '@google/genai@1.48.0':
+./pnpm-lock.yaml:10257:  '@google/genai@1.48.0(@modelcontextprotocol/sdk@1.29.0(zod@4.3.6))':

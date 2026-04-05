@@ -1,5 +1,7 @@
 import { POST } from "./route";
 import { aiClient, PRICING_MODEL } from "@/lib/ai/client";
+import { requireRole } from "@/lib/rbac";
+import { AuthError } from "@/lib/supabase/auth-helpers";
 
 jest.mock("@/lib/ai/client", () => ({
   aiClient: {
@@ -12,14 +14,25 @@ jest.mock("@/lib/ai/client", () => ({
   PRICING_MODEL: "gpt-4o-mini"
 }));
 
+jest.mock("@/lib/rbac", () => ({
+  requireRole: jest.fn()
+}));
+
 type MockedCreateFn = jest.MockedFunction<typeof aiClient.chat.completions.create>;
 const mockedCreate = aiClient.chat.completions.create as MockedCreateFn;
+const mockedRequireRole = jest.mocked(requireRole);
 
 describe("POST /api/v1/ai/pricing-agent", () => {
   let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
     mockedCreate.mockReset();
+    mockedRequireRole.mockReset();
+    mockedRequireRole.mockResolvedValue({
+      id: "user-123",
+      email: "user@example.com",
+      role: "customer"
+    });
     consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -42,6 +55,29 @@ describe("POST /api/v1/ai/pricing-agent", () => {
 
     expect(response.status).toBe(400);
     expect(payload.error).toBe("Invalid pricing-agent payload");
+  });
+
+  test("returns 401 when user is not authenticated", async () => {
+    mockedRequireRole.mockRejectedValueOnce(new AuthError("Not authenticated", 401));
+
+    const request = new Request("http://localhost/api/v1/ai/pricing-agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        propertyType: "Terraced House",
+        location: "SW1A 1AA",
+        floorAreaM2: 85,
+        condition: "fair",
+        scope: "Refurb kitchen and bathroom."
+      })
+    });
+
+    const response = await POST(request);
+    const payload = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(401);
+    expect(payload.error).toBe("Not authenticated");
+    expect(mockedCreate).not.toHaveBeenCalled();
   });
 
   test("uses shared AI model and normalizes category and total ranges", async () => {

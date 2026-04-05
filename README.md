@@ -98,6 +98,7 @@ npx supabase migration new <name>
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key (server session auth) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key used for storage + metadata persistence |
 | `OPENAI_API_KEY` | Yes | API key used by `services/ai.ts` |
+| `USE_OPENAI` | No | Runtime feature flag (`true` by default); set `false` to disable OpenAI calls during rollback/incident response |
 | `OPENAI_DESIGN_METADATA_MODEL` | No | Override AI metadata model (default: `gpt-4.1-mini`) |
 | `SUPABASE_DESIGN_UPLOAD_BUCKET` | No | Storage bucket name (default: `design-uploads`) |
 | `DESIGN_SIGNED_URL_EXPIRY_SECONDS` | No | Signed URL TTL in seconds (default: `3600`) |

@@ -1,5 +1,7 @@
 import { POST } from "./route";
-import { aiClient, PRICING_MODEL } from "@/lib/ai/client";
+import { aiClient, DESIGN_MODEL } from "@/lib/ai/client";
+import { requireRole } from "@/lib/rbac";
+import { AuthError } from "@/lib/supabase/auth-helpers";
 
 jest.mock("@/lib/ai/client", () => ({
   aiClient: {
@@ -9,17 +11,28 @@ jest.mock("@/lib/ai/client", () => ({
       }
     }
   },
-  PRICING_MODEL: "gemini-2.0-flash"
+  DESIGN_MODEL: "gpt-4o-mini"
+}));
+
+jest.mock("@/lib/rbac", () => ({
+  requireRole: jest.fn()
 }));
 
 type MockedCreateFn = jest.MockedFunction<typeof aiClient.chat.completions.create>;
 const mockedCreate = aiClient.chat.completions.create as MockedCreateFn;
+const mockedRequireRole = jest.mocked(requireRole);
 
 describe("POST /api/v1/ai/design-agent", () => {
   let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
     mockedCreate.mockReset();
+    mockedRequireRole.mockReset();
+    mockedRequireRole.mockResolvedValue({
+      id: "user-123",
+      email: "user@example.com",
+      role: "customer"
+    });
     consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -43,6 +56,28 @@ describe("POST /api/v1/ai/design-agent", () => {
 
     expect(response.status).toBe(400);
     expect(payload.error).toBe("Invalid design-agent payload");
+  });
+
+  test("returns 401 when user is not authenticated", async () => {
+    mockedRequireRole.mockRejectedValueOnce(new AuthError("Not authenticated", 401));
+
+    const request = new Request("http://localhost/api/v1/ai/design-agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        photos: ["https://example.com/room.jpg"],
+        roomType: "Kitchen",
+        style: "Modern",
+        budget: "£15k-£30k"
+      })
+    });
+
+    const response = await POST(request);
+    const payload = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(401);
+    expect(payload.error).toBe("Not authenticated");
+    expect(mockedCreate).not.toHaveBeenCalled();
   });
 
   test("uses shared AI model and normalizes successful responses", async () => {
@@ -110,7 +145,7 @@ describe("POST /api/v1/ai/design-agent", () => {
     expect(response.status).toBe(200);
     expect(mockedCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: PRICING_MODEL
+        model: DESIGN_MODEL
       })
     );
     expect(payload.estimatedCost).toEqual({

@@ -12,7 +12,7 @@ const qdrantApiKey = process.env.QDRANT_API_KEY?.trim() ?? "";
 export const ESTIMATES_COLLECTION =
   process.env.QDRANT_ESTIMATES_COLLECTION?.trim() || "estimates";
 // Driven by EMBEDDING_DIMENSIONS so it stays in sync with the embedding model.
-// Gemini text-embedding-004 → 768 dims; previously OpenAI text-embedding-3-small → 1536.
+// OpenAI text-embedding-3-small uses 1536 dimensions.
 export const ESTIMATE_VECTOR_SIZE = EMBEDDING_DIMENSIONS;
 
 export type EstimateQdrantClient = Pick<

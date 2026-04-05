@@ -7,23 +7,25 @@ function isConfigured(value: string | undefined): boolean {
 }
 
 export async function GET() {
-  const geminiKeyConfigured = isConfigured(process.env.GEMINI_API_KEY);
+  const openAiKeyConfigured = isConfigured(process.env.OPENAI_API_KEY);
 
   const configured = {
-    GEMINI_API_KEY: geminiKeyConfigured,
-    GEMINI_MODEL: isConfigured(process.env.GEMINI_MODEL),
-    GEMINI_VISION_MODEL: isConfigured(process.env.GEMINI_VISION_MODEL),
-    GEMINI_DESIGN_MODEL: isConfigured(process.env.GEMINI_DESIGN_MODEL),
+    OPENAI_API_KEY: openAiKeyConfigured,
+    USE_OPENAI: isConfigured(process.env.USE_OPENAI),
+    OPENAI_MODEL: isConfigured(process.env.OPENAI_MODEL),
+    OPENAI_VISION_MODEL: isConfigured(process.env.OPENAI_VISION_MODEL),
+    OPENAI_DESIGN_MODEL: isConfigured(process.env.OPENAI_DESIGN_MODEL),
+    OPENAI_ASSISTANT_MODEL: isConfigured(process.env.OPENAI_ASSISTANT_MODEL)
   };
 
-  const ok = geminiKeyConfigured;
+  const ok = openAiKeyConfigured;
 
   return NextResponse.json(
     {
       ok,
       message: ok
         ? "AI environment variables are configured."
-        : "Missing GEMINI_API_KEY — all AI features are unavailable.",
+        : "Missing OPENAI_API_KEY — all AI features are unavailable.",
       configured,
     },
     { status: ok ? 200 : 503 }

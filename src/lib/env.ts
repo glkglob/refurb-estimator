@@ -14,18 +14,29 @@ const serverCoreEnvSchema = z.object({
 /**
  * AI server environment variables.
  * Only required for endpoints that actually call AI providers.
- * All AI is now handled by Google Gemini — no OpenAI or HuggingFace keys.
+ * All AI is now handled by OpenAI.
  */
 const serverAiEnvSchema = z.object({
-  GEMINI_API_KEY: z
+  OPENAI_API_KEY: z
     .string()
-    .min(1, "GEMINI_API_KEY is required"),
-  /** Override the default Gemini model (defaults to gemini-2.0-flash). */
-  GEMINI_MODEL: z.string().min(1).default("gemini-2.0-flash"),
-  /** Override the model used by the design-metadata service. */
-  GEMINI_DESIGN_MODEL: z.string().min(1).default("gemini-2.0-flash"),
-  /** Override the model used for vision / photo-estimate. */
-  GEMINI_VISION_MODEL: z.string().min(1).default("gemini-2.0-flash"),
+    .min(1, "OPENAI_API_KEY is required"),
+  /** Runtime provider feature flag. Keep true during OpenAI rollout. */
+  USE_OPENAI: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  /** Optional model override for text completions. */
+  OPENAI_MODEL: z.string().min(1).default("gpt-4o-mini"),
+  /** Optional model override for assistant/coplan routes. */
+  OPENAI_ASSISTANT_MODEL: z.string().min(1).default("gpt-4o-mini"),
+  /** Optional model override for vision/photo routes. */
+  OPENAI_VISION_MODEL: z.string().min(1).default("gpt-4o-mini"),
+  /** Optional model override for design text routes. */
+  OPENAI_DESIGN_MODEL: z.string().min(1).default("gpt-4o-mini"),
+  /** Optional model override for image generation routes. */
+  OPENAI_IMAGE_MODEL: z.string().min(1).default("gpt-image-1"),
+  /** Optional model override for vector embeddings. */
+  OPENAI_EMBEDDING_MODEL: z.string().min(1).default("text-embedding-3-small"),
 });
 
 const clientEnvSchema = z.object({
@@ -83,10 +94,14 @@ function readServerAiEnv(): ServerAiEnv {
     schema: serverAiEnvSchema,
     scope: "server ai",
     values: {
-      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-      GEMINI_MODEL: process.env.GEMINI_MODEL,
-      GEMINI_DESIGN_MODEL: process.env.GEMINI_DESIGN_MODEL,
-      GEMINI_VISION_MODEL: process.env.GEMINI_VISION_MODEL,
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+      USE_OPENAI: process.env.USE_OPENAI,
+      OPENAI_MODEL: process.env.OPENAI_MODEL,
+      OPENAI_ASSISTANT_MODEL: process.env.OPENAI_ASSISTANT_MODEL,
+      OPENAI_VISION_MODEL: process.env.OPENAI_VISION_MODEL,
+      OPENAI_DESIGN_MODEL: process.env.OPENAI_DESIGN_MODEL,
+      OPENAI_IMAGE_MODEL: process.env.OPENAI_IMAGE_MODEL,
+      OPENAI_EMBEDDING_MODEL: process.env.OPENAI_EMBEDDING_MODEL,
     },
   });
 }

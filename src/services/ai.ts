@@ -1,15 +1,16 @@
 /**
  * AI design-metadata generation service.
  *
- * Backed by Google Gemini via the shared getAI() singleton. The public API
- * accepts an optional dependency-injection client so unit tests can supply a
- * mock without touching environment variables.
+ * Backed by the shared AI client adapter. The public API accepts an optional
+ * dependency-injection client so unit tests can supply a mock without touching
+ * environment variables.
  */
-import { getAI } from "@/lib/gemini";
+import { aiClient as sharedAiClient } from "@/lib/ai/client";
 import { createHash } from "crypto";
 import { z } from "zod";
 
-const DEFAULT_AI_MODEL = "gemini-2.0-flash";
+const DEFAULT_AI_MODEL = "gpt-4.1-mini";
+const DEFAULT_IMAGE_MODEL = "gpt-image-1";
 const DEFAULT_IMAGE_DIMENSION = 1024;
 
 const aiResponseSchema = z.object({
@@ -43,8 +44,9 @@ export type GenerateDesignResult = {
   width: number;
   height: number;
   region: string;
-  provider: "gemini";
+  provider: "openai";
   model: string;
+  generatedImageUrl?: string;
   createdAt: string;
 };
 
@@ -74,15 +76,29 @@ export type AiClientLike = {
       create: (request: CompletionRequest) => Promise<CompletionResponse>;
     };
   };
+  images?: {
+    generate?: (request: {
+      model: string;
+      prompt: string;
+      size?: "1024x1024" | "1024x1536" | "1536x1024";
+      n?: number;
+    }) => Promise<{
+      urls: string[];
+      b64Json: string[];
+    }>;
+  };
 };
 
 type GenerateDesignDependencies = {
   client?: AiClientLike;
   model?: string;
+  imageModel?: string;
 };
 
 type ErrorWithStatus = {
   status?: unknown;
+  statusCode?: unknown;
+  code?: unknown;
   message?: unknown;
 };
 
@@ -99,59 +115,64 @@ export class AIDesignServiceError extends Error {
   }
 }
 
-/**
- * Build a Gemini-backed AiClientLike from the shared singleton.
- * Only called when no client is injected (i.e., in production).
- */
-function createGeminiClient(): AiClientLike {
-  const ai = getAI(); // throws if GEMINI_API_KEY is unset
-
-  return {
-    chat: {
-      completions: {
-        create: async (request: CompletionRequest): Promise<CompletionResponse> => {
-          const prompt = request.messages.map((m) => m.content).join("\n\n");
-
-          const response = await ai.models.generateContent({
-            model: request.model,
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            config: {
-              temperature: request.temperature,
-              maxOutputTokens: 1024,
-            },
-          });
-
-          return {
-            choices: [
-              {
-                message: { content: response.text ?? "" },
-              },
-            ],
-          };
-        },
-      },
-    },
-  };
-}
-
 function hasStatus(error: unknown): error is ErrorWithStatus {
-  return typeof error === "object" && error !== null && "status" in error;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    ("status" in error || "statusCode" in error)
+  );
 }
 
 function toStatusNumber(error: unknown): number | undefined {
-  if (!hasStatus(error) || typeof error.status !== "number") {
+  if (!hasStatus(error)) {
     return undefined;
   }
 
-  return error.status;
+  if (typeof error.status === "number") {
+    return error.status;
+  }
+
+  if (typeof error.statusCode === "number") {
+    return error.statusCode;
+  }
+
+  return undefined;
+}
+
+function toCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return undefined;
+  }
+
+  const code = (error as ErrorWithStatus).code;
+  return typeof code === "string" ? code.toLowerCase() : undefined;
+}
+
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as ErrorWithStatus).message;
+    if (typeof message === "string") {
+      return message;
+    }
+  }
+
+  return "";
+}
+
+function isMissingApiKey(error: unknown): boolean {
+  const message = toErrorMessage(error).toLowerCase();
+  return (
+    message.includes("openai_api_key") ||
+    (message.includes("api key") && message.includes("openai"))
+  );
 }
 
 function isNetworkError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  const message = error.message.toLowerCase();
+  const message = toErrorMessage(error).toLowerCase();
   return (
     message.includes("network") ||
     message.includes("fetch") ||
@@ -166,6 +187,13 @@ function mapAiError(error: unknown): AIDesignServiceError {
     return error;
   }
 
+  if (isMissingApiKey(error)) {
+    return new AIDesignServiceError(
+      "AI service is not configured. Set OPENAI_API_KEY.",
+      500
+    );
+  }
+
   if (isNetworkError(error)) {
     return new AIDesignServiceError(
       "Network error while contacting AI generation service.",
@@ -174,10 +202,40 @@ function mapAiError(error: unknown): AIDesignServiceError {
   }
 
   const statusCode = toStatusNumber(error);
+  const errorCode = toCode(error);
+
+  if (
+    statusCode === 404 ||
+    toErrorMessage(error).toLowerCase().includes("model not found")
+  ) {
+    return new AIDesignServiceError(
+      "Configured AI model was not found.",
+      502
+    );
+  }
+
   if (statusCode === 429) {
     return new AIDesignServiceError(
       "AI service rate limit exceeded. Please retry shortly.",
       503
+    );
+  }
+
+  if (
+    errorCode === "invalid_argument" ||
+    errorCode === "invalid_request_error" ||
+    statusCode === 400
+  ) {
+    return new AIDesignServiceError(
+      "AI provider rejected the request payload.",
+      502
+    );
+  }
+
+  if (statusCode === 401 || statusCode === 403) {
+    return new AIDesignServiceError(
+      "AI provider authentication failed. Check API key permissions.",
+      502
     );
   }
 
@@ -228,23 +286,17 @@ export async function generateDesign(
 ): Promise<GenerateDesignResult> {
   const model =
     dependencies?.model ??
-    process.env.GEMINI_DESIGN_MODEL ??
+    process.env.OPENAI_DESIGN_METADATA_MODEL ??
+    process.env.OPENAI_DESIGN_MODEL ??
+    process.env.OPENAI_MODEL ??
     DEFAULT_AI_MODEL;
+  const imageModel =
+    dependencies?.imageModel ??
+    process.env.OPENAI_IMAGE_MODEL ??
+    DEFAULT_IMAGE_MODEL;
 
-  let client: AiClientLike;
-  if (dependencies?.client) {
-    client = dependencies.client;
-  } else {
-    try {
-      client = createGeminiClient();
-    } catch (err) {
-      // getAI() throws a plain Error when GEMINI_API_KEY is absent
-      throw new AIDesignServiceError(
-        err instanceof Error ? err.message : "GEMINI_API_KEY is not configured.",
-        500
-      );
-    }
-  }
+  const client =
+    dependencies?.client ?? (sharedAiClient as unknown as AiClientLike);
 
   try {
     const response = await client.chat.completions.create({
@@ -284,14 +336,40 @@ export async function generateDesign(
       );
     }
 
+    const resolvedWidth = parsed.data.width ?? request.width ?? DEFAULT_IMAGE_DIMENSION;
+    const resolvedHeight = parsed.data.height ?? request.height ?? DEFAULT_IMAGE_DIMENSION;
+
+    let generatedImageUrl: string | undefined;
+    if (client.images?.generate) {
+      const size: "1024x1024" | "1024x1536" | "1536x1024" =
+        resolvedWidth === resolvedHeight
+          ? "1024x1024"
+          : resolvedWidth > resolvedHeight
+            ? "1536x1024"
+            : "1024x1536";
+
+      const imageResult = await client.images.generate({
+        model: imageModel,
+        prompt: parsed.data.prompt,
+        size,
+        n: 1
+      });
+
+      const firstGeneratedUrl = imageResult.urls[0];
+      if (typeof firstGeneratedUrl === "string" && firstGeneratedUrl.length > 0) {
+        generatedImageUrl = firstGeneratedUrl;
+      }
+    }
+
     return {
       prompt: parsed.data.prompt,
       seed: parsed.data.seed ?? createSeed(request.imageUrl, request.user.userId),
-      width: parsed.data.width ?? request.width ?? DEFAULT_IMAGE_DIMENSION,
-      height: parsed.data.height ?? request.height ?? DEFAULT_IMAGE_DIMENSION,
+      width: resolvedWidth,
+      height: resolvedHeight,
       region: request.region,
-      provider: "gemini",
+      provider: "openai",
       model,
+      generatedImageUrl,
       createdAt: new Date().toISOString()
     };
   } catch (error) {

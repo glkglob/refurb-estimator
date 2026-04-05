@@ -51,12 +51,9 @@
   "jest.autoRun": "off",
 
   // -------------------------------------------------------------------------
-  // AI — Google Gemini (via Gemini Code Assist extension)
+  // AI
   // -------------------------------------------------------------------------
-  // Disable GitHub Copilot if present; Gemini is the sole AI provider.
   "github.copilot.enable": {
     "*": false
-  },
-  "geminiCode.enableCodeCompletion": true,
-  "geminiCode.enableInlineChat": true
+  }
 }

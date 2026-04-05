@@ -41,6 +41,7 @@
   ],
   "exclude": [
     "node_modules",
+    "refurb-estimator",
     "tests/e2e",
     "playwright.config.ts"
   ]

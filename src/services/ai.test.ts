@@ -60,7 +60,7 @@ describe("services/ai.generateDesign", () => {
     expect(result.width).toBe(1024);
     expect(result.height).toBe(768);
     expect(result.model).toBe("gpt-test-model");
-    expect(result.provider).toBe("openai");
+    expect(result.provider).toBe("gemini");
   });
 
   test("creates deterministic seed when seed is missing from AI output", async () => {
@@ -146,16 +146,15 @@ describe("services/ai.generateDesign", () => {
   });
 
   test("throws 500 when no API key is available and no client is injected", async () => {
-    const originalApiKey = process.env.OPENAI_API_KEY;
-    delete process.env.OPENAI_API_KEY;
+    const originalApiKey = process.env.GEMINI_API_KEY;
+    delete process.env.GEMINI_API_KEY;
 
     try {
       await expect(generateDesign(baseRequest)).rejects.toMatchObject({
         statusCode: 500,
-        message: "OPENAI_API_KEY is not configured."
       } satisfies Partial<AIDesignServiceError>);
     } finally {
-      process.env.OPENAI_API_KEY = originalApiKey;
+      process.env.GEMINI_API_KEY = originalApiKey;
     }
   });
 });

@@ -1,15 +1,22 @@
-import OpenAI from "openai";
+/**
+ * AI design-metadata generation service.
+ *
+ * Backed by Google Gemini via the shared getAI() singleton. The public API
+ * accepts an optional dependency-injection client so unit tests can supply a
+ * mock without touching environment variables.
+ */
+import { getAI } from "@/lib/gemini";
 import { createHash } from "crypto";
 import { z } from "zod";
 
-const DEFAULT_AI_MODEL = "gpt-4.1-mini";
+const DEFAULT_AI_MODEL = "gemini-2.0-flash";
 const DEFAULT_IMAGE_DIMENSION = 1024;
 
 const aiResponseSchema = z.object({
   prompt: z.string().trim().min(20).max(4000),
   seed: z.number().int().nonnegative().max(2147483647).optional(),
   width: z.number().int().min(256).max(2048).optional(),
-  height: z.number().int().min(256).max(2048).optional()
+  height: z.number().int().min(256).max(2048).optional(),
 });
 
 export type DesignProjectType = "loft" | "new_build";
@@ -36,7 +43,7 @@ export type GenerateDesignResult = {
   width: number;
   height: number;
   region: string;
-  provider: "openai";
+  provider: "gemini";
   model: string;
   createdAt: string;
 };
@@ -72,7 +79,6 @@ export type AiClientLike = {
 type GenerateDesignDependencies = {
   client?: AiClientLike;
   model?: string;
-  apiKey?: string;
 };
 
 type ErrorWithStatus = {
@@ -93,8 +99,39 @@ export class AIDesignServiceError extends Error {
   }
 }
 
-function createAiClient(apiKey: string): AiClientLike {
-  return new OpenAI({ apiKey });
+/**
+ * Build a Gemini-backed AiClientLike from the shared singleton.
+ * Only called when no client is injected (i.e., in production).
+ */
+function createGeminiClient(): AiClientLike {
+  const ai = getAI(); // throws if GEMINI_API_KEY is unset
+
+  return {
+    chat: {
+      completions: {
+        create: async (request: CompletionRequest): Promise<CompletionResponse> => {
+          const prompt = request.messages.map((m) => m.content).join("\n\n");
+
+          const response = await ai.models.generateContent({
+            model: request.model,
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            config: {
+              temperature: request.temperature,
+              maxOutputTokens: 1024,
+            },
+          });
+
+          return {
+            choices: [
+              {
+                message: { content: response.text ?? "" },
+              },
+            ],
+          };
+        },
+      },
+    },
+  };
 }
 
 function hasStatus(error: unknown): error is ErrorWithStatus {
@@ -189,14 +226,25 @@ export async function generateDesign(
   request: GenerateDesignRequest,
   dependencies?: GenerateDesignDependencies
 ): Promise<GenerateDesignResult> {
-  const model = dependencies?.model ?? process.env.OPENAI_DESIGN_METADATA_MODEL ?? DEFAULT_AI_MODEL;
-  const client = dependencies?.client ?? (() => {
-    const apiKey = dependencies?.apiKey ?? process.env.OPENAI_API_KEY;
-    if (!apiKey || apiKey.trim().length === 0) {
-      throw new AIDesignServiceError("OPENAI_API_KEY is not configured.", 500);
+  const model =
+    dependencies?.model ??
+    process.env.GEMINI_DESIGN_MODEL ??
+    DEFAULT_AI_MODEL;
+
+  let client: AiClientLike;
+  if (dependencies?.client) {
+    client = dependencies.client;
+  } else {
+    try {
+      client = createGeminiClient();
+    } catch (err) {
+      // getAI() throws a plain Error when GEMINI_API_KEY is absent
+      throw new AIDesignServiceError(
+        err instanceof Error ? err.message : "GEMINI_API_KEY is not configured.",
+        500
+      );
     }
-    return createAiClient(apiKey);
-  })();
+  }
 
   try {
     const response = await client.chat.completions.create({
@@ -242,7 +290,7 @@ export async function generateDesign(
       width: parsed.data.width ?? request.width ?? DEFAULT_IMAGE_DIMENSION,
       height: parsed.data.height ?? request.height ?? DEFAULT_IMAGE_DIMENSION,
       region: request.region,
-      provider: "openai",
+      provider: "gemini",
       model,
       createdAt: new Date().toISOString()
     };

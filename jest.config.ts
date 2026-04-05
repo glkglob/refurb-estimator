@@ -13,16 +13,18 @@ const config: Config = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
     "^next/server$": "<rootDir>/test/mocks/nextServer.ts",
-    "^server-only$": "<rootDir>/test/mocks/serverOnly.ts"
+    "^server-only$": "<rootDir>/test/mocks/serverOnly.ts",
+    "^@google/genai$": "<rootDir>/node_modules/@google/genai/dist/index.cjs"
   },
 
   transformIgnorePatterns: [
-    "/node_modules/(?!next/)"
+    "/node_modules/(?!next/|@google/genai/)"
   ],
 
   testPathIgnorePatterns: [
     "/node_modules/",
     "/.next/",
+    "<rootDir>/refurb-estimator/",
     "<rootDir>/tests/e2e/",
     "<rootDir>/tests/unit/.*\\.adapters\\.test\\.ts$",
   ]

@@ -1,7 +1,6 @@
 export {
   MATERIAL_IDS,
   MATERIAL_PRICE_BANDS,
-  MATERIAL_UNITS,
   MATERIAL_CATEGORIES
 } from "./material";
 export type {
